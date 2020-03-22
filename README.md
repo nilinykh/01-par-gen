@@ -2,7 +2,8 @@
 
 ### Train model
 
-1. Run `preproc.ipynb` on raw paragraphs (for more details, check the notebook) to build paragraphs in the format which is required for the model
+1. Run `preproc.ipynb` on raw paragraphs (for more details, check the notebook) to build paragraphs in the format which is required for the model.
+p.s. `splits.json` and `dataset_paragraphs_v1.json` are already included in the `data` directory for your convenience.
 
 2. Run `create_input_files.py` to generate files which include word map, image features, captions and their lengths for all three data splits. Note that image features where extracted in advance, and this script simply distributes them between data splits properly.
 

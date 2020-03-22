@@ -265,9 +265,14 @@ class WordRNN(nn.Module):
 
         self.rnn_arch = args.rnn_arch
         if self.rnn_arch == 'LSTM':
-            self.decode_step = nn.LSTM(input_size=self.embed_dim, hidden_size=self.hidden_size,
-                                       num_layers=self.num_layers_wordrnn, dropout=self.dropout_rate,
-                                       batch_first=True)
+            if self.num_layers_wordrnn != 1:
+                self.decode_step = nn.LSTM(input_size=self.embed_dim, hidden_size=self.hidden_size,
+                                           num_layers=self.num_layers_wordrnn, dropout=self.dropout_rate,
+                                           batch_first=True)
+            else:
+                self.decode_step = nn.LSTM(input_size=self.embed_dim, hidden_size=self.hidden_size,
+                                           num_layers=self.num_layers_wordrnn,
+                                           batch_first=True)
         else:
             raise Exception('Unknown RNN type.')
 

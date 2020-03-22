@@ -103,11 +103,14 @@ def main(args):
 
     elif args.encoder_type == 'densecap':
         encoder = RegPool(args)
-        encoder_optimizer = torch.optim.Adam(params=filter(lambda p: p.requires_grad,
-                                             encoder.parameters()),
-                                             lr=args.encoder_lr)
-                                             #weight_decay=args.encoder_weight_decay)
-        #encoder_optimizer = None
+        if args.feature_linear:
+            encoder_optimizer = torch.optim.Adam(params=filter(lambda p: p.requires_grad,
+                                                 encoder.parameters()),
+                                                 lr=args.encoder_lr)
+                                                 #weight_decay=args.encoder_weight_decay)
+        elif not args.feature_linear:
+            encoder_optimizer = None
+
         # Load train and val datasets
         print('Loading DenseCap features...')
 

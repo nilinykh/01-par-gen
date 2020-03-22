@@ -42,10 +42,6 @@ def train(train_loader,
     with logger.train():
         for i, (imgs, image_ids, caps, caplens) in enumerate(train_loader):
 
-            sentence_optimizer.zero_grad()
-            word_optimizer.zero_grad()
-            encoder_optimizer.zero_grad()
-
             data_time.update(time.time() - start)
 
             imgs = imgs.to(device)
@@ -115,7 +111,8 @@ def train(train_loader,
 
             sentence_optimizer.zero_grad()
             word_optimizer.zero_grad()
-            encoder_optimizer.zero_grad()
+            if args.feature_linear:
+                encoder_optimizer.zero_grad()
 
             loss.backward()
 
@@ -125,7 +122,8 @@ def train(train_loader,
 
             sentence_optimizer.step()
             word_optimizer.step()
-            encoder_optimizer.step()
+            if args.feature_linear:
+                encoder_optimizer.step()
 
             # Print status
             if i % int(args.print_freq) == 0:

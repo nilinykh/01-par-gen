@@ -28,9 +28,11 @@ C-W: clipping for word LSTM\
 LN-W: layer normalisation for word LSTM\
 BN-E: batch normalisation for encoder\
 VL-min: minimal validation set loss that has been achieved
+VL-min-W: word validation min loss
+VL-min-S: sentence validatin min loss
 
-| Exp Num | Feat-Extractor | Proj-Matrix | BS | LR-S | LR-W | NL-W | D-W | L-S | L-W | C-S | C-W | LN-W | BN-E | VL-min |
-|---|----------------|---------|----|------|------|------|-----|-----|-----|-----|-----|------|------|------|
-|  simple |       DenseCap         |     -    |  64  |   1e-4   |   1e-3   |   1   |  -   |  1   |  1   |  -   |  -  |  -  |  -    |      |
+| Exp Num | Feat-Extractor | Proj-Matrix | BS | LR-S | LR-W | NL-W | D-W | L-S | L-W | C-S | C-W | LN-W | BN-E | VL-min | VL-min-W | VL-min-S |
+|---|----------------|---------|----|------|------|------|-----|-----|-----|-----|-----|------|------|------|------|------|
+|  simple |       DenseCap         |     -    |  64  |   1e-4   |   1e-3   |   1   |  -   |  1   |  1   |  -   |  -  |  -  |  -    |      |      |      |
 |   |                |         |    |      |      |      |     |     |     |     |     |      |      |      |
 |   |                |         |    |      |      |      |     |     |     |     |     |      |      |      |

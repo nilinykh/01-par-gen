@@ -14,6 +14,7 @@
 
 ### Experiments
 
+Proj-Matrix: linear layer for image features\
 BS: batch size\
 LR-S: learning rate for the sentence LSTM\
 LR-W: learning rate for the word LSTM\
@@ -27,7 +28,7 @@ LN-W: layer normalisation for word LSTM\
 BN-E: batch normalisation for encoder\
 VL-min: minimal validation set loss that has been achieved
 
-| Exp Num | Feat-Extractor | Encoder | BS | LR-S | LR-W | NL-W | D-W | L-S | L-W | C-S | C-W | LN-W | BN-E | VL-min |
+| Exp Num | Feat-Extractor | Proj-Matrix | BS | LR-S | LR-W | NL-W | D-W | L-S | L-W | C-S | C-W | LN-W | BN-E | VL-min |
 |---|----------------|---------|----|------|------|------|-----|-----|-----|-----|-----|------|------|------|
 |  1 |       DenseCap         |     +    |    |      |      |      |     |     |     |     |     |      |      |      |
 |   |                |         |    |      |      |      |     |     |     |     |     |      |      |      |

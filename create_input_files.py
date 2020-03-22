@@ -7,7 +7,7 @@ if __name__ == '__main__':
                        image_folder='/home/xilini/vis-data/',
                        densecap_feat_folder='/home/xilini/out/',
                        max_sentences=6,
-                       min_word_freq=2,
+                       min_word_freq=1,
                        output_folder='/home/xilini/par-gen/01-par-gen/data/',
                        encoder_type='densecap',
                        max_words=50)

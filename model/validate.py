@@ -1,15 +1,19 @@
+import sys
 import time
 import json
+import pathlib
 
 from torch import nn
 import torch.backends.cudnn as cudnn
 import torch.nn.functional as F
 
-from utils import *
 from evalfunc.bleu.bleu import Bleu
 from evalfunc.rouge.rouge import Rouge
 from evalfunc.cider.cider import Cider
 from evalfunc.meteor.meteor import Meteor
+
+sys.path.append('/home/xilini/par-gen/01-par-gen')
+from utils import *
 
 device = torch.device("cuda")
 cudnn.benchmark = True
@@ -169,6 +173,8 @@ def validate(val_loader,
                     hypotheses_batch[image_ids[predicted_paragraph].item()] = par_text
 
                 assert len(references_batch.keys()) == len(hypotheses_batch.keys())
+
+                pathlib.Path(f'./generation_validate').mkdir(parents=True, exist_ok=True)
 
                 with open(f'./generation_validate/hyp_{args.exp_num}.json', 'w') as f:
                     json.dump(hypotheses_batch, f)

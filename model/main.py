@@ -5,6 +5,7 @@ full training and validation loop
 # do not forget to set CUDA_VISIBLE_DEVICES to any of the gpus you would like to use (!!!)
 
 import argparse
+import sys
 from configparser import ConfigParser
 
 from comet_ml import Experiment
@@ -21,6 +22,7 @@ from validate import *
 device = torch.device("cuda")
 cudnn.benchmark = True
 
+sys.path.append('/home/xilini/par-gen/01-par-gen')
 
 def main(args):
     """
@@ -212,11 +214,14 @@ def main(args):
         #word_lr_scheduler.step(val_this_epoch_word)
 
         # Check if there was an improvement
-
-        if initial_best_loss < val_epoch_loss:
+        if initial_best_loss == 0 and initial_best_loss < val_epoch_loss:
             is_best = True
             initial_best_loss = val_epoch_loss
-        is_best = False
+        elif initial_best_loss > val_epoch_loss:
+            is_best = True
+            initial_best_loss = val_epoch_loss
+        else:
+            is_best = False
 
         # Save checkpoint
         save_checkpoint(data_name,
@@ -237,7 +242,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     config_parser = ConfigParser()
-    config_parser.read('config.ini')
+    config_parser.read('../config.ini')
 
     # Get data paths
     densecap_path = config_parser.get('BASEPATH', 'densecap_path')

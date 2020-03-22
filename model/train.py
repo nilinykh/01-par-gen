@@ -1,7 +1,10 @@
+
+import sys
 import time
 import torch.backends.cudnn as cudnn
-from utils import *
 
+sys.path.append('/home/xilini/par-gen/01-par-gen')
+from utils import *
 
 device = torch.device("cuda")
 cudnn.benchmark = True

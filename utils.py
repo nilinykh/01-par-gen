@@ -241,6 +241,14 @@ def create_input_files(dataset,
             with open(os.path.join(output_folder, split + '_CAPLENS_' + base_filename + encoder_type + '.json'), 'w') as j:
                 json.dump(caplens, j)
 
+def caplens_eos(caplens, max_sents):
+    caplens_f = torch.flatten(caplens).type(torch.LongTensor)
+    caplens_f[caplens_f != 3] = 0
+    caplens_f[caplens_f == 3] = 1
+    caplens_f = caplens_f.unsqueeze(1)
+    init_inx = np.array([i for i in range(len(caplens_f)) if i % max_sents == 0])
+    return caplens_f, init_inx
+
 
 def save_checkpoint(data_name,
                     epoch,
@@ -268,10 +276,10 @@ def save_checkpoint(data_name,
              'word_optimizer': word_optimizer,
              'exp_num': exp_num}
 
-    pathlib.Path(f'./models/{exp_num}').mkdir(parents=True, exist_ok=True)
-    pathname = f'./models/{exp_num}/'
-    filename = f'checkpoint_{data_name}.pth.tar'
-    best_filename = f'BEST_checkpoint_{data_name}.pth.tar'
+    pathlib.Path(f'./checkpoints/{exp_num}').mkdir(parents=True, exist_ok=True)
+    pathname = f'./checkpoints/{exp_num}/'
+    filename = f'checkpoint.pth.tar'
+    best_filename = f'BEST_checkpoint.pth.tar'
 
     torch.save(state, pathname + filename)
     if is_best:

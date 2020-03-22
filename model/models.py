@@ -28,42 +28,45 @@ class RegPool(nn.Module):
     following Krause 2016 paragraph paper
     '''
     def __init__(self, args):
-        
-        print('Operation on features: Linear -> Leaky ReLU -> max ->')
-        
+
         super(RegPool, self).__init__()
         self.batch_size = args.batch_size
         self.num_boxes = args.num_boxes
         self.feats_dim = args.densecap_feat_dim
         self.project_dim = args.pooling_dim
-        
-        self.projection_matrix = nn.Linear(self.feats_dim, self.project_dim)
+
+        if args.feature_linear:
+            self.linear_transformation = True
+            self.projection_matrix = nn.Linear(self.feats_dim, self.project_dim)
+            self.__init_weights()
+        elif not args.feature_linear:
+            self.linear_transformation = False
+
         if args.bn:
             self.bn = nn.BatchNorm1d(self.project_dim, momentum=0.9)
-        else:
+        elif not args.bn:
             self.bn = False
-        self.__init_weights()
-        
+
     def __init_weights(self):
         nn.init.normal_(self.projection_matrix.weight)
         nn.init.constant_(self.projection_matrix.bias, 0.0)
-        
+
     def forward(self, features):
         """
         :input: images, a tensor of dimension (batch_size, num_boxes, feats_dim)
         :return: pooled vector
         """
-                
-        project_vec = nn.LeakyReLU()(self.projection_matrix(features))
+        if self.linear_transformation:
+            project_vec = nn.LeakyReLU()(self.projection_matrix(features))
+        else:
+            project_vec = features
         project_vec_all = torch.max(project_vec, 1).values
-        
-        # L2 normalisation is below to test for future
+        # L2 normalisation of features is below to test for future
         #project_vec_all = F.normalize(project_vec_all, p=2, dim=1)
-        
         if self.bn:
             project_vec_all = self.bn(project_vec_all)
         return project_vec_all
-        
+
 
 
 class Encoder(nn.Module):
@@ -126,13 +129,14 @@ class SentenceRNN(nn.Module):
         self.eos_classes = args.eos_classes
         self.embed_size = args.embed_dim
         super(SentenceRNN, self).__init__()
-        
+
         if args.encoder_type == 'resnet512':
             self.feat_dim = args.resnet512_feat_dim
         elif args.encoder_type == 'densecap':
-            self.feat_dim = args.pooling_dim
-            # 4096 if no encoder is used
-            #self.feat_dim = 4096
+            if args.feature_linear:
+                self.feat_dim = args.pooling_dim
+            else:
+                self.feat_dim = 4096
         else:
             raise Exception('Unknown encoder type.')
 
@@ -155,16 +159,15 @@ class SentenceRNN(nn.Module):
             else:
                 self.use_non_lin = False
             self.no_fc = False
-            
+
         else:
             self.no_fc = True
-        
+
         if args.dropout_stopping != 0:
             print('Stopping: Linear -> LeakyReLU -> Dropout')
             self.dropout_stopping = nn.Dropout(p=args.dropout_stopping)
         elif args.dropout_stopping == 0:
             self.dropout_stopping = False
-        #self.dropout_fc = nn.Dropout(p=args.dropout_fc)
         self.__init_weights()
 
     def __init_weights(self):
@@ -193,25 +196,23 @@ class SentenceRNN(nn.Module):
         end of the paragraph probability,
         topic of the sentence to be fed to wordRNN
         '''
-        
+
         if pooling_vector.shape[0] != self.batch_size:
             self.batch_size = pooling_vector.shape[0]
         h, c = states
         h = h.to(device)
         c = c.to(device)
-        
+
         pooling_vector = pooling_vector.unsqueeze(1)
         out, (h, c) = self.sentence_rnn(pooling_vector, (h, c))
         # h -> 1 x batch size x hid dim
-        
-        #if self.dropout_stopping:
-        #    prob = self.dropout_stopping(nn.LeakyReLU()(self.logistic(out)))
+
         prob = nn.LeakyReLU()(self.logistic(out))
         #prob = self.logistic(out)
         prob = prob.squeeze(1).squeeze(1)
 
         if not self.no_fc:
-        
+
             if self.use_non_lin:
                 if self.use_fc2:
                     topic = self.fc2(self.non_lin(self.fc1(out)))
@@ -222,9 +223,9 @@ class SentenceRNN(nn.Module):
                     topic = self.fc2(self.fc1(out))
                 else:
                     topic = self.fc(out)
-                
+
         if self.no_fc:
-        
+
             #topic = self.dropout_fc(out)
             topic = out
 
@@ -279,7 +280,7 @@ class WordRNN(nn.Module):
         if self.word_dropout:
             print('Projection: Linear -> Leaky ReLU -> Dropout')
         #self.linear_dropout = nn.Dropout(p=self.word_dropout)
-    
+
     def __init_embeddings(self):
         initrange = 0.1
         self.embeddings.weight.data.uniform_(-initrange, initrange)
@@ -317,4 +318,3 @@ class WordRNN(nn.Module):
         outputs = nn.LeakyReLU()(self.linear(outputs))
 
         return outputs, outputs_lengths, caps, caplens, h, c
-

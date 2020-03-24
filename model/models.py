@@ -312,8 +312,10 @@ class WordRNN(nn.Module):
         c = c.to(device)
         if new_batch_size != self.batch_size:
             self.batch_size = new_batch_size
+
         embeddings = self.embeddings(caps)
         embeddings = torch.cat([topic, embeddings], 1)
+        #print(embeddings, embeddings.shape)
         packed = pack_padded_sequence(embeddings, caplens, batch_first=True, enforce_sorted=False)
         hiddens, (h, c) = self.decode_step(packed, (h, c))
         outputs, outputs_lengths = pad_packed_sequence(hiddens, batch_first=True)

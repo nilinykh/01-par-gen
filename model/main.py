@@ -133,6 +133,9 @@ def main(args):
     else:
         raise Exception('Unrecognized encoder type.')
 
+    print(len(train_loader))
+    print(len(val_loader))
+
     sentence_decoder = SentenceRNN(args)
     word_decoder = WordRNN(args)
 

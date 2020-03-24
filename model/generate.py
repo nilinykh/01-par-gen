@@ -7,8 +7,8 @@ generation script
 import argparse
 from configparser import ConfigParser
 import time
+from itertools import islice
 
-from comet_ml import Experiment
 import torch.backends.cudnn as cudnn
 import torch.optim
 from torch.utils import data
@@ -30,41 +30,8 @@ cudnn.benchmark = True
 
 def main(args):
     """
-    Training and validation.
+    Generation
     """
-
-    experiment = Experiment(api_key=args.api_key,
-                            project_name=args.project_name, workspace=args.workspace)
-
-    hyper_params = {
-        'batch_size': args.batch_size,
-        'num_epochs': args.num_epochs,
-        'rnn_type': args.rnn_arch,
-        'encoder_type': args.encoder_type,
-        'rnn_hidden_init': args.rnn_hidden_init,
-        'embeddings_pretrained': args.embeddings_pretrained,
-        'freeze': args.freeze,
-        'encoder_lr': args.encoder_lr,
-        'layers_wordrnn': args.num_layers_wordrnn,
-        'sentence_decoder_lr': args.sentence_lr,
-        'word_decoder_lr': args.word_lr,
-        'lambda_sentence': args.lambda_sentence,
-        'lambda_word': args.lambda_word,
-        'max_sentence': args.max_sentences,
-        'max_words': args.max_words,
-        'encoder_dropout': args.encoder_dropout,
-        'word_dropout': args.word_dropout,
-        'wordlstm_dropout': args.wordlstm_dropout,
-        'dropout_fc': args.dropout_fc,
-        'dropout_stopping': args.dropout_stopping,
-        'layer_norm': args.layer_norm,
-        'encoder_weight_decay': args.encoder_weight_decay,
-        'sentence_weight_decay': args.sentence_weight_decay,
-        'word_weight_decay': args.word_weight_decay,
-        'clipping': args.clipping
-    }
-
-    experiment.log_parameters(hyper_params)
 
     if args.embeddings_pretrained:
         word_to_idx = os.path.join(args.densecap_path, 'word_to_idx' + '.json')
@@ -114,11 +81,15 @@ def main(args):
         print('Loading DenseCap features...')
 
         val_loader = data.DataLoader(
-            ParagraphDataset(args.data_folder, args.data_name, 'TEST'),
+            ParagraphDataset(args.data_folder, args.data_name, 'VAL'),
             batch_size=args.batch_size, shuffle=True,
             num_workers=args.workers, pin_memory=True)
 
         encoder_optimizer = None
+        
+        # pick X elements for generation only
+        val_iterator = iter(val_loader)
+        val_loader = list(islice(val_iterator, 1))
 
         #test_loader = data.DataLoader(
         #    ParagraphDataset(args.data_folder, args.data_name, 'TEST',
@@ -146,18 +117,18 @@ def main(args):
     train_step = 0
     val_step = 0
     # Epochs
-    for epoch in range(args.start_epoch, args.num_epochs):
+    #for epoch in range(args.start_epoch, args.num_epochs):
 
-        # One epoch's validation
-        _ = generate(val_loader=val_loader,
-                     encoder=encoder,
-                     sentence_decoder=sentence_decoder,
-                     word_decoder=word_decoder,
-                     logger=experiment,
-                     vocab_size=vocab_size,
-                     word_to_idx=word_to_idx,
-                     idx_to_word=idx_to_word,
-                     args=args)
+    # One epoch's validation
+    _ = generate(val_loader=val_loader,
+                 encoder=encoder,
+                 sentence_decoder=sentence_decoder,
+                 word_decoder=word_decoder,
+                 logger=None,
+                 vocab_size=vocab_size,
+                 word_to_idx=word_to_idx,
+                 idx_to_word=idx_to_word,
+                 args=args)
 
 
 def generate(val_loader,
@@ -178,6 +149,7 @@ def generate(val_loader,
     :param criterion: loss layer
     :return: BLEU-4 score
     """
+    
     sentence_decoder.eval()
     word_decoder.eval()
     if encoder is not None:
@@ -186,54 +158,72 @@ def generate(val_loader,
     cider_epoch = {}
     cider_epoch['CIDEr'] = list()
 
-    with logger.test():
-        with torch.no_grad():
-            # Batches
-            for _, (imgs, image_ids, caps, caplens) in enumerate(val_loader):
+    with torch.no_grad():
+        # Batches
+        for _, (imgs, image_ids, caps, caplens) in enumerate(val_loader):
+            
+            #for the purpose of making sure generated texts make sense
+            references_batch = dict()
+            hypotheses_batch = dict()
 
-                # for the purpose of making sure generated texts make sense
-                references_batch = dict()
-                hypotheses_batch = dict()
+            # Move to GPU, if available
+            imgs = imgs.to(device)
+            image_ids = image_ids.to(device)
+            caps = caps.to(device)
+            caplens = caplens.to(device)
 
-                # Move to GPU, if available
-                imgs = imgs.to(device)
-                image_ids = image_ids.to(device)
-                caps = caps.to(device)
-                caplens = caplens.to(device)
+            imgs = encoder(imgs)
+            args.batch_size = imgs.shape[0]
 
-                imgs = encoder(imgs)
-                args.batch_size = imgs.shape[0]
+            if args.encoder_type == 'resnet512':
+                # Prepare images for sentence decoder
+                imgs = imgs.view(args.batch_size, -1, args.resnet512_feat_dim)
+                num_pixels = imgs.size(1)
+                imgs = imgs.mean(dim=1)
 
-                if args.encoder_type == 'resnet512':
-                    # Prepare images for sentence decoder
-                    imgs = imgs.view(args.batch_size, -1, args.resnet512_feat_dim)
-                    num_pixels = imgs.size(1)
-                    imgs = imgs.mean(dim=1)
+            scores_all = torch.zeros(imgs.shape[0], args.max_sentences, args.max_words + 2, vocab_size).to(device)
+            targets_all = torch.zeros(imgs.shape[0], args.max_sentences, args.max_words + 2).to(device)
 
-                scores_all = torch.zeros(imgs.shape[0], args.max_sentences, args.max_words + 2, vocab_size).to(device)
-                targets_all = torch.zeros(imgs.shape[0], args.max_sentences, args.max_words + 2).to(device)
+            h_sent = torch.zeros(args.num_layers_sentencernn, imgs.shape[0], args.hidden_size)
+            c_sent = torch.zeros(args.num_layers_sentencernn, imgs.shape[0], args.hidden_size)
+            h_word = torch.zeros(args.num_layers_wordrnn, imgs.shape[0], args.hidden_size)
+            c_word = torch.zeros(args.num_layers_wordrnn, imgs.shape[0], args.hidden_size)
 
-                h_sent = torch.zeros(args.num_layers_sentencernn, imgs.shape[0], args.hidden_size)
-                c_sent = torch.zeros(args.num_layers_sentencernn, imgs.shape[0], args.hidden_size)
-                h_word = torch.zeros(args.num_layers_wordrnn, imgs.shape[0], args.hidden_size)
-                c_word = torch.zeros(args.num_layers_wordrnn, imgs.shape[0], args.hidden_size)
+            for sent_num in range(args.max_sentences):
 
-                for sent_num in range(args.max_sentences):
+                # SentenceRNN
+                p_source, topic, h_sent, c_sent = sentence_decoder(imgs, (h_sent, c_sent))
 
-                    # SentenceRNN
-                    p_source, topic, h_sent, c_sent = sentence_decoder(imgs, (h_sent, c_sent))
+                p = nn.Sigmoid()(p_source)
+                # break paragraph generation if the probability to STOP
+                # is higher than the threshold
+                #print(p.item(), sent_num)
+                if p.item() > 0.5:
+                    break
 
-                    p = nn.Sigmoid()(p_source)
-                    # break paragraph generation if the probability to STOP
-                    # is higher than the threshold
-                    if p.item() > 0.5:
-                        break
+                # WordRNN
+                current_captions = caps[:, sent_num, :]
+                current_caplens = caplens.squeeze(1)[:, sent_num]
+                max_seq_length = current_caplens[torch.argmax(current_caplens, dim=0)]
 
-                    # WordRNN
-                    current_captions = caps[:, sent_num, :]
-                    current_caplens = caplens.squeeze(1)[:, sent_num]
-                    max_seq_length = current_caplens[torch.argmax(current_caplens, dim=0)]
+                #print(current_captions)
+                #print(current_caplens)
+                #print(topic)
 
+                # ignore empty, non-existing sentences in calculations
+                nonzero_indices = (current_caplens!=0).nonzero()
+                nonzero_indices = nonzero_indices.flatten()
+                #print(nonzero_indices)
+                current_captions = torch.index_select(current_captions, 0, nonzero_indices)
+                current_caplens = torch.index_select(current_caplens, 0, nonzero_indices)
+                topic = torch.index_select(topic, 0, nonzero_indices)
+
+
+                if nonzero_indices.shape[0] == 0:
+                    
+                    continue
+
+                else:
                     scores,\
                     _,\
                     caps_decoder,\
@@ -242,80 +232,89 @@ def generate(val_loader,
                                                   (h_word, c_word))
 
                     targets = caps_decoder[:, :max_seq_length]
-                    scores_all[:, sent_num, :max_seq_length, :] = scores
-                    targets_all[:, sent_num, :max_seq_length] = targets
+                    scores_all[:scores.shape[0], sent_num, :max_seq_length, :] = scores
+                    targets_all[:targets.shape[0], sent_num, :max_seq_length] = targets
 
-                # EVALUATION
+            # EVALUATION
 
-                # Get references
-                for single_paragraph in range(targets_all.shape[0]):
-                    img_caps = targets_all[single_paragraph].tolist()
-                    img_captions = list(
-                        map(lambda c: [w for w in c if w not in {word_to_idx['<start>'], word_to_idx['<pad>']}],
-                            img_caps))  # remove <start> and pads
-                    paragraph_text = []
-                    for sent in img_captions:
-                        this_sent_text = [idx_to_word[w] for w in sent]
-                        paragraph_text.append(' '.join(this_sent_text))
-                    references_batch[image_ids[single_paragraph].item()] = paragraph_text
+            # Get references
+            for single_paragraph in range(targets_all.shape[0]):
+                img_caps = targets_all[single_paragraph].tolist()
+                img_captions = list(
+                    map(lambda c: [w for w in c if w not in {word_to_idx['<start>'], word_to_idx['<pad>']}],
+                        img_caps))  # remove <start> and pads
+                paragraph_text = []
+                for sent in img_captions:
+                    this_sent_text = [idx_to_word[w] for w in sent]
+                    paragraph_text.append(' '.join(this_sent_text))
+                references_batch[image_ids[single_paragraph].item()] = paragraph_text
 
-                # Get hypotheses
-                # 64 x 6 x 52 x vocab size
-                scores_probs = F.softmax(scores_all, dim=3)
-                preds = torch.argmax(scores_probs, dim=3)
-                caplens_squeezed = caplens.squeeze(1)
-                for predicted_paragraph in range(preds.shape[0]):
-                    par_preds = preds[predicted_paragraph].tolist()
-                    par_text = []
-                    for sent_num, sent in enumerate(par_preds):
-                        this_sentence = sent[:caplens_squeezed[predicted_paragraph, sent_num]]
-                        # remove first prediction (start token)
-                        this_sentence_text = [idx_to_word[w] for w in this_sentence][1:]
-                        text_with_end = []
-                        for elem in this_sentence_text:
-                            if elem != '<end>':
-                                text_with_end.append(elem)
-                            elif elem == '<end>':
-                                break
-                        par_text.append(' '.join(text_with_end))
-                    hypotheses_batch[image_ids[predicted_paragraph].item()] = par_text
+            # Get hypotheses
+            # 64 x 6 x 52 x vocab size
+            scores_probs = F.softmax(scores_all, dim=3)
+            preds = torch.argmax(scores_probs, dim=3)
+            caplens_squeezed = caplens.squeeze(1)
+            for predicted_paragraph in range(preds.shape[0]):
+                par_preds = preds[predicted_paragraph].tolist()
+                par_text = []
+                for sent_num, sent in enumerate(par_preds):
+                    this_sentence = sent[:caplens_squeezed[predicted_paragraph, sent_num]]
+                    # remove first prediction (start token)
+                    this_sentence_text = [idx_to_word[w] for w in this_sentence][1:]
+                    text_with_end = []
+                    for elem in this_sentence_text:
+                        if elem != '<end>':
+                            text_with_end.append(elem)
+                        elif elem == '<end>':
+                            text_with_end.append('<end>')
+                            break
+                    par_text.append(' '.join(text_with_end))
+                hypotheses_batch[image_ids[predicted_paragraph].item()] = par_text
 
-                assert len(references_batch.keys()) == len(hypotheses_batch.keys())
+            assert len(references_batch.keys()) == len(hypotheses_batch.keys())
 
-                print('REFERENCES\t', references_batch)
-                #with open('./results_base.json', 'w') as f:
-                #    json.dump(hypotheses_batch, f)
-                print('HYPOTHESES\t', hypotheses_batch)
-                print()
+            #print('REFERENCES\t', references_batch)
+            #with open('./results_base.json', 'w') as f:
+            #    json.dump(hypotheses_batch, f)
+            #print('HYPOTHESES\t', hypotheses_batch)
+            #print()
 
-                # Calculate BLEU & CIDEr & METEOR & ROUGE scores
-                # WARNING: at the moment, only BLEU is calculated: one hyp sentence is compared to all ref sentences
+            # Calculate BLEU & CIDEr & METEOR & ROUGE scores
+            # WARNING: at the moment, only BLEU is calculated: one hyp sentence is compared to all ref sentences
 
-                scorers = [
+            #scorers = [
 
-                    (Bleu(4), ["Bleu_1", "Bleu_2", "Bleu_3", "Bleu_4"]),
-                    (Cider('coco-val-df'), "CIDEr"),
-                    #(Meteor(), "METEOR"),
-                    #(Rouge(), "ROUGE_L")
-                ]
+            #    (Bleu(4), ["Bleu_1", "Bleu_2", "Bleu_3", "Bleu_4"]),
+            #    (Cider('coco-val-df'), "CIDEr"),
+                #(Meteor(), "METEOR"),
+                #(Rouge(), "ROUGE_L")
+            #]
 
-                score = []
-                method = []
-                for scorer, method_i in scorers:
-                    score_i, _ = scorer.compute_score(references_batch, hypotheses_batch)
-                    score.extend(score_i) if isinstance(score_i, list) else score.append(score_i)
-                    method.extend(method_i) if isinstance(method_i, list) else method.append(method_i)
+            #score = []
+            #method = []
+            #for scorer, method_i in scorers:
+            #    score_i, _ = scorer.compute_score(references_batch, hypotheses_batch)
+            #    score.extend(score_i) if isinstance(score_i, list) else score.append(score_i)
+            #    method.extend(method_i) if isinstance(method_i, list) else method.append(method_i)
 
-                score_dict = dict(zip(method, score))
-                print(score_dict)
-
+            #score_dict = dict(zip(method, score))
+            #print(score_dict)
+    
+            print()
+            print('IMAGE ID', list(references_batch.keys())[0])
+            print('GROUND TRUTH')
+            print(references_batch.values())
+            print('GENERATED')
+            print(hypotheses_batch.values())
+            print('------------------')
+            
     return None
 
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     config_parser = ConfigParser()
-    config_parser.read('config.ini')
+    config_parser.read('../config.ini')
 
     # Get data paths
     densecap_path = config_parser.get('BASEPATH', 'densecap_path')
@@ -375,6 +374,7 @@ if __name__ == '__main__':
     no_fc = config_parser.getboolean('PARAMS-SENTENCE', 'no_fc')
     bn = config_parser.getboolean('PARAMS-MODELS', 'bn')
     wordlstm_dropout = config_parser.get('PARAMS-WORD', 'wordlstm_dropout')
+    feature_linear = config_parser.getboolean('PARAMS-MODELS', 'feature_linear')
     model_trained = config_parser.get('PARAMS-MODELS', 'model_trained')
 
     api_key = config_parser.get('COMET', 'api_key')
@@ -385,7 +385,7 @@ if __name__ == '__main__':
     parser.add_argument('--data_folder', type=str, default=out_path, help='path to all input data')
     parser.add_argument('--data_name', type=str, default=data_name, help='shared name among target files')
     parser.add_argument('--model_path', type=str, default=checkpoint_path, help='path for keeping model"s checkpoints')
-    parser.add_argument('--model_trained', type=str, default=model_trained, help='load weights from specified model')
+    parser.add_argument('--model_trained', type=str, default=model_trained, help='actual trained model to use for generation')
     parser.add_argument('--densecap_path', type=str, default=densecap_path, help='path to the pretrained DenseCap materials')
     parser.add_argument('--data_folder_densecap', type=str, default=data_folder_densecap, help='path to the data when using DenseCap encoder')
 
@@ -437,6 +437,7 @@ if __name__ == '__main__':
     parser.add_argument('--no_fc', type=bool, default=no_fc, help='use fully connected layer or not for topic modelling')
     parser.add_argument('--bn', type=bool, default=bn, help='apply batch normalisation in the encoder or not')
     parser.add_argument('--wordlstm_dropout', type=float, default=wordlstm_dropout, help='dropout for embedding layer')
+    parser.add_argument('--feature_linear', type=bool, default=feature_linear, help='add linear layer for image features or not')
 
     parser.add_argument('--api_key', type=str, default=api_key, help='key for the Comet logger')
     parser.add_argument('--project_name', type=str, default=project_name, help='name of the project')

@@ -218,15 +218,14 @@ def create_input_files(dataset,
                     # Encode captions
                     if cap[0] != '<pad>':
 
-                        enc_c = [word_map['<start>']] + [word_map.get(word, word_map['<unk>']) for word in cap] + [
-                            word_map['<end>']] + [word_map['<pad>']] * (max_words - len(cap))
+                        enc_c = [word_map['<start>']] + [word_map.get(word, word_map['<unk>']) for word in cap] + [word_map['<end>']] + [word_map['<pad>']] * (max_words - len(cap))
+                        
+                        c_len = len(cap) + 2
 
                     elif cap[0] == '<pad>':
 
                         enc_c = [word_map['<pad>']] * (max_words + 2)
-
-                    # Find caption lengths
-                    c_len = len(cap) + 2
+                        c_len = 0
 
                     enc_captions.append(enc_c)
                     caplens.append(c_len)
@@ -243,11 +242,17 @@ def create_input_files(dataset,
 
 def caplens_eos(caplens, max_sents):
     caplens_f = torch.flatten(caplens).type(torch.LongTensor)
-    caplens_f[caplens_f != 3] = 0
-    caplens_f[caplens_f == 3] = 1
-    caplens_f = caplens_f.unsqueeze(1)
-    init_inx = np.array([i for i in range(len(caplens_f)) if i % max_sents == 0])
-    return caplens_f, init_inx
+    #print('interm', caplens_f)
+    actual_caplens = torch.zeros(caplens_f.shape[0])
+    #print(actual_caplens)
+    for num, item in enumerate(caplens_f):
+        if item != 0:
+            actual_caplens[num] = 0
+        else:
+            actual_caplens[num] = 1
+    actual_caplens = actual_caplens.unsqueeze(1)
+    init_inx = np.array([i for i in range(len(actual_caplens)) if i % max_sents == 0])
+    return actual_caplens, init_inx
 
 
 def save_checkpoint(data_name,

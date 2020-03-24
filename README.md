@@ -11,7 +11,11 @@
 
 ### Generate paragraphs
 
-1. To generate new paragraphs, run `model/generate.py`. This will also calculate evaluation scores (BLEU and CIDEr only at the moment). Generated paragraphs are displayed in the terminal window.
+1. To generate new paragraphs, run `model/generate.py`. This will also calculate evaluation scores, simply uncomment corresponding lines in the script if you want to get the scores (line ~285, BLEU and CIDEr only are calculated at the moment). Generated paragraphs are displayed in the terminal window.
+
+### Visualise (check paragraphs and images)
+
+1. Run `visualise.ipynb`, this will run generation script and it provides you with function to see image for which paragraph has been generated. You will also see both ground-truth and generated paragraphs. How many images to generate paragraphs for, which splits to use, etc. can be changed in `model/generate.py`.
 
 ### Experiments
 

@@ -15,6 +15,9 @@
 
 ### Experiments
 
+Dataset information:
+Visual Genome images with paragraphs, 14579 train set, 2490 validation set.
+
 Proj-Matrix: linear layer for image features\
 BS: batch size\
 LR-S: learning rate for the sentence LSTM\
@@ -33,6 +36,6 @@ VL-min-S: sentence validatin min loss
 
 | Exp Num | Feat-Extractor | Proj-Matrix | BS | LR-S | LR-W | NL-W | D-W | L-S | L-W | C-S | C-W | LN-W | BN-E | VL-min | VL-min-W | VL-min-S |
 |---|----------------|---------|----|------|------|------|-----|-----|-----|-----|-----|------|------|------|------|------|
-|  simple |       DenseCap         |     -    |  64  |   1e-4   |   1e-3   |   1   |  -   |  1   |  1   |  -   |  -  |  -  |  -    |      |      |      |
+|  simple |       DenseCap         |     -    |  32  |   1e-4   |   1e-3   |   1   |  -   |  1   |  1   |  -   |  -  |  -  |  -    |   11.01   |   7.78   |   2.77   |
 |   |                |         |    |      |      |      |     |     |     |     |     |      |      |      |
 |   |                |         |    |      |      |      |     |     |     |     |     |      |      |      |

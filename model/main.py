@@ -144,8 +144,8 @@ def main(args):
 
     sentence_optimizer = torch.optim.Adam(list(sentence_decoder.parameters()), lr=args.sentence_lr,
                                           weight_decay=args.sentence_weight_decay)
-    word_optimizer = torch.optim.Adam(list(word_decoder.parameters()), lr=args.word_lr)
-                                           #weight_decay=args.word_weight_decay)
+    word_optimizer = torch.optim.Adam(list(word_decoder.parameters()), lr=args.word_lr,
+                                           weight_decay=args.word_weight_decay)
 
     print('IMAGE ENCODER', encoder)
     print('SENTENCE DECODER', sentence_decoder)
@@ -305,10 +305,11 @@ if __name__ == '__main__':
     word_weight_decay = config_parser.get('PARAMS-WORD', 'word_weight_decay')
     sentence_nonlin = config_parser.getboolean('PARAMS-SENTENCE', 'sentence_nonlin')
     use_fc2 = config_parser.getboolean('PARAMS-SENTENCE', 'use_fc2')
-    no_fc = config_parser.getboolean('PARAMS-SENTENCE', 'no_fc')
+    use_fc = config_parser.getboolean('PARAMS-SENTENCE', 'use_fc')
     bn = config_parser.getboolean('PARAMS-MODELS', 'bn')
     wordlstm_dropout = config_parser.get('PARAMS-WORD', 'wordlstm_dropout')
     feature_linear = config_parser.getboolean('PARAMS-MODELS', 'feature_linear')
+    topic_hidden = config_parser.getboolean('PARAMS-WORD', 'topic_hidden')
 
     api_key = config_parser.get('COMET', 'api_key')
     project_name = config_parser.get('COMET', 'project_name')
@@ -366,10 +367,11 @@ if __name__ == '__main__':
     parser.add_argument('--word_weight_decay', type=float, default=word_weight_decay, help='weight decay for the word LSTM')
     parser.add_argument('--sentence_nonlin', type=bool, default=sentence_nonlin, help='use non-linearity in sentence LSTM or not')
     parser.add_argument('--use_fc2', type=bool, default=use_fc2, help='use 2 linear layers for topic creating or 1 linear layer')
-    parser.add_argument('--no_fc', type=bool, default=no_fc, help='use fully connected layer or not for topic modelling')
+    parser.add_argument('--use_fc', type=bool, default=use_fc, help='use fully connected layer or not for topic modelling')
     parser.add_argument('--bn', type=bool, default=bn, help='apply batch normalisation in the encoder or not')
     parser.add_argument('--wordlstm_dropout', type=float, default=wordlstm_dropout, help='dropout for embedding layer')
     parser.add_argument('--feature_linear', type=bool, default=feature_linear, help='add linear layer for image features or not')
+    parser.add_argument('--topic_hidden', type=bool, default=topic_hidden, help='initialise word LSTM from image topic or not')
 
     parser.add_argument('--api_key', type=str, default=api_key, help='key for the Comet logger')
     parser.add_argument('--project_name', type=str, default=project_name, help='name of the project')

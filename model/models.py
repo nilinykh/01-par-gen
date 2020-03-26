@@ -56,13 +56,14 @@ class RegPool(nn.Module):
         :input: images, a tensor of dimension (batch_size, num_boxes, feats_dim)
         :return: pooled vector
         """
+        #features = nn.Dropout()(features)
         if self.linear_transformation:
             project_vec = nn.LeakyReLU()(self.projection_matrix(features))
         else:
             project_vec = features
         project_vec_all = torch.max(project_vec, 1).values
         # L2 normalisation of features is below to test for future
-        #project_vec_all = F.normalize(project_vec_all, p=2, dim=1)
+        project_vec_all = F.normalize(project_vec_all, p=2, dim=1)
         if self.bn:
             project_vec_all = self.bn(project_vec_all)
         return project_vec_all
@@ -143,15 +144,18 @@ class SentenceRNN(nn.Module):
         self.sentence_rnn = nn.LSTM(input_size=self.feat_dim, hidden_size=self.hidden_size,
                                     num_layers=self.num_layers_sentencernn, batch_first=True)
         self.logistic = nn.Linear(self.hidden_size, self.eos_classes)
+        self.non_lin = nn.LeakyReLU()
 
-        if not args.no_fc:
+        if args.use_fc:
             if args.use_fc2:
                 self.fc1 = nn.Linear(self.hidden_size, self.pooling_dim)
-                self.fc2 = nn.Linear(self.pooling_dim, self.embed_size)
+                self.fc2 = nn.Linear(self.pooling_dim, self.pooling_dim)
                 self.use_fc2 = True
+                self.use_fc = True
             else:
-                self.fc = nn.Linear(self.hidden_size, self.embed_size)
+                self.fc1 = nn.Linear(self.hidden_size, self.pooling_dim)
                 self.use_fc2 = False
+                self.use_fc = True
 
             if args.sentence_nonlin:
                 self.use_non_lin = True
@@ -162,6 +166,8 @@ class SentenceRNN(nn.Module):
 
         else:
             self.no_fc = True
+            self.use_fc = False
+            self.use_fc2 = False
 
         if args.dropout_stopping != 0:
             print('Stopping: Linear -> LeakyReLU -> Dropout')
@@ -173,15 +179,15 @@ class SentenceRNN(nn.Module):
     def __init_weights(self):
         nn.init.normal_(self.logistic.weight)
         nn.init.constant_(self.logistic.bias, 0.0)
-        if not self.no_fc:
+        if self.use_fc:
             if self.use_fc2:
                 nn.init.normal_(self.fc1.weight)
                 nn.init.normal_(self.fc2.weight)
                 nn.init.constant_(self.fc1.bias, 0.0)
                 nn.init.constant_(self.fc2.bias, 0.0)
             else:
-                nn.init.normal_(self.fc.weight)
-                nn.init.constant_(self.fc.bias, 0.0)
+                nn.init.normal_(self.fc1.weight)
+                nn.init.constant_(self.fc1.bias, 0.0)
         else:
             print('No FC layers are used for topic modelling')
         for name, param in self.sentence_rnn.named_parameters():
@@ -205,24 +211,16 @@ class SentenceRNN(nn.Module):
 
         pooling_vector = pooling_vector.unsqueeze(1)
         out, (h, c) = self.sentence_rnn(pooling_vector, (h, c))
-        # h -> 1 x batch size x hid dim
 
-        prob = nn.LeakyReLU()(self.logistic(out))
-        #prob = self.logistic(out)
+        prob = self.non_lin(self.logistic(out))
         prob = prob.squeeze(1).squeeze(1)
 
-        if not self.no_fc:
+        if self.use_fc:
 
-            if self.use_non_lin:
-                if self.use_fc2:
-                    topic = self.fc2(self.non_lin(self.fc1(out)))
-                else:
-                    topic = self.non_lin(self.fc1(out))
+            if self.use_fc2:
+                topic = self.fc2(nn.ReLU()(self.fc1(out)))
             else:
-                if self.use_fc2:
-                    topic = self.fc2(self.fc1(out))
-                else:
-                    topic = self.fc(out)
+                topic = self.non_lin(self.fc1(out))
 
         if self.no_fc:
 
@@ -282,9 +280,18 @@ class WordRNN(nn.Module):
             self.layer_norm = False
 
         self.linear = nn.Linear(self.hidden_size, self.vocab_size)
+        #self.additional_linear = nn.Linear(self.hidden_size, self.hidden_size)
+        
         if self.word_dropout:
             print('Projection: Linear -> Leaky ReLU -> Dropout')
         #self.linear_dropout = nn.Dropout(p=self.word_dropout)
+        
+        if args.topic_hidden:
+            self.topic_hidden = True
+            self.init_h = nn.Linear(self.pooling_dim, self.hidden_size)
+            self.init_c = nn.Linear(self.pooling_dim, self.hidden_size)
+        else:
+            self.topic_hidden = False
 
     def __init_embeddings(self):
         initrange = 0.1
@@ -301,20 +308,37 @@ class WordRNN(nn.Module):
         """
         densecap_embeddings = torch.load(weights_matrix)
         return densecap_embeddings
+    
+    def init_hidden_state(self, topic):
+        """
+        Creates the initial hidden and cell states for the decoder's LSTM based on the encoded images.
+        :param encoder_out: encoded images, a tensor of dimension (batch_size, num_pixels, encoder_dim)
+        :return: hidden state, cell state
+        """
+        mean_topic = topic.mean(dim=1)
+        h = self.init_h(mean_topic).unsqueeze(0)  # (batch_size, decoder_dim)
+        c = self.init_c(mean_topic).unsqueeze(0)
+        return h, c
 
 
     def forward(self, topic, caps, caplens, new_batch_size, states):
         '''
         decode image features with word vectors and generate captions
         '''
-        h, c = states
+        
+        if self.topic_hidden:
+            h, c = self.init_hidden_state(topic)
+            caplens = caplens - 1
+        else:
+            h, c = states
         h = h.to(device)
         c = c.to(device)
         if new_batch_size != self.batch_size:
             self.batch_size = new_batch_size
-
         embeddings = self.embeddings(caps)
-        embeddings = torch.cat([topic, embeddings], 1)
+        #embeddings = nn.Dropout()(embeddings)
+        if not self.topic_hidden:
+            embeddings = torch.cat([topic, embeddings], 1)
         #print(embeddings, embeddings.shape)
         packed = pack_padded_sequence(embeddings, caplens, batch_first=True, enforce_sorted=False)
         hiddens, (h, c) = self.decode_step(packed, (h, c))
@@ -322,6 +346,6 @@ class WordRNN(nn.Module):
         # batch size x max seq length x hidden dim
         if self.layer_norm:
             outputs = self.layer_norm(outputs)
-        outputs = nn.LeakyReLU()(self.linear(outputs))
-
+        #outputs = self.additional_linear(outputs)
+        outputs = self.linear(outputs)
         return outputs, outputs_lengths, caps, caplens, h, c

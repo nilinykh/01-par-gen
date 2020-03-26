@@ -219,13 +219,13 @@ def create_input_files(dataset,
                     if cap[0] != '<pad>':
 
                         enc_c = [word_map['<start>']] + [word_map.get(word, word_map['<unk>']) for word in cap] + [word_map['<end>']] + [word_map['<pad>']] * (max_words - len(cap))
-                        
+
                         c_len = len(cap) + 2
 
                     elif cap[0] == '<pad>':
 
                         enc_c = [word_map['<pad>']] * (max_words + 2)
-                        c_len = 0
+                        c_len = 2
 
                     enc_captions.append(enc_c)
                     caplens.append(c_len)

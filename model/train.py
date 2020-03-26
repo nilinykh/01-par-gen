@@ -74,7 +74,8 @@ def train(train_loader,
 
             for sent_num in range(args.max_sentences):
 
-                p_source, topic, h_sent, c_sent = sentence_decoder(imgs, (h_sent, c_sent))
+                p_source, topic, h_sent, c_sent = sentence_decoder(imgs, (h_word, c_word))
+                #(h_word[-1].unsqueeze(0), c_word[-1].unsqueeze(0))
 
                 p_target = torch.LongTensor(caplens_f[init_inx].long().squeeze(1)).to(device)
                 p_target = p_target.type_as(p_source)
@@ -95,40 +96,45 @@ def train(train_loader,
                 #print(topic)
                 
                 # ignore empty, non-existing sentences in calculations
-                nonzero_indices = (current_caplens!=0).nonzero()
-                nonzero_indices = nonzero_indices.flatten()
+                #nonzero_indices = (current_caplens!=0).nonzero()
+                #nonzero_indices = nonzero_indices.flatten()
                 #print(nonzero_indices)
-                current_captions = torch.index_select(current_captions, 0, nonzero_indices)
-                current_caplens = torch.index_select(current_caplens, 0, nonzero_indices)
-                topic = torch.index_select(topic, 0, nonzero_indices)
+                #current_captions = torch.index_select(current_captions, 0, nonzero_indices)
+                #current_caplens = torch.index_select(current_caplens, 0, nonzero_indices)
+                #topic = torch.index_select(topic, 0, nonzero_indices)
                 
                 #print(current_captions)
                 #print(current_caplens)
                 #print(topic)
                 
-                if nonzero_indices.shape[0] == 0:
+                #if nonzero_indices.shape[0] == 0:
                     
-                    sentence_loss += torch.mean(sentrnn_loss)
-                    word_loss += 0
+                #    sentence_loss += torch.mean(sentrnn_loss)
+                #    word_loss += 0
 
+                #else:
+                    
+                scores,\
+                _,\
+                caps_decoder,\
+                _,\
+                h_word, c_word = word_decoder(topic, current_captions, current_caplens, imgs.shape[0], (h_word, c_word))
+
+                #print(max_seq_length)
+                if args.topic_hidden:
+                    targets = caps_decoder[:, 1:max_seq_length]
                 else:
-                    
-                    scores,\
-                    _,\
-                    caps_decoder,\
-                    _,\
-                    h_word, c_word = word_decoder(topic, current_captions, current_caplens, imgs.shape[0], (h_word, c_word))
-                    
                     targets = caps_decoder[:, :max_seq_length]
-                    wordrnn_loss = criterion_word(scores.permute(0, 2, 1), targets) * args.lambda_word
+                #print(targets)
+                wordrnn_loss = criterion_word(scores.permute(0, 2, 1), targets) * args.lambda_word
 
-                    #print(scores, scores.shape)
-                    #print(targets, targets.shape)
-                    #print(wordrnn_loss)
-                    
-                    sentence_loss += torch.mean(sentrnn_loss)
-                    word_loss += torch.mean(wordrnn_loss)
-                    
+                #print(scores, scores.shape)
+                #print(targets, targets.shape)
+                #print(wordrnn_loss)
+
+                sentence_loss += torch.mean(sentrnn_loss)
+                word_loss += torch.mean(wordrnn_loss)
+
                     #print()
                     
                 #print('NOW HERE')

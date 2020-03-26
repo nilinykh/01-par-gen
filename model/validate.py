@@ -86,7 +86,7 @@ def validate(val_loader,
 
                 for sent_num in range(args.max_sentences):
 
-                    p_source, topic, h_sent, c_sent = sentence_decoder(imgs, (h_sent, c_sent))
+                    p_source, topic, h_sent, c_sent = sentence_decoder(imgs, (h_word, c_word))
 
                     p_target = torch.LongTensor(caplens_f[init_inx].long().squeeze(1)).to(device)
                     p_target = p_target.type_as(p_source)
@@ -107,34 +107,44 @@ def validate(val_loader,
                     #print(topic)
 
                     # ignore empty, non-existing sentences in calculations
-                    nonzero_indices = (current_caplens!=0).nonzero()
-                    nonzero_indices = nonzero_indices.flatten()
+                    #nonzero_indices = (current_caplens!=0).nonzero()
+                    #nonzero_indices = nonzero_indices.flatten()
                     #print(nonzero_indices)
-                    current_captions = torch.index_select(current_captions, 0, nonzero_indices)
-                    current_caplens = torch.index_select(current_caplens, 0, nonzero_indices)
-                    topic = torch.index_select(topic, 0, nonzero_indices)
+                    #current_captions = torch.index_select(current_captions, 0, nonzero_indices)
+                    #current_caplens = torch.index_select(current_caplens, 0, nonzero_indices)
+                    #topic = torch.index_select(topic, 0, nonzero_indices)
                 
 
-                    if nonzero_indices.shape[0] == 0:
+                    #if nonzero_indices.shape[0] == 0:
 
-                        sentence_loss += torch.mean(sentrnn_loss)
-                        word_loss += 0
+                    #    sentence_loss += torch.mean(sentrnn_loss)
+                    #    word_loss += 0
 
+                    #else:
+                    scores,\
+                    _,\
+                    caps_decoder,\
+                    _,\
+                    h_word, c_word = word_decoder(topic, current_captions, current_caplens, imgs.shape[0], (h_word, c_word))
+
+                    if args.topic_hidden:
+                        targets = caps_decoder[:, 1:max_seq_length]
                     else:
-                        scores,\
-                        _,\
-                        caps_decoder,\
-                        _,\
-                        h_word, c_word = word_decoder(topic, current_captions, current_caplens, imgs.shape[0],
-                                                      (h_word, c_word))
-
                         targets = caps_decoder[:, :max_seq_length]
+                    #print(scores.shape)
+                    #print(scores_all.shape)
+                    
+                    if args.topic_hidden:
+                        scores_all[:scores.shape[0], sent_num, :max_seq_length-1, :] = scores
+                        targets_all[:targets.shape[0], sent_num, :max_seq_length-1] = targets
+                    else:
                         scores_all[:scores.shape[0], sent_num, :max_seq_length, :] = scores
                         targets_all[:targets.shape[0], sent_num, :max_seq_length] = targets
-                        wordrnn_loss = criterion_word(scores.permute(0, 2, 1), targets) * args.lambda_word
+                    
+                    wordrnn_loss = criterion_word(scores.permute(0, 2, 1), targets) * args.lambda_word
 
-                        sentence_loss += torch.mean(sentrnn_loss)
-                        word_loss += torch.mean(wordrnn_loss)
+                    sentence_loss += torch.mean(sentrnn_loss)
+                    word_loss += torch.mean(wordrnn_loss)
 
 
                 batch_time.update(time.time() - start)
@@ -182,7 +192,8 @@ def validate(val_loader,
                         if eos[sent_num].item() > 0.5:
                             break
                         this_sentence = sent
-                        this_sentence_text = [idx_to_word[w] for w in this_sentence][1:]
+                        # removed [1:] for now
+                        this_sentence_text = [idx_to_word[w] for w in this_sentence]
                         if '<end>' in this_sentence_text:
                             end_token_loc = this_sentence_text.index('<end>') + 1
                             this_sentence_text = this_sentence_text[:end_token_loc]

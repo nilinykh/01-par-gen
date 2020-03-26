@@ -81,7 +81,7 @@ def main(args):
         print('Loading DenseCap features...')
 
         val_loader = data.DataLoader(
-            ParagraphDataset(args.data_folder, args.data_name, 'VAL'),
+            ParagraphDataset(args.data_folder, args.data_name, 'TEST'),
             batch_size=args.batch_size, shuffle=True,
             num_workers=args.workers, pin_memory=True)
 
@@ -174,6 +174,8 @@ def generate(val_loader,
 
             imgs = encoder(imgs)
             args.batch_size = imgs.shape[0]
+            
+            caplens_f, init_inx = caplens_eos(caplens, args.max_sentences)
 
             if args.encoder_type == 'resnet512':
                 # Prepare images for sentence decoder
@@ -191,15 +193,15 @@ def generate(val_loader,
 
             for sent_num in range(args.max_sentences):
 
-                # SentenceRNN
-                p_source, topic, h_sent, c_sent = sentence_decoder(imgs, (h_sent, c_sent))
+                p_source, topic, h_sent, c_sent = sentence_decoder(imgs, (h_word, c_word))
 
-                p = nn.Sigmoid()(p_source)
-                # break paragraph generation if the probability to STOP
-                # is higher than the threshold
-                #print(p.item(), sent_num)
-                if p.item() > 0.5:
-                    break
+                p_target = torch.LongTensor(caplens_f[init_inx].long().squeeze(1)).to(device)
+                p_target = p_target.type_as(p_source)
+                init_inx += 1
+
+                #print(p_source)
+                #print(p_target)
+                #print(sentrnn_loss)
 
                 # WordRNN
                 current_captions = caps[:, sent_num, :]
@@ -208,30 +210,39 @@ def generate(val_loader,
 
                 #print(current_captions)
                 #print(current_caplens)
-                #print(topic)
 
                 # ignore empty, non-existing sentences in calculations
-                nonzero_indices = (current_caplens!=0).nonzero()
-                nonzero_indices = nonzero_indices.flatten()
+                #nonzero_indices = (current_caplens!=0).nonzero()
+                #nonzero_indices = nonzero_indices.flatten()
                 #print(nonzero_indices)
-                current_captions = torch.index_select(current_captions, 0, nonzero_indices)
-                current_caplens = torch.index_select(current_caplens, 0, nonzero_indices)
-                topic = torch.index_select(topic, 0, nonzero_indices)
+                #current_captions = torch.index_select(current_captions, 0, nonzero_indices)
+                #current_caplens = torch.index_select(current_caplens, 0, nonzero_indices)
+                #topic = torch.index_select(topic, 0, nonzero_indices)
 
 
-                if nonzero_indices.shape[0] == 0:
-                    
-                    continue
+                #if nonzero_indices.shape[0] == 0:
 
+                #    sentence_loss += torch.mean(sentrnn_loss)
+                #    word_loss += 0
+
+                #else:
+                scores,\
+                _,\
+                caps_decoder,\
+                _,\
+                h_word, c_word = word_decoder(topic, current_captions, current_caplens, imgs.shape[0], (h_word, c_word))
+
+                if args.topic_hidden:
+                    targets = caps_decoder[:, 1:max_seq_length]
                 else:
-                    scores,\
-                    _,\
-                    caps_decoder,\
-                    _,\
-                    h_word, c_word = word_decoder(topic, current_captions, current_caplens, imgs.shape[0],
-                                                  (h_word, c_word))
-
                     targets = caps_decoder[:, :max_seq_length]
+                #print(scores.shape)
+                #print(scores_all.shape)
+
+                if args.topic_hidden:
+                    scores_all[:scores.shape[0], sent_num, :max_seq_length-1, :] = scores
+                    targets_all[:targets.shape[0], sent_num, :max_seq_length-1] = targets
+                else:
                     scores_all[:scores.shape[0], sent_num, :max_seq_length, :] = scores
                     targets_all[:targets.shape[0], sent_num, :max_seq_length] = targets
 
@@ -371,11 +382,12 @@ if __name__ == '__main__':
     word_weight_decay = config_parser.get('PARAMS-WORD', 'word_weight_decay')
     sentence_nonlin = config_parser.getboolean('PARAMS-SENTENCE', 'sentence_nonlin')
     use_fc2 = config_parser.getboolean('PARAMS-SENTENCE', 'use_fc2')
-    no_fc = config_parser.getboolean('PARAMS-SENTENCE', 'no_fc')
+    use_fc = config_parser.getboolean('PARAMS-SENTENCE', 'use_fc')
     bn = config_parser.getboolean('PARAMS-MODELS', 'bn')
     wordlstm_dropout = config_parser.get('PARAMS-WORD', 'wordlstm_dropout')
     feature_linear = config_parser.getboolean('PARAMS-MODELS', 'feature_linear')
     model_trained = config_parser.get('PARAMS-MODELS', 'model_trained')
+    topic_hidden = config_parser.getboolean('PARAMS-WORD', 'topic_hidden')
 
     api_key = config_parser.get('COMET', 'api_key')
     project_name = config_parser.get('COMET', 'project_name')
@@ -434,10 +446,11 @@ if __name__ == '__main__':
     parser.add_argument('--word_weight_decay', type=float, default=word_weight_decay, help='weight decay for the word LSTM')
     parser.add_argument('--sentence_nonlin', type=bool, default=sentence_nonlin, help='use non-linearity in sentence LSTM or not')
     parser.add_argument('--use_fc2', type=bool, default=use_fc2, help='use 2 linear layers for topic creating or 1 linear layer')
-    parser.add_argument('--no_fc', type=bool, default=no_fc, help='use fully connected layer or not for topic modelling')
+    parser.add_argument('--use_fc', type=bool, default=use_fc, help='use fully connected layer or not for topic modelling')
     parser.add_argument('--bn', type=bool, default=bn, help='apply batch normalisation in the encoder or not')
     parser.add_argument('--wordlstm_dropout', type=float, default=wordlstm_dropout, help='dropout for embedding layer')
     parser.add_argument('--feature_linear', type=bool, default=feature_linear, help='add linear layer for image features or not')
+    parser.add_argument('--topic_hidden', type=bool, default=topic_hidden, help='initialise word LSTM from image topic or not')
 
     parser.add_argument('--api_key', type=str, default=api_key, help='key for the Comet logger')
     parser.add_argument('--project_name', type=str, default=project_name, help='name of the project')

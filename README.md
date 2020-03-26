@@ -40,8 +40,4 @@ VL-min-S: sentence validatin min loss
 
 | Exp Num | Feat-Extractor | Proj-Matrix | BS | LR-S | LR-W | NL-W | D-W | L-S | L-W | C-S | C-W | LN-W | BN-E | VL-min | VL-min-W | VL-min-S |
 |---|----------------|---------|----|------|------|------|-----|-----|-----|-----|-----|------|------|------|------|------|
-|  simple |       DenseCap         |     -    |  32  |   1e-4   |   1e-3   |   1   |  -   |  1   |  1   |  -   |  -  |  -  |  -    |   11.01   |   7.78   |   2.77   |
-|  simple_ln-w |       DenseCap         |     -    |  32  |   1e-4   |   1e-3   |   1   |  -   |  1   |  1   |  -   |  -  |  +  |  -    |   11.77   |   7.71   |   3.67   |
-|  topic_projection |       DenseCap         |   +   |  32  |   1e-4   |   1e-3   |   1   |  -   |  1   |  1   |  -   |  -  |  +  |  -    |   11.06   |   7.78   |   2.92   |
-|  batch_norm |       DenseCap         |   +   |  32  |   1e-4   |   1e-3   |   1   |  -   |  1   |  1   |  -   |  -  |  -  |  +    |   10.89   |   7.78   |   2.81   |
-|  wordlstm_two |       DenseCap         |   +   |  32  |   1e-4   |   1e-3   |   1   |  0.5   |  1   |  1   |  -   |  -  |  -  |  -    |   10.49   |   7.71   |   2.74   |
+|  simple |       DenseCap         |     +    |  64  |   1e-3   |   1e-3   |   1   |  -   |  1   |  1   |  -   |  -  |  +  |  -    |   5.61   |   5.57   |   0.03   |

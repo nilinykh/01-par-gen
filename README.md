@@ -41,3 +41,4 @@ VL-min-S: sentence validatin min loss
 | Exp Num | Feat-Extractor | Proj-Matrix | BS | LR-S | LR-W | NL-W | D-W | L-S | L-W | C-S | C-W | LN-W | BN-E | VL-min | VL-min-W | VL-min-S |
 |---|----------------|---------|----|------|------|------|-----|-----|-----|-----|-----|------|------|------|------|------|
 |  simple |       DenseCap         |     +    |  64  |   1e-3   |   1e-3   |   1   |  -   |  1   |  1   |  -   |  -  |  +  |  -    |   5.61   |   5.57   |   0.03   |
+|  no_projection |       DenseCap         |     -    |  64  |   1e-3   |   1e-3   |   1   |  -   |  1   |  1   |  -   |  -  |  +  |  -    |   5.61   |   5.50   |   0.04   |

@@ -125,7 +125,7 @@ def validate(val_loader,
                     _,\
                     caps_decoder,\
                     _,\
-                    h_word, c_word = word_decoder(topic, current_captions, current_caplens, imgs.shape[0], (h_word, c_word))
+                    h_word, c_word = word_decoder(topic, current_captions, current_caplens, imgs.shape[0], (h_sent, c_sent))
 
                     if args.topic_hidden:
                         targets = caps_decoder[:, 1:max_seq_length]
@@ -157,7 +157,8 @@ def validate(val_loader,
                 this_epoch_word += word_loss
                 this_epoch_loss += loss
 
-                scores_all_copy = scores_all.clone()
+                #scores_all_copy = scores_all.clone()
+                scores_all_copy = scores_all
                 batch_time.update(time.time() - start)
                 start = time.time()
 

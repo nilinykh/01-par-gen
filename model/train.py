@@ -118,7 +118,7 @@ def train(train_loader,
                 _,\
                 caps_decoder,\
                 _,\
-                h_word, c_word = word_decoder(topic, current_captions, current_caplens, imgs.shape[0], (h_word, c_word))
+                h_word, c_word = word_decoder(topic, current_captions, current_caplens, imgs.shape[0], (h_sent, c_sent))
 
                 #print(max_seq_length)
                 if args.topic_hidden:

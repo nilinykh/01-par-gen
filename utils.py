@@ -20,7 +20,7 @@ cudnn.benchmark = True
 def create_input_files(dataset,
                        paragraph_json_path,
                        image_folder,
-                       densecap_feat_folder,
+                       image_paths,
                        max_sentences,
                        min_word_freq,
                        output_folder,
@@ -84,6 +84,19 @@ def create_input_files(dataset,
     assert len(val_image_paths) == len(val_image_captions)
     assert len(test_image_paths) == len(test_image_captions)
 
+    with open(image_paths + 'train_imgs_path.txt', 'w') as f:
+        for path in train_image_paths:
+            f.write(path)
+            f.write('\n')
+    with open(image_paths + 'val_imgs_path.txt', 'w') as f:
+        for path in val_image_paths:
+            f.write(path)
+            f.write('\n')
+    with open(image_paths + 'test_imgs_path.txt', 'w') as f:
+        for path in test_image_paths:
+            f.write(path)
+            f.write('\n')
+
     # Create word map
     words = [w for w in word_freq.keys() if word_freq[w] > min_word_freq]
     word_map = {k: v + 1 for v, k in enumerate(words)}
@@ -94,15 +107,15 @@ def create_input_files(dataset,
     word_map['<pad>'] = 0
 
     # for densecap feature organisation
-    with open(densecap_feat_folder + 'train_imgs_path.txt', 'r') as f:
+    with open(image_paths + 'train_imgs_path.txt', 'r') as f:
         train_paths = [line.rstrip() for line in f.readlines()]
-    with open(densecap_feat_folder + 'val_imgs_path.txt', 'r') as f:
+    with open(image_paths + 'val_imgs_path.txt', 'r') as f:
         val_paths = [line.rstrip() for line in f.readlines()]
-    with open(densecap_feat_folder + 'test_imgs_path.txt', 'r') as f:
+    with open(image_paths + 'test_imgs_path.txt', 'r') as f:
         test_paths = [line.rstrip() for line in f.readlines()]
-    train_feats = h5py.File(densecap_feat_folder + 'train_paragraph_feat.h5', 'r')['feats']
-    val_feats = h5py.File(densecap_feat_folder + 'val_paragraph_feat.h5', 'r')['feats']
-    test_feats = h5py.File(densecap_feat_folder + 'test_paragraph_feat.h5', 'r')['feats']
+    train_feats = h5py.File(image_paths + 'train_paragraph_feat.h5', 'r')['feats']
+    val_feats = h5py.File(image_paths + 'val_paragraph_feat.h5', 'r')['feats']
+    test_feats = h5py.File(image_paths + 'test_paragraph_feat.h5', 'r')['feats']
 
     # Create a base/root name for all output files
     base_filename = dataset + '_' + str(max_sentences) + '_sent_per_img_' + str(min_word_freq) + '_min_word_freq'
@@ -219,7 +232,6 @@ def create_input_files(dataset,
                     if cap[0] != '<pad>':
 
                         enc_c = [word_map['<start>']] + [word_map.get(word, word_map['<unk>']) for word in cap] + [word_map['<end>']] + [word_map['<pad>']] * (max_words - len(cap))
-
                         c_len = len(cap) + 2
 
                     elif cap[0] == '<pad>':

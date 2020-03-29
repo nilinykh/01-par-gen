@@ -149,7 +149,10 @@ class SentenceRNN(nn.Module):
         if args.use_fc:
             if args.use_fc2:
                 self.fc1 = nn.Linear(self.hidden_size, self.pooling_dim)
-                self.fc2 = nn.Linear(self.pooling_dim, self.pooling_dim)
+                if args.topic_hidden:
+                    self.fc2 = nn.Linear(self.pooling_dim, self.pooling_dim)
+                else:
+                    self.fc2 = nn.Linear(self.pooling_dim, self.hidden_size)
                 self.use_fc2 = True
                 self.use_fc = True
             else:

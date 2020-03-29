@@ -5,7 +5,7 @@ if __name__ == '__main__':
     create_input_files(dataset='vg',
                        paragraph_json_path='/home/xilini/par-gen/01-par-gen/data/dataset_paragraphs_v1.json',
                        image_folder='/home/xilini/vis-data/',
-                       densecap_feat_folder='/home/xilini/out/',
+                       image_paths='/home/xilini/par-gen/01-par-gen/data/',
                        max_sentences=6,
                        min_word_freq=1,
                        output_folder='/home/xilini/par-gen/01-par-gen/data/',

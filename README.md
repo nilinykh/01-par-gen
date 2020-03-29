@@ -1,5 +1,13 @@
 # 01-par-gen
 
+### Current issues and tasks:
+1. To improve word loss:
+	- use generated phrase captions as additional input along with the topic vector
+	- to get phrase embeddings, concatenate/sum/average pre-trained DenseCap word embeddings
+	- another option: train own LSTM to learn embeddings from scratch
+	- experiment with/without densecap embeddings, update experiments
+2. Experiment with batch size, larger batch size tends to improve results (but there must be a limit to it?)
+
 ### Train model
 
 1. Run `preproc.ipynb` on raw paragraphs (for more details, check the notebook) to build paragraphs in the format which is required for the model.\

@@ -43,3 +43,6 @@ VL-min-S: sentence validatin min loss
 |  simple |       DenseCap         |     +    |  64  |   1e-3   |   1e-3   |   1   |  -   |  1   |  1   |  -   |  -  |  +  |  -    |   5.61   |   5.57   |   0.03   |
 |  no_projection |       DenseCap         |     -    |  64  |   1e-3   |   1e-3   |   1   |  -   |  1   |  1   |  -   |  -  |  +  |  -    |   5.61   |   5.50   |   0.04   |
 |  hidden_from_topic |       DenseCap         |     +    |  64  |   1e-3   |   1e-3   |   1   |  -   |  1   |  1   |  -   |  -  |  +  |  -    |   5.80   |   5.74  |   0.03   |
+|  simple_noproj_256 |       DenseCap         |     -    |  256  |   1e-3   |   1e-3   |   1   |  -   |  1   |  1   |  -   |  -  |  +  |  -    |   4.79   |   4.60  |   0.13   |
+|  simple_noproj_512 |       DenseCap         |     -    |  512  |   1e-3   |   1e-3   |   1   |  -   |  1   |  1   |  -   |  -  |  +  |  -    |   4.45   |   4.18  |   0.23   |
+

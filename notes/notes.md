@@ -1,6 +1,32 @@
 Nikolai
 
 
+## 2020-04-10
+
+  - The graph of the learning configuration, 2020-04-10-model_scheme.pdf
+  - Test the effects of the end of sentence predictor by removing this part
+  - Remove one of the RuLUs re-econding the visual features
+  - End to end model from visual features to sentences; the model does not have any attention; can we help the model to attend; dense-cap descriptions; attention on visual features in the bounding boxes (cf. Mehdi's paper)
+  - Training and validation loss: after some point the validation loss explodes and training loss is reduced: over-fitting starts; descriptions at this stage?
+  - Pre-training in the original paper:
+    * Word-LSTM (embeddings, weights and linear) is pre-trained from Densecap; this is fine-tuned for the current sentences
+    * Word-embeddings from the Densecap
+    * What happens if we use a pre-trained language model instead of training it?
+  - Next?
+    * Baseline 1: Plot the training and validation loss, validate the generation of the model with the lowest val loss; save the sentences
+    * Baseline 2: Remove the multi-tasking of the sentence loss; improvement? Generate max number of images, i.e. 6
+    * Baseline 3: Representation of visual vectors, remove one of the ReLUs
+    * Baseline 4: Use Densecap pre-training for the word LSTMs; two options: freeze and add another layer; use the weights and update them in the fine tuning; there may be doing this in the paper
+  - INLG: https://www.inlg2020.org,  deadline of 15 May
+
+
+
+## 2020-04-03
+
+  - Discussing the ISP
+
+
+
 ## 2020-03-27
 
   - Passing the LSTM cell state of the last word of the previous sentence as an input to the sentence LSTM makes a difference in predicting whether this is the last sentence

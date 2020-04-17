@@ -1,6 +1,26 @@
 Nikolai
 
 
+## 2020-04-17 
+
+  - Using Densecap embeddings and LSTM language model and fine-tuning them (initilaise only and then update the weights) improves the performance
+  - A system without the denscap language model generates fragmented phrases (which seem to be good) but the syntax is fragmented
+  - In packing sentences, now we do not calculate loss on padded tokens
+  - Results: 
+	* Baseline 1: 
+  - Next?
+	* Double checking of the code
+	* Create Topic/language embeddings: take an image, create denscap descriptions, take the hidden state of the last word of the LSTM and save this as a topic represnetation for each region; 50 regions; then max polling and finally we get Topic embeddings; concatenate topic embeddings and visual embeddings; start generating sentences from that; visual and language pipeline; the sentence genrator needs to learn how to select information and generate from that
+	* INLG, 15 August
+	* Any other intermediate conferences
+	* Semdial, 15 May: a position paper about the state of the art of the paragraph generation
+	* Literature: Devi Parikh (Drev Batra), deep learning models for generation; how are the intermediate topics represented from which language is generated
+	* A comparison of paragraph generation models: https://helda.helsinki.fi/bitstream/handle/10138/304686/arturs_polis_thesis_final.pdf?sequence=1&isAllowed=y
+	* Kevin Knight, The Moment When the Future Fell Asleep 9am-10am, June 3, NAACL 2018
+	* Elizabeth Clark, Yangfeng Ji, Noah A. Smith: Neural Text Generation in Stories Using Entity Representations as Context, NAACL 2018 outstanding paper, 4:36PM - 4:54PM, https://www.aclweb.org/anthology/N18-1204/ (includes [video](https://vimeo.com/277672801) of the talk)
+
+
+
 ## 2020-04-10
 
   - The graph of the learning configuration, 2020-04-10-model_scheme.pdf

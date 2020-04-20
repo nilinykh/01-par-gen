@@ -61,7 +61,7 @@ def main(args):
     }
 
     experiment.log_parameters(hyper_params)
-    
+
     if args.with_densecap_captions:
         print('Loading DenseCap embeddings...')
         word_to_idx = os.path.join(args.densecap_path, 'word_to_idx' + '.json')
@@ -69,7 +69,7 @@ def main(args):
     else:
         word_to_idx = os.path.join(args.data_folder, 'WORDMAP_' + args.data_name + '.json')
         dc_embeddings = None
-        
+
     if args.embeddings_pretrained:
         print('Loading DenseCap vocabulary...')
         word_to_idx = os.path.join(args.densecap_path, 'word_to_idx' + '.json')
@@ -113,9 +113,8 @@ def main(args):
         encoder = RegPool(args)
         if args.feature_linear:
             encoder_optimizer = torch.optim.Adam(params=filter(lambda p: p.requires_grad,
-                                                 encoder.parameters()),
+                                                               encoder.parameters()),
                                                  lr=args.encoder_lr)
-                                                 #weight_decay=args.encoder_weight_decay)
         elif not args.feature_linear:
             encoder_optimizer = None
 
@@ -153,19 +152,13 @@ def main(args):
     sentence_optimizer = torch.optim.Adam(list(sentence_decoder.parameters()), lr=args.sentence_lr,
                                           weight_decay=args.sentence_weight_decay)
     word_optimizer = torch.optim.Adam(list(word_decoder.parameters()), lr=args.word_lr,
-                                           weight_decay=args.word_weight_decay)
-    
-    #if torch.cuda.device_count() > 1:
-    #    print("Let's use", torch.cuda.device_count(), "GPUs!")
-    #    sentence_decoder = nn.DataParallel(sentence_decoder)
-    #    word_decoder = nn.DataParallel(word_decoder)
-        
+                                      weight_decay=args.word_weight_decay)
     sentence_decoder.to(device)
     word_decoder.to(device)
     encoder.to(device)
-    
+
     #densecap_embedding_layer = nn.Embedding(len(word_to_idx), 512)
-    
+
     print('IMAGE ENCODER', encoder)
     print('SENTENCE DECODER', sentence_decoder)
     print('WORD DECODER', word_decoder)
@@ -175,14 +168,14 @@ def main(args):
     epochs_since_improvement = 0
 
     # Move to GPU
-    
+
     #sentence_decoder = sentence_decoder.to(device)
     #word_decoder = word_decoder.to(device)
     #encoder = encoder.to(device)
 
     # Loss functions
-    criterion_sent = nn.BCEWithLogitsLoss(reduction='none').to(device)
-    criterion_word = nn.CrossEntropyLoss(reduction='none', ignore_index=0).to(device)
+    criterion_sent = nn.BCEWithLogitsLoss().to(device)
+    criterion_word = nn.CrossEntropyLoss(ignore_index=0).to(device)
 
     #sentence_lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(sentence_optimizer, 'min',
     #                                                                   verbose=True, patience=1)
@@ -190,14 +183,14 @@ def main(args):
     #                                                               verbose=True, patience=1)
 
     initial_best_loss = args.best_val_loss
-    
+
     train_epoch_loss = []
     train_sentence_epoch_loss = []
     train_word_epoch_loss = []
     val_epoch_loss = []
     val_sentence_epoch_loss = []
     val_word_epoch_loss = []
-    
+
     # Epochs
     for epoch in range(args.start_epoch, args.num_epochs):
 
@@ -246,16 +239,17 @@ def main(args):
         experiment.log_metric("val_loss", this_val_epoch_loss, step=epoch)
         experiment.log_metric("val_sentence_loss", val_this_epoch_sentence, step=epoch)
         experiment.log_metric("val_word_loss", val_this_epoch_word, step=epoch)
-        
+
         train_epoch_loss.append(epoch_loss)
         train_sentence_epoch_loss.append(this_epoch_sentence)
         train_word_epoch_loss.append(this_epoch_word)
         val_epoch_loss.append(this_val_epoch_loss)
         val_sentence_epoch_loss.append(val_this_epoch_sentence)
         val_word_epoch_loss.append(val_this_epoch_word)
-        
+
         plot_loss(train_epoch_loss, val_epoch_loss, args.exp_num, loss_type='full')
-        plot_loss(train_sentence_epoch_loss, val_sentence_epoch_loss, args.exp_num, loss_type='sentence')
+        plot_loss(train_sentence_epoch_loss, val_sentence_epoch_loss, args.exp_num,
+                  loss_type='sentence')
         plot_loss(train_word_epoch_loss, val_word_epoch_loss, args.exp_num, loss_type='word')
 
         #sentence_lr_scheduler.step(val_this_epoch_sentence)

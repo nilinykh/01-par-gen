@@ -22,12 +22,11 @@ class ParagraphDataset(Dataset):
         assert self.split in {'TRAIN', 'VAL', 'TEST'}
 
         # Open hdf5 file where images are stored
-        self.h5_file = h5py.File(os.path.join(data_folder,
-                                              'DENSECAP' + self.split + '_IMAGES_' + data_name + '.hdf5'), 'r')
+        self.h5_file = h5py.File(os.path.join(data_folder, self.split + '_IMAGES_' + data_name + '.hdf5'), 'r')
 
         # Load DenseCap-generated captions
-        self.densecap = self.h5_file['densecap_captions']
-        
+        #self.densecap = self.h5_file['densecap_captions']
+
         # Image features in current split
         self.imgs = self.h5_file['images']
 
@@ -38,13 +37,11 @@ class ParagraphDataset(Dataset):
         self.cpi = self.h5_file.attrs['sentences_per_paragraph']
 
         # Load encoded captions (completely into memory)
-        with open(os.path.join(data_folder,
-                               'DENSECAP' + self.split + '_CAPTIONS_' + data_name + '.json'), 'r') as j:
+        with open(os.path.join(data_folder, self.split + '_CAPTIONS_' + data_name + '.json'), 'r') as j:
             self.captions = json.load(j)
 
         # Load caption lengths (completely into memory)
-        with open(os.path.join(data_folder,
-                               'DENSECAP' + self.split + '_CAPLENS_' + data_name + '.json'), 'r') as j:
+        with open(os.path.join(data_folder, self.split + '_CAPLENS_' + data_name + '.json'), 'r') as j:
             self.caplens = json.load(j)
 
         # PyTorch transformation pipeline for the image (normalizing, etc.)
@@ -57,7 +54,7 @@ class ParagraphDataset(Dataset):
         image_id = int(self.image_ids[i].split('/')[-1].split('.jpg')[0])
         image = torch.FloatTensor(self.imgs[i])
         #print('CAPS', self.densecap[i])
-        this_densecap = self.densecap[i]
+        #this_densecap = self.densecap[i]
         if self.transform is not None:
             image = self.transform(image)
         # Locate indexes of paragraph sentences for the current image
@@ -70,9 +67,10 @@ class ParagraphDataset(Dataset):
         captions = torch.LongTensor(self.captions[cap_start:cap_end])
         caplen = torch.LongTensor([self.caplens[cap_start:cap_end]])
         #print(this_densecap)
-        
+
         #print(image, image_id, captions, caplen, this_densecap)
-        return image, image_id, captions, caplen, this_densecap
+        return image, image_id, captions, caplen
+        #return image, image_id, captions, caplen, this_densecap
 
     def __len__(self):
         return self.dataset_size

@@ -33,7 +33,7 @@ def main(args):
     """
     Generation
     """
-    
+
     if args.with_densecap_captions:
         print('Loading DenseCap embeddings...')
         word_to_idx = os.path.join(args.densecap_path, 'word_to_idx' + '.json')
@@ -96,7 +96,7 @@ def main(args):
             num_workers=args.workers, pin_memory=True)
 
         encoder_optimizer = None
-        
+
         # pick X elements for generation only
         val_iterator = iter(val_loader)
         val_loader = list(islice(val_iterator, 100))
@@ -161,7 +161,7 @@ def generate(val_loader,
     :param criterion: loss layer
     :return: BLEU-4 score
     """
-    
+
     sentence_decoder.eval()
     word_decoder.eval()
     if encoder is not None:
@@ -169,42 +169,42 @@ def generate(val_loader,
 
     cider_epoch = {}
     cider_epoch['CIDEr'] = list()
-    
+
     paragraphs_generated = []
 
     with torch.no_grad():
         # Batches
-        for _, (imgs, image_ids, caps, caplens, densecap_captions) in enumerate(val_loader):
-            
+        for _, (imgs, image_ids, caps, caplens) in enumerate(val_loader):
+
             pars = {}
-            
+
             #for the purpose of making sure generated texts make sense
             references_batch = dict()
             hypotheses_batch = dict()
 
             # Move to GPU, if available
-            densecap_captions = [ast.literal_eval(elem) for elem in densecap_captions]
+            #densecap_captions = [ast.literal_eval(elem) for elem in densecap_captions]
             imgs = imgs.to(device)
             image_ids = image_ids.to(device)
             caps = caps.to(device)
             caplens = caplens.to(device)
-            
+
             #print(caps)
-            
-            if args.with_densecap_captions:
-                phrase_embeddings = densecap_to_embeddings(densecap_captions, word_to_idx, dc_embeddings)
-            else:
-                phrase_embeddings = None
-            
+
+            #if args.with_densecap_captions:
+            #    phrase_embeddings = densecap_to_embeddings(densecap_captions, word_to_idx, dc_embeddings)
+            #else:
+            #    phrase_embeddings = None
+
             imgs = encoder(imgs)
             args.batch_size = imgs.shape[0]
-            
+
             caplens_f, init_inx = caplens_eos(caplens, args.max_sentences)
-            
+
             if args.encoder_type == 'resnet512':
                 # Prepare images for sentence decoder
                 imgs = imgs.view(args.batch_size, -1, args.resnet512_feat_dim)
-                num_pixels = imgs.size(1)
+                #num_pixels = imgs.size(1)
                 imgs = imgs.mean(dim=1)
 
             scores_all = torch.zeros(imgs.shape[0], args.max_sentences, args.max_words + 2, vocab_size).to(device)
@@ -217,11 +217,12 @@ def generate(val_loader,
 
             for sent_num in range(args.max_sentences):
 
-                p_source, topic, ht_sent, ct_sent = sentence_decoder(imgs, phrase_embeddings, (h_sent, c_sent))
-                
+                p_source, topic, ht_sent, ct_sent = sentence_decoder(imgs,
+                                                                     (h_sent, c_sent))
+
                 h_sent = ht_sent
                 c_sent = ct_sent
-                
+
                 p_predicted = nn.Sigmoid()(p_source)
                 p_target = torch.LongTensor(caplens_f[init_inx].long().squeeze(1)).to(device)
                 p_target = p_target.type_as(p_source)
@@ -239,19 +240,25 @@ def generate(val_loader,
                 max_seq_length = current_caplens[torch.argmax(current_caplens, dim=0)]
 
                 scores,\
-                sorted_caplens,\
+                _,\
                 caps_decoder,\
-                sort_ind,\
-                ht_word, ct_word = word_decoder(topic, current_captions, current_caplens, imgs.shape[0], (h_word, c_word))
-                
+                _,\
+                ht_word, ct_word = word_decoder(topic,
+                                                current_captions,
+                                                current_caplens,
+                                                imgs.shape[0],
+                                                (h_word, c_word))
+
                 h_word = ht_word
                 c_word = ct_word
 
                 if args.topic_hidden:
                     targets = caps_decoder[:, 1:max_seq_length]
                 else:
-                    targets = pack_padded_sequence(caps_decoder, sorted_caplens, batch_first=True)[0]
-                    #targets = caps_decoder[:, :max_seq_length]
+                    #targets = pack_padded_sequence(caps_decoder,
+                    #                                sorted_caplens,
+                    #                                batch_first=True)[0]
+                    targets = caps_decoder[:, :max_seq_length]
 
                 if args.topic_hidden:
                     scores_all[:scores.shape[0], sent_num, :max_seq_length-1, :] = scores
@@ -267,7 +274,7 @@ def generate(val_loader,
                 #print(img_caps)
                 #print(word_to_idx['<start>'], word_to_idx['<pad>'])
                 img_captions = list(
-                    map(lambda c: [w for w in c if w not in {word_to_idx['<start>'], word_to_idx['<pad>'], word_to_idx['raining']}],
+                    map(lambda c: [w for w in c if w not in {word_to_idx['<start>'], word_to_idx['<pad>']}],
                         img_caps))  # remove <start> and pads
                 paragraph_text = []
                 for sent in img_captions:
@@ -327,11 +334,11 @@ def generate(val_loader,
 
             #score_dict = dict(zip(method, score))
             #print(score_dict)
-            
+
             pars['image_id'] = list(references_batch.keys())[0]
             pars['references'] = list(references_batch.values())[0]
             pars['hypotheses'] = list(hypotheses_batch.values())[0]
-    
+
             print()
             print('IMAGE ID', list(references_batch.keys())[0])
             print('GROUND TRUTH')
@@ -339,12 +346,12 @@ def generate(val_loader,
             print('GENERATED')
             print(hypotheses_batch.values())
             print('------------------')
-            
+
             paragraphs_generated.append(pars)
-            
-    with open('./generated_paragraphs_densecap.json', 'w') as f:
+
+    with open('./generated_paragraphs.json', 'w') as f:
         json.dump(paragraphs_generated, f)
-            
+
     return None
 
 if __name__ == '__main__':

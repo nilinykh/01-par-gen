@@ -118,28 +118,28 @@ def create_input_files(dataset,
     test_feats = h5py.File(image_paths + 'test.h5', 'r')['feats']
 
     # Create a base/root name for all output files
-    base_filename = dataset + '_' + str(max_sentences) + '_sent_per_img_' + str(min_word_freq) + '_min_word_freq'
+    base_filename = 'PRETRAINED' + dataset + '_' + str(max_sentences) + '_sent_per_img_' + str(min_word_freq) + '_min_word_freq'
 
     # Save word map to a JSON
     #with open(os.path.join(output_folder, 'WORDMAP_' + base_filename + encoder_type + '.json'), 'w') as j:
     #    json.dump(word_map, j)
-        
+
     print('Loading DenseCap vocabulary...')
     word_to_idx = os.path.join('/home/xilini/par-data/densecap-reworked/word_to_idx' + '.json')
     with open(word_to_idx, 'r') as j:
         word_map = json.load(j)
 
     # Sample captions for each image, save images to HDF5 file, and captions and their lengths to JSON files
-    seed(123)
+    seed(456)
     for impaths, imcaps, split in [(train_image_paths, train_image_captions, 'TRAIN'),
                                    (val_image_paths, val_image_captions, 'VAL'),
                                    (test_image_paths, test_image_captions, 'TEST')]:
-        
+
         # Open DenseCap captions
         with open(image_paths + split.lower()+'_captions.json', 'r') as f:
             densecap_captions = json.load(f)
 
-        with h5py.File(os.path.join(output_folder, 'DENSECAP' + split + '_IMAGES_' + base_filename + encoder_type + '.hdf5'), 'a') as h:
+        with h5py.File(os.path.join(output_folder, split + '_IMAGES_' + base_filename + encoder_type + '.hdf5'), 'a') as h:
             # Make a note of the number of captions we are sampling per image
             h.attrs['sentences_per_paragraph'] = max_sentences
 
@@ -148,7 +148,7 @@ def create_input_files(dataset,
                 images = h.create_dataset('images', (len(impaths), 3, 256, 256), dtype='uint8')
             elif encoder_type == 'densecap':
                 images = h.create_dataset('images', (len(impaths), 50, 4096), dtype='uint8')
-            
+
             # Create dataset inside HDF5 file to store image ids
             dt = h5py.special_dtype(vlen=str)
             imageids = h.create_dataset('image_ids', (len(impaths),), dtype=dt)
@@ -160,7 +160,7 @@ def create_input_files(dataset,
             caplens = []
 
             for i, path in enumerate(tqdm(impaths)):
-                                
+
                 dc_caps[i] = str(densecap_captions[i])
 
                 imcaps[i] = [elem for elem in imcaps[i] if elem != []]
@@ -168,7 +168,6 @@ def create_input_files(dataset,
                 # Sample captions
                 if len(imcaps[i]) < max_sentences:
                     captions = imcaps[i] + [['<pad>'] for _ in range(max_sentences - len(imcaps[i]))]
-
                 elif len(imcaps[i]) > max_sentences:
                     captions = imcaps[i][:max_sentences]
                 else:
@@ -240,11 +239,11 @@ def create_input_files(dataset,
                 for j, cap in enumerate(captions):
                     # Encode captions
                     if cap[0] != '<pad>':
+                        # if it is not empty sentence
                         enc_c = [word_map['<start>']] + [word_map.get(word, word_map['<unk>']) for word in cap] + [word_map['<end>']] + [word_map['<pad>']] * (max_words - len(cap))
                         c_len = len(cap) + 2
-
                     elif cap[0] == '<pad>':
-
+                        # if it is an empty sentence, we add 2 pads (two because of source-target decoding scheme)
                         enc_c = [word_map['<pad>']] * (max_words + 2)
                         c_len = 2
                     enc_captions.append(enc_c)
@@ -254,10 +253,10 @@ def create_input_files(dataset,
             assert images.shape[0] * max_sentences == len(enc_captions) == len(caplens)
 
             # Save encoded captions and their lengths to JSON files
-            with open(os.path.join(output_folder,'DENSECAP' + split + '_CAPTIONS_' + base_filename + encoder_type + '.json'), 'w') as j:
+            with open(os.path.join(output_folder, split + '_CAPTIONS_' + base_filename + encoder_type + '.json'), 'w') as j:
                 json.dump(enc_captions, j)
 
-            with open(os.path.join(output_folder,'DENSECAP' + split + '_CAPLENS_' + base_filename + encoder_type + '.json'), 'w') as j:
+            with open(os.path.join(output_folder, split + '_CAPLENS_' + base_filename + encoder_type + '.json'), 'w') as j:
                 json.dump(caplens, j)
 
 def caplens_eos(caplens, max_sents):
@@ -289,7 +288,7 @@ def densecap_to_embeddings(captions, w2i, emb):
             indices = [w2i[w] for w in single_phrase]
             #print('phrase', single_phrase)
             #print('indices', indices)
-            this_phrase_embedding = torch.stack([emb[i] for i in indices]) 
+            this_phrase_embedding = torch.stack([emb[i] for i in indices])
             #print('phrase embedding', this_phrase_embedding, this_phrase_embedding.shape)
             this_phrase_embedding = torch.mean(this_phrase_embedding, 0, False)
             #print(this_phrase_embedding, this_phrase_embedding.shape)

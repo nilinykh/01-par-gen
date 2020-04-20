@@ -8,6 +8,7 @@ import argparse
 from configparser import ConfigParser
 import time
 from itertools import islice
+import ast
 
 import torch.backends.cudnn as cudnn
 import torch.optim
@@ -32,8 +33,17 @@ def main(args):
     """
     Generation
     """
+    
+    if args.with_densecap_captions:
+        print('Loading DenseCap embeddings...')
+        word_to_idx = os.path.join(args.densecap_path, 'word_to_idx' + '.json')
+        dc_embeddings = torch.load(os.path.join(args.densecap_path, 'densecap_emb.pt'))
+    else:
+        word_to_idx = os.path.join(args.data_folder, 'WORDMAP_' + args.data_name + '.json')
+        dc_embeddings = None
 
     if args.embeddings_pretrained:
+        print('Loading DenseCap vocabulary...')
         word_to_idx = os.path.join(args.densecap_path, 'word_to_idx' + '.json')
         idx_to_word = os.path.join(args.densecap_path, 'idx_to_word' + '.json')
         with open(word_to_idx, 'r') as j:
@@ -54,7 +64,7 @@ def main(args):
     # Initialize / load checkpoint
     #if not args.checkpoint:
 
-    if args.encoder_type == 'resnet512':
+    if args.encoder_type == 'resnet52':
         encoder = Encoder()
         encoder_optimizer = torch.optim.Adam(params=filter(lambda p: p.requires_grad,
                                                            encoder.parameters()),
@@ -64,7 +74,7 @@ def main(args):
                                          std=[0.229, 0.224, 0.225])
 
         val_loader = data.DataLoader(
-            ParagraphDataset(args.data_folder, args.data_name, 'TEST',
+            ParagraphDataset(args.data_folder, args.data_name, 'VAL',
                              transform=transforms.Compose([normalize])),
             batch_size=args.batch_size, shuffle=True,
             num_workers=args.workers, pin_memory=True)
@@ -89,7 +99,7 @@ def main(args):
         
         # pick X elements for generation only
         val_iterator = iter(val_loader)
-        val_loader = list(islice(val_iterator, 1))
+        val_loader = list(islice(val_iterator, 100))
 
         #test_loader = data.DataLoader(
         #    ParagraphDataset(args.data_folder, args.data_name, 'TEST',
@@ -128,6 +138,7 @@ def main(args):
                  vocab_size=vocab_size,
                  word_to_idx=word_to_idx,
                  idx_to_word=idx_to_word,
+                 dc_embeddings=dc_embeddings,
                  args=args)
 
 
@@ -139,6 +150,7 @@ def generate(val_loader,
              vocab_size,
              word_to_idx,
              idx_to_word,
+             dc_embeddings,
              args):
     """
     Performs generation for the single epoch.
@@ -157,26 +169,38 @@ def generate(val_loader,
 
     cider_epoch = {}
     cider_epoch['CIDEr'] = list()
+    
+    paragraphs_generated = []
 
     with torch.no_grad():
         # Batches
-        for _, (imgs, image_ids, caps, caplens) in enumerate(val_loader):
+        for _, (imgs, image_ids, caps, caplens, densecap_captions) in enumerate(val_loader):
+            
+            pars = {}
             
             #for the purpose of making sure generated texts make sense
             references_batch = dict()
             hypotheses_batch = dict()
 
             # Move to GPU, if available
+            densecap_captions = [ast.literal_eval(elem) for elem in densecap_captions]
             imgs = imgs.to(device)
             image_ids = image_ids.to(device)
             caps = caps.to(device)
             caplens = caplens.to(device)
-
+            
+            #print(caps)
+            
+            if args.with_densecap_captions:
+                phrase_embeddings = densecap_to_embeddings(densecap_captions, word_to_idx, dc_embeddings)
+            else:
+                phrase_embeddings = None
+            
             imgs = encoder(imgs)
             args.batch_size = imgs.shape[0]
             
             caplens_f, init_inx = caplens_eos(caplens, args.max_sentences)
-
+            
             if args.encoder_type == 'resnet512':
                 # Prepare images for sentence decoder
                 imgs = imgs.view(args.batch_size, -1, args.resnet512_feat_dim)
@@ -193,14 +217,20 @@ def generate(val_loader,
 
             for sent_num in range(args.max_sentences):
 
-                p_source, topic, h_sent, c_sent = sentence_decoder(imgs, (h_word, c_word))
-
+                p_source, topic, ht_sent, ct_sent = sentence_decoder(imgs, phrase_embeddings, (h_sent, c_sent))
+                
+                h_sent = ht_sent
+                c_sent = ct_sent
+                
+                p_predicted = nn.Sigmoid()(p_source)
                 p_target = torch.LongTensor(caplens_f[init_inx].long().squeeze(1)).to(device)
                 p_target = p_target.type_as(p_source)
                 init_inx += 1
 
+                #print(init_inx)
                 #print(p_source)
                 #print(p_target)
+                #print(p_predicted)
                 #print(sentrnn_loss)
 
                 # WordRNN
@@ -208,36 +238,20 @@ def generate(val_loader,
                 current_caplens = caplens.squeeze(1)[:, sent_num]
                 max_seq_length = current_caplens[torch.argmax(current_caplens, dim=0)]
 
-                #print(current_captions)
-                #print(current_caplens)
-
-                # ignore empty, non-existing sentences in calculations
-                #nonzero_indices = (current_caplens!=0).nonzero()
-                #nonzero_indices = nonzero_indices.flatten()
-                #print(nonzero_indices)
-                #current_captions = torch.index_select(current_captions, 0, nonzero_indices)
-                #current_caplens = torch.index_select(current_caplens, 0, nonzero_indices)
-                #topic = torch.index_select(topic, 0, nonzero_indices)
-
-
-                #if nonzero_indices.shape[0] == 0:
-
-                #    sentence_loss += torch.mean(sentrnn_loss)
-                #    word_loss += 0
-
-                #else:
                 scores,\
-                _,\
+                sorted_caplens,\
                 caps_decoder,\
-                _,\
-                h_word, c_word = word_decoder(topic, current_captions, current_caplens, imgs.shape[0], (h_word, c_word))
+                sort_ind,\
+                ht_word, ct_word = word_decoder(topic, current_captions, current_caplens, imgs.shape[0], (h_word, c_word))
+                
+                h_word = ht_word
+                c_word = ct_word
 
                 if args.topic_hidden:
                     targets = caps_decoder[:, 1:max_seq_length]
                 else:
-                    targets = caps_decoder[:, :max_seq_length]
-                #print(scores.shape)
-                #print(scores_all.shape)
+                    targets = pack_padded_sequence(caps_decoder, sorted_caplens, batch_first=True)[0]
+                    #targets = caps_decoder[:, :max_seq_length]
 
                 if args.topic_hidden:
                     scores_all[:scores.shape[0], sent_num, :max_seq_length-1, :] = scores
@@ -247,16 +261,19 @@ def generate(val_loader,
                     targets_all[:targets.shape[0], sent_num, :max_seq_length] = targets
 
             # EVALUATION
-
             # Get references
             for single_paragraph in range(targets_all.shape[0]):
                 img_caps = targets_all[single_paragraph].tolist()
+                #print(img_caps)
+                #print(word_to_idx['<start>'], word_to_idx['<pad>'])
                 img_captions = list(
-                    map(lambda c: [w for w in c if w not in {word_to_idx['<start>'], word_to_idx['<pad>']}],
+                    map(lambda c: [w for w in c if w not in {word_to_idx['<start>'], word_to_idx['<pad>'], word_to_idx['raining']}],
                         img_caps))  # remove <start> and pads
                 paragraph_text = []
                 for sent in img_captions:
-                    this_sent_text = [idx_to_word[w] for w in sent]
+                    this_sent_text = [idx_to_word[str(int(w))] for w in sent]
+                    #print(this_sent_text)
+                    #print()
                     paragraph_text.append(' '.join(this_sent_text))
                 references_batch[image_ids[single_paragraph].item()] = paragraph_text
 
@@ -271,7 +288,7 @@ def generate(val_loader,
                 for sent_num, sent in enumerate(par_preds):
                     this_sentence = sent[:caplens_squeezed[predicted_paragraph, sent_num]]
                     # remove first prediction (start token)
-                    this_sentence_text = [idx_to_word[w] for w in this_sentence][1:]
+                    this_sentence_text = [idx_to_word[str(int(w))] for w in this_sentence][1:]
                     text_with_end = []
                     for elem in this_sentence_text:
                         if elem != '<end>':
@@ -310,6 +327,10 @@ def generate(val_loader,
 
             #score_dict = dict(zip(method, score))
             #print(score_dict)
+            
+            pars['image_id'] = list(references_batch.keys())[0]
+            pars['references'] = list(references_batch.values())[0]
+            pars['hypotheses'] = list(hypotheses_batch.values())[0]
     
             print()
             print('IMAGE ID', list(references_batch.keys())[0])
@@ -318,6 +339,11 @@ def generate(val_loader,
             print('GENERATED')
             print(hypotheses_batch.values())
             print('------------------')
+            
+            paragraphs_generated.append(pars)
+            
+    with open('./generated_paragraphs_densecap.json', 'w') as f:
+        json.dump(paragraphs_generated, f)
             
     return None
 
@@ -388,6 +414,7 @@ if __name__ == '__main__':
     feature_linear = config_parser.getboolean('PARAMS-MODELS', 'feature_linear')
     model_trained = config_parser.get('PARAMS-MODELS', 'model_trained')
     topic_hidden = config_parser.getboolean('PARAMS-WORD', 'topic_hidden')
+    with_densecap_captions = config_parser.getboolean('PARAMS-MODELS', 'with_densecap_captions')
 
     api_key = config_parser.get('COMET', 'api_key')
     project_name = config_parser.get('COMET', 'project_name')
@@ -451,6 +478,7 @@ if __name__ == '__main__':
     parser.add_argument('--wordlstm_dropout', type=float, default=wordlstm_dropout, help='dropout for embedding layer')
     parser.add_argument('--feature_linear', type=bool, default=feature_linear, help='add linear layer for image features or not')
     parser.add_argument('--topic_hidden', type=bool, default=topic_hidden, help='initialise word LSTM from image topic or not')
+    parser.add_argument('--with_densecap_captions', type=bool, default=with_densecap_captions, help='use densecap captions to create language topic or not')
 
     parser.add_argument('--api_key', type=str, default=api_key, help='key for the Comet logger')
     parser.add_argument('--project_name', type=str, default=project_name, help='name of the project')

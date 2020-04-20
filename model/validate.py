@@ -2,6 +2,7 @@ import sys
 import time
 import json
 import pathlib
+import ast
 
 from torch import nn
 import torch.backends.cudnn as cudnn
@@ -11,6 +12,7 @@ from evalfunc.bleu.bleu import Bleu
 from evalfunc.rouge.rouge import Rouge
 from evalfunc.cider.cider import Cider
 from evalfunc.meteor.meteor import Meteor
+from torch.nn.utils.rnn import pack_padded_sequence
 
 sys.path.append('/home/xilini/par-gen/01-par-gen')
 from utils import *
@@ -28,6 +30,7 @@ def validate(val_loader,
              vocab_size,
              word_to_idx,
              idx_to_word,
+             dc_embeddings,
              args):
 
     '''
@@ -48,16 +51,22 @@ def validate(val_loader,
     with logger.validate():
         with torch.no_grad():
             # Batches
-            for i, (imgs, image_ids, caps, caplens) in enumerate(val_loader):
+            for i, (imgs, image_ids, caps, caplens, densecap_captions) in enumerate(val_loader):
 
                 references_batch = dict()
                 hypotheses_batch = dict()
 
+                densecap_captions = [ast.literal_eval(elem) for elem in densecap_captions]
                 imgs = imgs.to(device)
-                image_ids = image_ids.to(device)
                 caps = caps.to(device)
                 caplens = caplens.to(device)
+                image_ids = image_ids.to(device)
 
+                if args.with_densecap_captions:
+                    phrase_embeddings = densecap_to_embeddings(densecap_captions, word_to_idx, dc_embeddings)
+                else:
+                    phrase_embeddings = None
+               
                 # Forward prop.
                 imgs = encoder(imgs)
                 args.batch_size = imgs.shape[0]
@@ -74,19 +83,22 @@ def validate(val_loader,
                 sentence_loss = 0
                 word_loss = 0
 
-                scores_all = torch.zeros(imgs.shape[0], args.max_sentences, args.max_words + 2, vocab_size).to(device)
-                targets_all = torch.zeros(imgs.shape[0], args.max_sentences, args.max_words + 2).to(device)
+                #scores_all = torch.zeros(imgs.shape[0], args.max_sentences, args.max_words + 2, vocab_size).to(device)
+                #targets_all = torch.zeros(imgs.shape[0], args.max_sentences, args.max_words + 2).to(device)
 
                 h_sent = torch.zeros(args.num_layers_sentencernn, imgs.shape[0], args.hidden_size)
                 c_sent = torch.zeros(args.num_layers_sentencernn, imgs.shape[0], args.hidden_size)
                 h_word = torch.zeros(args.num_layers_wordrnn, imgs.shape[0], args.hidden_size)
                 c_word = torch.zeros(args.num_layers_wordrnn, imgs.shape[0], args.hidden_size)
 
-                eos_predicted = torch.zeros(imgs.shape[0], args.max_sentences).to(device)
+                #eos_predicted = torch.zeros(imgs.shape[0], args.max_sentences).to(device)
 
                 for sent_num in range(args.max_sentences):
 
-                    p_source, topic, h_sent, c_sent = sentence_decoder(imgs, (h_word, c_word))
+                    p_source, topic, ht_sent, ct_sent = sentence_decoder(imgs, phrase_embeddings, (h_sent, c_sent))
+                    
+                    h_sent = ht_sent
+                    c_sent = ct_sent
 
                     p_target = torch.LongTensor(caplens_f[init_inx].long().squeeze(1)).to(device)
                     p_target = p_target.type_as(p_source)
@@ -101,46 +113,43 @@ def validate(val_loader,
                     current_captions = caps[:, sent_num, :]
                     current_caplens = caplens.squeeze(1)[:, sent_num]
                     max_seq_length = current_caplens[torch.argmax(current_caplens, dim=0)]
-
-                    #print(current_captions)
+                    
+                    #print('CAPTIONS ORIG', current_captions)
                     #print(current_caplens)
-                    #print(topic)
-
-                    # ignore empty, non-existing sentences in calculations
-                    #nonzero_indices = (current_caplens!=0).nonzero()
-                    #nonzero_indices = nonzero_indices.flatten()
-                    #print(nonzero_indices)
-                    #current_captions = torch.index_select(current_captions, 0, nonzero_indices)
-                    #current_caplens = torch.index_select(current_caplens, 0, nonzero_indices)
-                    #topic = torch.index_select(topic, 0, nonzero_indices)
-                
-
-                    #if nonzero_indices.shape[0] == 0:
-
-                    #    sentence_loss += torch.mean(sentrnn_loss)
-                    #    word_loss += 0
-
-                    #else:
+                    
                     scores,\
-                    _,\
+                    sorted_caplens,\
                     caps_decoder,\
-                    _,\
-                    h_word, c_word = word_decoder(topic, current_captions, current_caplens, imgs.shape[0], (h_sent, c_sent))
-
+                    sort_ind,\
+                    ht_word, ct_word = word_decoder(topic, current_captions, current_caplens, imgs.shape[0], (h_word, c_word))
+                    
+                    h_word = ht_word
+                    c_word = ct_word
+                                        
+                    #print('sort ind', sort_ind)
+                    #print('CAPTIONS SORTED', caps_decoder)
+                                        
                     if args.topic_hidden:
                         targets = caps_decoder[:, 1:max_seq_length]
                     else:
                         targets = caps_decoder[:, :max_seq_length]
+                        #targets = pack_padded_sequence(caps_decoder, sorted_caplens, batch_first=True)[0]
                     #print(scores.shape)
                     #print(scores_all.shape)
+                                        
+                    #scores = scores[sort_ind]
+                    #targets = targets[sort_ind]
                     
-                    if args.topic_hidden:
-                        scores_all[:scores.shape[0], sent_num, :max_seq_length-1, :] = scores
-                        targets_all[:targets.shape[0], sent_num, :max_seq_length-1] = targets
-                    else:
-                        scores_all[:scores.shape[0], sent_num, :max_seq_length, :] = scores
-                        targets_all[:targets.shape[0], sent_num, :max_seq_length] = targets
+                    #print('SORTED BACK T', targets)
                     
+                    #if args.topic_hidden:
+                    #    scores_all[:scores.shape[0], sent_num, :max_seq_length-1, :] = scores
+                    #    targets_all[:targets.shape[0], sent_num, :max_seq_length-1] = targets
+                    #else:
+                    #    scores_all[:scores.shape[0], sent_num, :max_seq_length, :] = scores
+                    #    targets_all[:targets.shape[0], sent_num, :max_seq_length] = targets
+                    
+                    #wordrnn_loss = criterion_word(scores, targets) * args.lambda_word
                     wordrnn_loss = criterion_word(scores.permute(0, 2, 1), targets) * args.lambda_word
 
                     sentence_loss += torch.mean(sentrnn_loss)
@@ -153,12 +162,12 @@ def validate(val_loader,
                 loss += sentence_loss
                 loss += word_loss
 
-                this_epoch_sentence += sentence_loss
+                this_epoch_sentence += sentence_loss / args.lambda_sentence
                 this_epoch_word += word_loss
                 this_epoch_loss += loss
 
                 #scores_all_copy = scores_all.clone()
-                scores_all_copy = scores_all
+                #scores_all_copy = scores_all
                 batch_time.update(time.time() - start)
                 start = time.time()
 
@@ -170,7 +179,8 @@ def validate(val_loader,
 
                 # GENERATE SENTENCES UNTIL THE END TOKEN IS PICKED
                 # Get references
-                for single_paragraph in range(targets_all.shape[0]):
+                
+                '''for single_paragraph in range(targets_all.shape[0]):
                     img_caps = targets_all[single_paragraph].tolist()
                     img_captions = list(
                         map(lambda c: [w for w in c if w not in {word_to_idx['<start>'], word_to_idx['<pad>']}],
@@ -185,6 +195,7 @@ def validate(val_loader,
                 # batch size x num sents x num words x vocab size
                 scores_probs = F.softmax(scores_all_copy, dim=3)
                 preds = torch.argmax(scores_probs, dim=3)
+                
                 for predicted_paragraph in range(preds.shape[0]):
                     par_preds = preds[predicted_paragraph].tolist()
                     eos = eos_predicted[predicted_paragraph]
@@ -208,7 +219,7 @@ def validate(val_loader,
                 with open(f'./generation_validate/hyp_{args.exp_num}.json', 'w') as f:
                     json.dump(hypotheses_batch, f)
                 with open(f'./generation_validate/ref_{args.exp_num}.json', 'w') as f:
-                    json.dump(references_batch, f)
+                    json.dump(references_batch, f)'''
                 #print(hypotheses_batch)
                 #print()
 

@@ -6,6 +6,7 @@ from imageio import imread
 from skimage.transform import resize
 from tqdm import tqdm
 from collections import Counter
+import matplotlib.pyplot as plt
 
 import numpy as np
 import h5py
@@ -98,13 +99,12 @@ def create_input_files(dataset,
             f.write('\n')
 
     # Create word map
-    words = [w for w in word_freq.keys() if word_freq[w] > min_word_freq]
-    word_map = {k: v + 1 for v, k in enumerate(words)}
-    word_map['<unk>'] = len(word_map) + 1
-    word_map['<start>'] = len(word_map) + 1
-    word_map['<end>'] = len(word_map) + 1
-    #word_map['<empty>'] = len(word_map) + 1
-    word_map['<pad>'] = 0
+    #words = [w for w in word_freq.keys() if word_freq[w] > min_word_freq]
+    #word_map = {k: v + 1 for v, k in enumerate(words)}
+    #word_map['<unk>'] = len(word_map) + 1
+    #word_map['<start>'] = len(word_map) + 1
+    #word_map['<end>'] = len(word_map) + 1
+    #word_map['<pad>'] = 0
 
     # for densecap feature organisation
     with open(image_paths + 'train_imgs_path.txt', 'r') as f:
@@ -113,27 +113,33 @@ def create_input_files(dataset,
         val_paths = [line.rstrip() for line in f.readlines()]
     with open(image_paths + 'test_imgs_path.txt', 'r') as f:
         test_paths = [line.rstrip() for line in f.readlines()]
-    train_feats = h5py.File(image_paths + 'train_paragraph_feat.h5', 'r')['feats']
-    val_feats = h5py.File(image_paths + 'val_paragraph_feat.h5', 'r')['feats']
-    test_feats = h5py.File(image_paths + 'test_paragraph_feat.h5', 'r')['feats']
+    train_feats = h5py.File(image_paths + 'train.h5', 'r')['feats']
+    val_feats = h5py.File(image_paths + 'val.h5', 'r')['feats']
+    test_feats = h5py.File(image_paths + 'test.h5', 'r')['feats']
 
     # Create a base/root name for all output files
     base_filename = dataset + '_' + str(max_sentences) + '_sent_per_img_' + str(min_word_freq) + '_min_word_freq'
 
     # Save word map to a JSON
-    with open(os.path.join(output_folder, 'WORDMAP_' + base_filename + encoder_type + '.json'), 'w') as j:
-        json.dump(word_map, j)
-
-    #train_val_image_paths = train_image_paths + val_image_paths
-    #train_val_image_captions = train_image_captions + val_image_captions
+    #with open(os.path.join(output_folder, 'WORDMAP_' + base_filename + encoder_type + '.json'), 'w') as j:
+    #    json.dump(word_map, j)
+        
+    print('Loading DenseCap vocabulary...')
+    word_to_idx = os.path.join('/home/xilini/par-data/densecap-reworked/word_to_idx' + '.json')
+    with open(word_to_idx, 'r') as j:
+        word_map = json.load(j)
 
     # Sample captions for each image, save images to HDF5 file, and captions and their lengths to JSON files
     seed(123)
     for impaths, imcaps, split in [(train_image_paths, train_image_captions, 'TRAIN'),
                                    (val_image_paths, val_image_captions, 'VAL'),
                                    (test_image_paths, test_image_captions, 'TEST')]:
+        
+        # Open DenseCap captions
+        with open(image_paths + split.lower()+'_captions.json', 'r') as f:
+            densecap_captions = json.load(f)
 
-        with h5py.File(os.path.join(output_folder, split + '_IMAGES_' + base_filename + encoder_type + '.hdf5'), 'a') as h:
+        with h5py.File(os.path.join(output_folder, 'DENSECAP' + split + '_IMAGES_' + base_filename + encoder_type + '.hdf5'), 'a') as h:
             # Make a note of the number of captions we are sampling per image
             h.attrs['sentences_per_paragraph'] = max_sentences
 
@@ -142,9 +148,11 @@ def create_input_files(dataset,
                 images = h.create_dataset('images', (len(impaths), 3, 256, 256), dtype='uint8')
             elif encoder_type == 'densecap':
                 images = h.create_dataset('images', (len(impaths), 50, 4096), dtype='uint8')
+            
             # Create dataset inside HDF5 file to store image ids
             dt = h5py.special_dtype(vlen=str)
             imageids = h.create_dataset('image_ids', (len(impaths),), dtype=dt)
+            dc_caps = h.create_dataset('densecap_captions', (len(impaths),), dtype=dt)
 
             print("\nReading %s images and captions, storing to file...\n" % split)
 
@@ -152,6 +160,8 @@ def create_input_files(dataset,
             caplens = []
 
             for i, path in enumerate(tqdm(impaths)):
+                                
+                dc_caps[i] = str(densecap_captions[i])
 
                 imcaps[i] = [elem for elem in imcaps[i] if elem != []]
 
@@ -230,7 +240,6 @@ def create_input_files(dataset,
                 for j, cap in enumerate(captions):
                     # Encode captions
                     if cap[0] != '<pad>':
-
                         enc_c = [word_map['<start>']] + [word_map.get(word, word_map['<unk>']) for word in cap] + [word_map['<end>']] + [word_map['<pad>']] * (max_words - len(cap))
                         c_len = len(cap) + 2
 
@@ -238,7 +247,6 @@ def create_input_files(dataset,
 
                         enc_c = [word_map['<pad>']] * (max_words + 2)
                         c_len = 2
-
                     enc_captions.append(enc_c)
                     caplens.append(c_len)
 
@@ -246,10 +254,10 @@ def create_input_files(dataset,
             assert images.shape[0] * max_sentences == len(enc_captions) == len(caplens)
 
             # Save encoded captions and their lengths to JSON files
-            with open(os.path.join(output_folder, split + '_CAPTIONS_' + base_filename + encoder_type + '.json'), 'w') as j:
+            with open(os.path.join(output_folder,'DENSECAP' + split + '_CAPTIONS_' + base_filename + encoder_type + '.json'), 'w') as j:
                 json.dump(enc_captions, j)
 
-            with open(os.path.join(output_folder, split + '_CAPLENS_' + base_filename + encoder_type + '.json'), 'w') as j:
+            with open(os.path.join(output_folder,'DENSECAP' + split + '_CAPLENS_' + base_filename + encoder_type + '.json'), 'w') as j:
                 json.dump(caplens, j)
 
 def caplens_eos(caplens, max_sents):
@@ -257,14 +265,42 @@ def caplens_eos(caplens, max_sents):
     #print('interm', caplens_f)
     actual_caplens = torch.zeros(caplens_f.shape[0])
     #print(actual_caplens)
+    #print(caplens_f)
     for num, item in enumerate(caplens_f):
-        if item != 0:
+        if item != 2:
             actual_caplens[num] = 0
         else:
             actual_caplens[num] = 1
     actual_caplens = actual_caplens.unsqueeze(1)
     init_inx = np.array([i for i in range(len(actual_caplens)) if i % max_sents == 0])
     return actual_caplens, init_inx
+
+def densecap_to_embeddings(captions, w2i, emb):
+    embeddings = torch.zeros(len(captions), 512)
+    #print(embeddings, embeddings.shape)
+    for n, c in enumerate(captions):
+        #print('caption', c)
+        intermediate_embeddings = []
+        for each_phrase in c:
+            #phrase_embeddings
+            single_phrase = each_phrase.split()
+            single_phrase = [w if w != '<UNK>' else '<unk>' for w in single_phrase]
+            single_phrase = [w for w in single_phrase if w in w2i.keys()]
+            indices = [w2i[w] for w in single_phrase]
+            #print('phrase', single_phrase)
+            #print('indices', indices)
+            this_phrase_embedding = torch.stack([emb[i] for i in indices]) 
+            #print('phrase embedding', this_phrase_embedding, this_phrase_embedding.shape)
+            this_phrase_embedding = torch.mean(this_phrase_embedding, 0, False)
+            #print(this_phrase_embedding, this_phrase_embedding.shape)
+            intermediate_embeddings.append(this_phrase_embedding)
+        #print('interm embeddings', intermediate_embeddings)
+        full_embeddings = torch.stack(intermediate_embeddings)
+        #print(full_embeddings, full_embeddings.shape)
+        full_embeddings = torch.mean(full_embeddings, 0, False)
+        embeddings[n, :] = full_embeddings
+    #print('embeddings', embeddings, embeddings.shape)
+    return embeddings
 
 
 def save_checkpoint(data_name,
@@ -353,3 +389,28 @@ def accuracy(scores, targets, k):
     correct = ind.eq(targets.view(-1, 1).expand_as(ind))
     correct_total = correct.view(-1).float().sum()  # 0D tensor
     return correct_total.item() * (100.0 / batch_size)
+
+def plot_loss(this_train, this_val, exp_num, loss_type='full'):
+    if loss_type == 'full':
+        train_label = 'Train Loss'
+        val_label = 'Val Loss'
+    if loss_type == 'sentence':
+        train_label = 'Sentence Train Loss'
+        val_label = 'Sentence Val Loss'
+    if loss_type == 'word':
+        train_label = 'Word Train Loss'
+        val_label = 'Word Val Loss'
+    fig = plt.figure(figsize=(10, 8))
+    plt.plot(range(1, len(this_train) + 1), this_train, label=train_label)
+    plt.plot(range(1, len(this_val) + 1), this_val, label=val_label)
+    plt.xlabel('epochs')
+    plt.ylabel('loss')
+    plt.grid(True)
+    plt.legend()
+    plt.tight_layout()
+    plt.show()
+    pathlib.Path(f'./checkpoints/{exp_num}').mkdir(parents=True, exist_ok=True)
+    pathname = f'./checkpoints/{exp_num}/'
+    fig.savefig(os.path.join(pathname, 'loss_' + loss_type + '.png'),
+                bbox_inches='tight')
+    plt.close(fig)

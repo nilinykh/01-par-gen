@@ -98,7 +98,7 @@ def main(args):
                                          std=[0.229, 0.224, 0.225])
 
         train_loader = data.DataLoader(
-            ParagraphDataset(args.data_folder, args.data_name, 'TRAIN',
+            ParagraphDataset(args.data_folder, args.data_name, 'VAL',
                              transform=transforms.Compose([normalize])),
             batch_size=args.batch_size, shuffle=True,
             num_workers=args.workers, pin_memory=True)
@@ -174,8 +174,8 @@ def main(args):
     #encoder = encoder.to(device)
 
     # Loss functions
-    criterion_sent = nn.BCEWithLogitsLoss().to(device)
-    criterion_word = nn.CrossEntropyLoss(ignore_index=0).to(device)
+    criterion_sent = nn.BCEWithLogitsLoss(reduction='none').to(device)
+    criterion_word = nn.CrossEntropyLoss(reduction='none', ignore_index=0).to(device)
 
     #sentence_lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(sentence_optimizer, 'min',
     #                                                                   verbose=True, patience=1)

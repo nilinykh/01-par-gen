@@ -59,6 +59,7 @@ class ParagraphDataset(Dataset):
             image = self.transform(image)
         # Locate indexes of paragraph sentences for the current image
         if i != 0:
+            #6
             cap_end = i * self.cpi + 6 # because of indexing starting from 0
             cap_start = cap_end - 6
         elif i == 0:

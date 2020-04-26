@@ -25,7 +25,8 @@ def precook(s, n=4, out=False):
     :param n: int    : number of ngrams for which representation is calculated
     :return: term frequency vector for occuring ngrams
     """
-    words = s.split()
+    #words = s.split()
+    words = s
     counts = defaultdict(int)
     for k in range(1,n+1):
         for i in range(len(words)-k+1):
@@ -195,7 +196,7 @@ class CiderScorer(object):
             # assert to check document frequency
             assert(len(self.ctest) >= max(self.document_frequency.values()))
         else:
-            file = open('/home/xilini/par-gen/im2p_new/evalfunc/cider/data/coco-val-df.p', 'rb')
+            file = open('/home/xilini/par-gen/01-par-gen/evalfunc/cider/data/coco-val-df.p', 'rb')
             docFreq = pickle.load(file, encoding='bytes')
             self.document_frequency = docFreq
             #self.document_frequency = defaultdict(str, ((k, v) for k, v in docFreq.items()))

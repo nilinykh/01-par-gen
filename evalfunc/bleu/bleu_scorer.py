@@ -24,7 +24,8 @@ def precook(s, n=4, out=False):
     """Takes a string as input and returns an object that can be given to
     either cook_refs or cook_test. This is optional: cook_refs and cook_test
     can take string arguments as well."""
-    words = s.split()
+    #words = s.split()
+    words = s
     counts = defaultdict(int)
     for k in range(1,n+1):
         for i in range(len(words)-k+1):

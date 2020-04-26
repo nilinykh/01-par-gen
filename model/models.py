@@ -180,11 +180,6 @@ class SentenceRNN(nn.Module):
             self.dropout_stopping = False
         self.__init_weights()
 
-        if args.with_densecap_captions:
-            self.with_densecap_captions = True
-        elif not args.with_densecap_captions:
-            self.with_densecap_captions = False
-
     def __init_weights(self):
         nn.init.normal_(self.logistic.weight)
         nn.init.constant_(self.logistic.bias, 0.0)
@@ -205,7 +200,7 @@ class SentenceRNN(nn.Module):
             elif 'weight' in name:
                 nn.init.normal_(param)
 
-    def forward(self, pooling_vector, phrase_embeddings, states):
+    def forward(self, pooling_vector, states):
         '''
         forward topic vector and output
         end of the paragraph probability,
@@ -215,51 +210,24 @@ class SentenceRNN(nn.Module):
         if pooling_vector.shape[0] != self.batch_size:
             self.batch_size = pooling_vector.shape[0]
 
-        #states = tuple([h.permute(1, 0, 2) for h in states])
         h, c = states
         h = h.to(device)
         c = c.to(device)
 
-        #self.sentence_rnn.flatten_parameters()
-
-        if phrase_embeddings != None:
-            phrase_embeddings = phrase_embeddings.to(device)
-
         pooling_vector = pooling_vector.unsqueeze(1)
-
         out, (h, c) = self.sentence_rnn(pooling_vector, (h, c))
-
         prob = self.non_lin(self.logistic(out))
         prob = prob.squeeze(1).squeeze(1)
 
         if self.use_fc:
-
             if self.use_fc2:
                 topic = self.fc2(nn.ReLU()(self.fc1(out)))
             else:
                 topic = self.non_lin(self.fc1(out))
-
         if self.no_fc:
-
-            #topic = self.dropout_fc(out)
             topic = out
 
-        #print('topic', topic, topic.shape)
-        #print('captions', phrase_embeddings, phrase_embeddings.shape)
-
-        if self.with_densecap_captions:
-            #topic = topic.squeeze(1)
-            #phrase_embeddings = phrase_embeddings.permute(1, 0)
-            topic = torch.mul(topic, phrase_embeddings)
-            #print('interm', topic, topic.shape)
-            topic = torch.mean(topic, 1, False)
-            #print('final', topic, topic.shape)
-        else:
-            topic = topic
-        #print(topic)
-        #print()
         return prob, topic, h, c
-        #return topic, h, c
 
 
 
@@ -414,9 +382,6 @@ class WordRNN(nn.Module):
         decode image features with word vectors and generate captions
         '''
 
-        #densecap_captions = densecap_captions.to(device)
-        #states = tuple([h.permute(1, 0, 2) for h in states])
-
         if self.topic_hidden:
             h, c = self.init_hidden_state(topic)
             caplens = caplens - 1
@@ -429,48 +394,38 @@ class WordRNN(nn.Module):
             self.batch_size = new_batch_size
 
         caplens, sort_ind = caplens.sort(dim=0, descending=True)
-        #print('new caplens', caplens)
-        #print('sort ind', sort_ind)
         caps = caps[sort_ind]
-        #print('new captions', caps)
         topic = topic[sort_ind]
-        #print('new topic', topic)
+        
+        embeddings = self.embeddings(caps)
 
-        packed_caps = pack_padded_sequence(caps, caplens, batch_first=True)
-        embeddings = nn.utils.rnn.PackedSequence(self.embeddings(packed_caps.data),
-                                                 packed_caps.batch_sizes)
-        #embeddings = self.embeddings(caps)
-
-        if self.with_densecap_captions:
-            topic = topic.unsqueeze(1)
         topic = self.non_lin(self.image_to_hidden(topic))
         if not self.topic_hidden:
             embeddings = torch.cat([topic, embeddings], 1)
 
-        #print(embeddings, embeddings.shape)
-        #print(caplens)
-        #for t in range(max(caplens)):
-        #    batch_size_t = sum([l > t for l in caplens])
-        #    decode_input = embeddings[:batch_size_t, t, :].unsqueeze(1)
-        #    hiddens, (h, c) = self.decode_step(decode_input, (h[:, :batch_size_t, :], c[:, :batch_size_t, :]))
-        #    if self.layer_norm:
-        #        outputs = self.layer_norm(hiddens)
-        #    preds = self.linear(h)  # (batch_size_t, vocab_size)
-        #    predictions[:batch_size_t, t, :] = preds
-
-        #packed = pack_padded_sequence(embeddings, caplens, batch_first=True)
-        _, (h, c) = self.decode_step(embeddings, (h, c))
-        #outputs, _ = pad_packed_sequence(packed_outputs, batch_first=True)
+        packed = pack_padded_sequence(embeddings, caplens, batch_first=True)
+        hiddens, (h, c) = self.decode_step(packed, (h, c))
         if self.layer_norm:
-            outputs = self.layer_norm(h[-1])
-        outputs = self.linear(h[-1])
-
-        #print(outputs.shape)
-        #print(outputs)
-
-        #print('return sort ind', sort_ind)
-        #print('return caps', caps)
-        #print('return caplens', caplens)
-
-        #return predictions, caplens, caps, caplens, sort_ind, h, c
+            outputs = self.layer_norm(hiddens.data)
+        outputs = self.linear(hiddens.data)
+        #print(outputs, outputs.shape)
+        
+        #----WITHOUT TEACHER FORCING (TEST CODE, NOT WORKING ATM)----#
+        #topic = self.non_lin(self.image_to_hidden(topic))
+        #inputs = topic
+        #predicted_caps = torch.zeros(self.batch_size, caplens[0], self.vocab_size)
+        #for i in range(caplens[0]):
+        #    hiddens, (h, c) = self.decode_step(inputs, (h, c))
+        #    outputs = self.linear(hiddens)
+        #    scores_probs = F.log_softmax(outputs, dim=2)
+        #    if mode == 'val':
+        #        predicted_caps[:, i] = scores_probs.squeeze(1)
+        #        topv, topi = scores_probs.topk(1)
+        #        decoder_input = topi.squeeze(1).detach()
+        #        inputs = self.embeddings(decoder_input)
+        #    if mode == 'train':
+        #        predicted_caps[:, i] = scores_probs.squeeze(1)
+        #        inputs = self.embeddings(caps[:, i]).unsqueeze(1)
+        #return predicted_caps, caps, caplens, sort_ind, h, c
+        
         return outputs, caps, caplens, sort_ind, h, c

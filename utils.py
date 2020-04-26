@@ -99,12 +99,12 @@ def create_input_files(dataset,
             f.write('\n')
 
     # Create word map
-    #words = [w for w in word_freq.keys() if word_freq[w] > min_word_freq]
-    #word_map = {k: v + 1 for v, k in enumerate(words)}
-    #word_map['<unk>'] = len(word_map) + 1
-    #word_map['<start>'] = len(word_map) + 1
-    #word_map['<end>'] = len(word_map) + 1
-    #word_map['<pad>'] = 0
+    words = [w for w in word_freq.keys() if word_freq[w] > min_word_freq]
+    word_map = {k: v + 1 for v, k in enumerate(words)}
+    word_map['<unk>'] = len(word_map) + 1
+    word_map['<start>'] = len(word_map) + 1
+    word_map['<end>'] = len(word_map) + 1
+    word_map['<pad>'] = 0
 
     # for densecap feature organisation
     with open(image_paths + 'train_imgs_path.txt', 'r') as f:
@@ -118,16 +118,16 @@ def create_input_files(dataset,
     test_feats = h5py.File(image_paths + 'test.h5', 'r')['feats']
 
     # Create a base/root name for all output files
-    base_filename = 'PRETRAINED' + dataset + '_' + str(max_sentences) + '_sent_per_img_' + str(min_word_freq) + '_min_word_freq'
+    base_filename = dataset + '_' + str(max_sentences) + '_sent_per_img_' + str(min_word_freq) + '_min_word_freq'
 
     # Save word map to a JSON
-    #with open(os.path.join(output_folder, 'WORDMAP_' + base_filename + encoder_type + '.json'), 'w') as j:
-    #    json.dump(word_map, j)
+    with open(os.path.join(output_folder, 'WORDMAP_' + base_filename + encoder_type + '.json'), 'w') as j:
+        json.dump(word_map, j)
 
-    print('Loading DenseCap vocabulary...')
-    word_to_idx = os.path.join('/home/xilini/par-data/densecap-reworked/word_to_idx' + '.json')
-    with open(word_to_idx, 'r') as j:
-        word_map = json.load(j)
+    #print('Loading DenseCap vocabulary...')
+    #word_to_idx = os.path.join('/home/xilini/par-data/densecap-reworked/word_to_idx' + '.json')
+    #with open(word_to_idx, 'r') as j:
+    #    word_map = json.load(j)
 
     # Sample captions for each image, save images to HDF5 file, and captions and their lengths to JSON files
     seed(456)

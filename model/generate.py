@@ -339,8 +339,8 @@ def generate(val_loader,
                 
                 if args.decoding_strategy == 'greedy':
                     for i in range(args.max_words):
-                        if i == 1:
-                            inputs = word_decoder.embeddings(start_token).unsqueeze(1)
+                        #if i == 1:
+                        #    inputs = word_decoder.embeddings(start_token).unsqueeze(1)
                         hiddens, (h_word, c_word) = word_decoder.decode_step(inputs, (h_word, c_word))
                         outputs = word_decoder.linear(hiddens)
                         outputs = F.softmax(outputs, dim=-1)
@@ -351,8 +351,8 @@ def generate(val_loader,
                      
                 if args.decoding_strategy == 'sampling':
                     for i in range(args.max_words):
-                        if i == 1:
-                            inputs = word_decoder.embeddings(start_token).unsqueeze(1)
+                        #if i == 1:
+                        #    inputs = word_decoder.embeddings(start_token).unsqueeze(1)
                         hiddens, (h_word, c_word) = word_decoder.decode_step(inputs, (h_word, c_word))
                         outputs = word_decoder.linear(hiddens)
                         if args.temperature:
@@ -365,8 +365,8 @@ def generate(val_loader,
 
                 if args.decoding_strategy == 'topn_sampling':
                     for i in range(args.max_words):
-                        if i == 1:
-                            inputs = word_decoder.embeddings(start_token).unsqueeze(1)
+                        #if i == 1:
+                        #    inputs = word_decoder.embeddings(start_token).unsqueeze(1)
                         hiddens, (h_word, c_word) = word_decoder.decode_step(inputs, (h_word, c_word))
                         outputs = word_decoder.linear(hiddens)
                         if args.temperature:
@@ -383,45 +383,54 @@ def generate(val_loader,
                         inputs = word_decoder.embeddings(word_idx).unsqueeze(0).unsqueeze(0)
                         
                 if args.decoding_strategy == 'beam':
-                    
-                    start = [word_to_idx['<start>']]
+
+                    embs = word_decoder.embeddings.weight.data
+                    embs = torch.cat([embs, inputs.squeeze(0)], dim=0)
+                    word_to_idx['image'] = 7603
+                    start = [word_to_idx['image']]
                     start_word = [[start, 0.0]]
                     final_caption = []
                     
+                    #print('start', start)
+                    #print('start word', start_word)
+                    
                     while len(start_word[0][0]) < args.max_words:
+                        
                         temp = []
+                        
                         for s in start_word:
                             
-                            if len(start_word[0][0]) == 2:
-                                inputs = word_decoder.embeddings(start_token).unsqueeze(1)
-                                
-                            hiddens, (h_word, c_word) = word_decoder.decode_step(inputs, (h_word, c_word))
+                            #print('S', s)
+                            
+                            word_in = embs[torch.LongTensor([s[0][-1]])].unsqueeze(0)
+                            hiddens, (h_word, c_word) = word_decoder.decode_step(word_in, (h_word, c_word))
                             outputs = word_decoder.linear(hiddens)
-
                             probs = F.softmax(outputs, dim=-1).squeeze(0)
                             probs = probs.cpu()
                             word_preds = np.argsort(probs[0])[-args.beam:]
+                            #print('word preds', word_preds)
 
                             for w in word_preds:
+                                #print('SSSS', s)
                                 next_cap, prob = s[0][:], s[1]
-                                #print(next_cap)
-                                #print(prob)
+                                #print('curr cap', next_cap)
+                                #print('curr prob', prob)
                                 next_cap.append(w.item())
-                                prob += probs[0][w]
-                                temp.append([next_cap, prob])
+                                new_prob = prob + probs[0][w]
+                                #print(w)
+                                #print(prob, probs[0][w])
+                                #print('final prob', new_prob)
+                                temp.append([next_cap, new_prob])
                             
                         start_word = temp
                         start_word = sorted(start_word, reverse=False, key=lambda l: l[1])
+                        #print('after sorting', start_word)
                         start_word = start_word[-args.beam:]
-
-                        next_index = start_word[-1][0][-1]
-                        word_idx = torch.LongTensor([next_index]).to(device)
-                        inputs = word_decoder.embeddings(word_idx).unsqueeze(0)
+                        #print('after removing', start_word)
                         
                     start_word = start_word[-1][0]
-                    #print(start_word)
+                    #print('FINAL START WORD', start_word)
                     intermediate_caption = [i for i in start_word[1:]]
-                    #print(intermediate_caption)
                 
                     for i in intermediate_caption:
                         if i != '<end>':
@@ -469,7 +478,7 @@ def generate(val_loader,
                     image_id = image_ids[predicted_paragraph].item()
                     hypotheses_batch[image_id] = []
                 par_preds = generated[predicted_paragraph]
-                this_sentence_text = [idx_to_word[w] for w in par_preds][1:]
+                this_sentence_text = [idx_to_word[w] for w in par_preds]
                 hypotheses_batch[image_id].append(' '.join(this_sentence_text))
                 
             #print(hypotheses_batch)

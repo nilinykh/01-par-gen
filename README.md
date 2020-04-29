@@ -6,9 +6,13 @@ Type of models which have been trained:
 1. Baseline:
 - encoder with one linear layer and max pooling over regions to produce image vector,
 - decoder consisting of
--- sentence LSTM (input: image vector, previous sentence LSTM hidden state; output: sentence topic vector) and linear layer for predicting end of the paragraph (input: sentence topic vector; output: 0/1)
--- word LSTM (input: sentence topic vector, word embeddings, previous word LSTM hidden state; output: word scores) for sentence generation, output is passed through linear layer with subsequence softmax applied to it in order to get word probabilities
+
+  -- sentence LSTM (input: image vector, previous sentence LSTM hidden state; output: sentence topic vector) and linear layer for predicting end of the paragraph (input: sentence topic vector; output: 0/1)
+  
+  -- word LSTM (input: sentence topic vector, word embeddings, previous word LSTM hidden state; output: word scores) for sentence generation, output is passed through linear layer with subsequence softmax applied to it in order to get word probabilities
+  
 2. Baseline + 2 linear layers are added: the first one expands sentence topic vector, the second one shrinks it back to the input dimension for word LSTM (512 -> 1024 -> 512)
+
 3. Baseline + 2 layer word LSTM, where the first layer is initialised with DenseCap RNN weights (not frozen) + word embeddings are initialised from DenseCap (not frozen)
 
 Various decoding strategies have been implemented (greedy search, beam search, sampling, top-n sampling, nucleus sampling). For some good description of decoding strategies: https://web.stanford.edu/class/cs224n/slides/cs224n-2019-lecture15-nlg.pdf, https://github.com/huggingface/blog/blob/master/notebooks/02_how_to_generate.ipynb

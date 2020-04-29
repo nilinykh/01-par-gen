@@ -347,6 +347,7 @@ if __name__ == '__main__':
     feature_linear = config_parser.getboolean('PARAMS-MODELS', 'feature_linear')
     topic_hidden = config_parser.getboolean('PARAMS-WORD', 'topic_hidden')
     with_densecap_captions = config_parser.getboolean('PARAMS-MODELS', 'with_densecap_captions')
+    attention = config_parser.getboolean('PARAMS-MODELS', 'attention')
 
     api_key = config_parser.get('COMET', 'api_key')
     project_name = config_parser.get('COMET', 'project_name')
@@ -410,6 +411,7 @@ if __name__ == '__main__':
     parser.add_argument('--feature_linear', type=bool, default=feature_linear, help='add linear layer for image features or not')
     parser.add_argument('--topic_hidden', type=bool, default=topic_hidden, help='initialise word LSTM from image topic or not')
     parser.add_argument('--with_densecap_captions', type=bool, default=with_densecap_captions, help='use densecap captions to create language topic or not')
+    parser.add_argument('--attention', type=bool, default=attention, help='use attention or not')
 
     parser.add_argument('--api_key', type=str, default=api_key, help='key for the Comet logger')
     parser.add_argument('--project_name', type=str, default=project_name, help='name of the project')

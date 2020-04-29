@@ -111,6 +111,52 @@ class Encoder(nn.Module):
         for layer in list(self.resnet.children())[5:]:
             for param in layer.parameters():
                 param.requires_grad = fine_tune
+                
+class Attention(nn.Module):
+    """
+    Attention Network.
+    """
+
+    def __init__(self, encoder_dim, decoder_dim, attention_dim):
+        """
+        :param encoder_dim: feature size of encoded images
+        :param decoder_dim: size of decoder's RNN
+        :param attention_dim: size of the attention network
+        """
+        super(Attention, self).__init__()
+        self.encoder_att = nn.Linear(encoder_dim, attention_dim)  # linear layer to transform encoded image
+        self.decoder_att = nn.Linear(decoder_dim, attention_dim)  # linear layer to transform decoder's output
+        self.full_att = nn.Linear(attention_dim, 1)  # linear layer to calculate values to be softmax-ed
+        self.relu = nn.ReLU()
+        self.softmax = nn.Softmax(dim=1)  # softmax layer to calculate weights
+
+    def forward(self, encoder_out, decoder_hidden):
+        """
+        Forward propagation.
+        :param encoder_out: encoded images, a tensor of dimension (batch_size, num_pixels, encoder_dim)
+        :param decoder_hidden: previous decoder output, a tensor of dimension (batch_size, decoder_dim)
+        :return: attention weighted encoding, weights
+        """
+        decoder_hidden = decoder_hidden.permute(1, 0, 2)
+        att1 = self.encoder_att(encoder_out)  # (batch_size, num_pixels, attention_dim)
+        att2 = self.decoder_att(decoder_hidden)  # (batch_size, attention_dim)
+        
+        print(att1, att1.shape)
+        print(att2, att2.shape)
+        
+        print(self.relu(att1 + att2))
+        
+        #print('ATT')
+        #print(att1.shape, att2.shape)
+        # try concatenation, addition is not necessary (but it seems like this is how it was done in the original code)
+        #print(self.full_att(self.relu(att1 + att2)).shape)
+        att = self.full_att(self.relu(att1 + att2)).squeeze(2)  # (batch_size, num_pixels)
+        print(att, att.shape)
+        alpha = self.softmax(att)  # (batch_size, num_pixels)
+        print(alpha)
+        attention_weighted_encoding = (encoder_out * alpha.unsqueeze(2)).sum(dim=1)  # (batch_size, encoder_dim)
+        #print(attention_weighted_encoding, attention_weighted_encoding.shape)
+        return attention_weighted_encoding, alpha
 
 
 class SentenceRNN(nn.Module):
@@ -267,14 +313,17 @@ class WordRNN(nn.Module):
                 self.decode_step = nn.LSTM(input_size=self.embed_dim, hidden_size=self.hidden_size,
                                            num_layers=self.num_layers_wordrnn, dropout=self.dropout_rate,
                                            batch_first=True)
+                if args.embeddings_pretrained:
+                    self.load_my_state_dict(args.densecap_path + 'rnn_densecap.pkl')
             else:
-                self.decode_step = nn.LSTM(input_size=self.embed_dim, hidden_size=self.hidden_size,
+                if args.attention:
+                    self.decode_step = nn.LSTMCell(input_size=self.embed_dim, hidden_size=self.hidden_size, bias=True)
+                else:
+                    self.decode_step = nn.LSTM(input_size=self.embed_dim, hidden_size=self.hidden_size,
                                            num_layers=self.num_layers_wordrnn,
                                            batch_first=True)
         else:
             raise Exception('Unknown RNN type.')
-
-        self.load_my_state_dict(args.densecap_path + 'rnn_densecap.pkl')
 
         if args.layer_norm:
             #nn.LayerNorm
@@ -292,9 +341,9 @@ class WordRNN(nn.Module):
         #self.linear_dropout = nn.Dropout(p=self.word_dropout)
 
         if args.topic_hidden:
-            self.topic_hidden = True
             self.init_h = nn.Linear(self.pooling_dim, self.hidden_size)
             self.init_c = nn.Linear(self.pooling_dim, self.hidden_size)
+            self.topic_hidden = True
         else:
             self.topic_hidden = False
 
@@ -303,12 +352,19 @@ class WordRNN(nn.Module):
         elif not args.with_densecap_captions:
             self.with_densecap_captions = False
 
-        #if args.use_fc:
-        self.image_to_hidden = nn.Linear(self.pooling_dim, self.hidden_size)
-        self.non_lin = nn.ReLU()
-        self.im2h = True
-        #elif not args.use_fc:
-        #    self.im2h = False
+        if args.use_fc:
+            self.image_to_hidden = nn.Linear(self.pooling_dim, self.hidden_size)
+            self.non_lin = nn.ReLU()
+            self.im2h = True
+        elif not args.use_fc:
+            self.im2h = False
+            
+        if args.attention:
+            self.f_beta = nn.Linear(self.hidden_size, self.pooling_dim)
+            self.attention = Attention(self.pooling_dim, self.hidden_size, self.hidden_size)
+            self.init_h = nn.Linear(self.pooling_dim, self.hidden_size)
+            self.init_c = nn.Linear(self.pooling_dim, self.hidden_size)
+            self.use_attention = True
 
     def __init_embeddings(self):
         initrange = 0.1
@@ -364,16 +420,18 @@ class WordRNN(nn.Module):
         """
         densecap_embeddings = torch.load(weights_matrix)
         return densecap_embeddings
+    
 
-    def init_hidden_state(self, topic):
+    def init_hidden_state(self, encoder_out):
         """
-        Creates the initial hidden and cell states for the decoder's LSTM based on the encoded images.
-        :param encoder_out: encoded images, a tensor of dimension (batch_size, num_pixels, encoder_dim)
+        Creates the initial hidden and cell states for the decoder's LSTM based on the image topics.
+        :param encoder_out: encoded images, a tensor of dimension (batch_size, 1, topic_dim)
         :return: hidden state, cell state
         """
-        mean_topic = topic.mean(dim=1)
-        h = self.init_h(mean_topic).unsqueeze(0)  # (batch_size, decoder_dim)
-        c = self.init_c(mean_topic).unsqueeze(0)
+        mean_encoder_out = encoder_out.squeeze(1)
+        #print(mean_encoder_out, mean_encoder_out.shape)
+        h = self.init_h(mean_encoder_out).unsqueeze(0)  # (num_layers, batch_size, topic_dim)
+        c = self.init_c(mean_encoder_out).unsqueeze(0)
         return h, c
 
 
@@ -398,17 +456,49 @@ class WordRNN(nn.Module):
         topic = topic[sort_ind]
         
         embeddings = self.embeddings(caps)
+        
+        if self.use_attention:
+            print(topic, topic.shape)
+            h, c = self.init_hidden_state(topic)  # (batch_size, topic_dim)
+            # no image at first, so the source length is smaller by 1 element
+            caplens = caplens - 1
+            #print(h.shape, c.shape)
+            outputs = torch.zeros(self.batch_size, max(caplens), self.vocab_size).to(device)
+            # At each time-step, decode by
+            # attention-weighing the encoder's output based on the decoder's previous hidden state output
+            # then generate a new word in the decoder with the previous word and the attention weighted encoding
+            for t in range(max(caplens)):
+                batch_size_t = sum([l > t for l in caplens])
+                attention_weighted_encoding, alpha = self.attention(topic[:batch_size_t],
+                                                                    h[:batch_size_t])
+                #print(alpha)
+                #print()
+                
+                gate = nn.Sigmoid()(self.f_beta(h[:batch_size_t]))  # gating scalar, (batch_size_t, encoder_dim)
+                
+                #print(gate, gate.shape)
+                #print(attention_weighted_encoding, attention_weighted_encoding.shape)
 
-        topic = self.non_lin(self.image_to_hidden(topic))
-        if not self.topic_hidden:
-            embeddings = torch.cat([topic, embeddings], 1)
+                attention_weighted_encoding = gate * attention_weighted_encoding
+                #print(attention_weighted_encoding.shape)
+                #print(embeddings[:batch_size_t, t, :].shape)
+                h, c = self.decode_step(
+                    torch.cat([embeddings[:batch_size_t, t, :].unsqueeze(1), attention_weighted_encoding], dim=1),
+                    (h[:batch_size_t], c[:batch_size_t]))  # (batch_size_t, decoder_dim)
+                preds = self.linear(h)  # (batch_size_t, vocab_size)
+                outputs[:batch_size_t, t, :] = preds
+                #alphas[:batch_size_t, t, :] = alpha
 
-        packed = pack_padded_sequence(embeddings, caplens, batch_first=True)
-        hiddens, (h, c) = self.decode_step(packed, (h, c))
-        if self.layer_norm:
-            outputs = self.layer_norm(hiddens.data)
-        outputs = self.linear(hiddens.data)
-        #print(outputs, outputs.shape)
+        else:
+            if self.im2h:
+                topic = self.non_lin(self.image_to_hidden(topic))
+            if not self.topic_hidden:
+                embeddings = torch.cat([topic, embeddings], 1)
+            packed = pack_padded_sequence(embeddings, caplens, batch_first=True)
+            hiddens, (h, c) = self.decode_step(packed, (h, c))
+            if self.layer_norm:
+                outputs = self.layer_norm(hiddens.data)
+            outputs = self.linear(hiddens.data)
         
         #----WITHOUT TEACHER FORCING (TEST CODE, NOT WORKING ATM)----#
         #topic = self.non_lin(self.image_to_hidden(topic))

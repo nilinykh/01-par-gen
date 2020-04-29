@@ -94,14 +94,14 @@ def main(args):
 
         val_loader = data.DataLoader(
             ParagraphDataset(args.data_folder, args.data_name, 'TEST'),
-            batch_size=args.batch_size, shuffle=True,
+            batch_size=args.batch_size, shuffle=False,
             num_workers=args.workers, pin_memory=True)
 
         encoder_optimizer = None
 
         # pick X elements for generation only
         val_iterator = iter(val_loader)
-        val_loader = list(islice(val_iterator, 10))
+        val_loader = list(islice(val_iterator, 4))
 
         #test_loader = data.DataLoader(
         #    ParagraphDataset(args.data_folder, args.data_name, 'TEST',
@@ -173,64 +173,6 @@ def top_k_top_p_filtering(logits, top_k=0, top_p=0.0, filter_value=-float('Inf')
         
     return logits
 
-def beam_search_predictions(probs, beam_size, word_to_idx, idx_to_word):
-    
-    start = [word_to_idx['<start>']]
-    print('start', start)
-    start_word = [[start, 0.0]]
-    print('start word', start_word)
-    print('probs', probs)
-    probs = probs.cpu()
-    
-    #while len(start_word[0][0]) < max_len:
-    #    temp = []
-    temp = []
-    for s in start_word:
-
-        print(probs[0])
-        print(np.argsort(probs[0]))
-        word_preds = np.argsort(probs[0])[-beam_size:]
-        print('word preds', word_preds)
-        
-        # Getting the top <beam_index>(n) predictions and creating a 
-        # new list so as to put them via the model again
-        
-        for w in word_preds:
-            print(w.item())
-            print(s[0][:], s[1])
-            next_cap, prob = s[0][:], s[1]
-            next_cap.append(w.item())
-            prob += probs[0][w]
-            temp.append([next_cap, prob])
-            
-        print(temp)
-        start_word = temp
-        # Sorting according to the probabilities
-        start_word = sorted(start_word, reverse=False, key=lambda l: l[1])
-        print(start_word)
-        # Getting the top words
-        print(beam)
-        start_word = start_word[-beam_size:]
-        print(start_word)
-    
-    start_word = start_word[-1][0]
-    print(start_word)
-    intermediate_caption = [idx_to_word[i] for i in start_word]
-    print('interm caption', intermediate_caption)
-    
-    final_caption = []
-    for i in intermediate_caption:
-        if i != '<end>':
-            final_caption.append(i)
-        else:
-            break
-    
-    final_caption = ' '.join(final_caption[1:])
-    
-    print(final_caption)
-    
-    return final_caption
-        
     
 def generate(val_loader,
              encoder,
@@ -319,7 +261,7 @@ def generate(val_loader,
                 #print(p_predicted)
                 #print(sentrnn_loss)
                 
-                if p_predicted > 0.5:
+                if p_predicted > 0.4:
                     break
 
                 # WordRNN
@@ -330,7 +272,8 @@ def generate(val_loader,
                 # generation
                 start_token = torch.LongTensor([word_to_idx['<start>']]).to(device)
                 end_token = torch.LongTensor([word_to_idx['<end>']]).to(device)
-                topic = word_decoder.non_lin(word_decoder.image_to_hidden(topic))
+                if args.use_fc:
+                    topic = word_decoder.non_lin(word_decoder.image_to_hidden(topic))
                 inputs = topic
                 
                 this_gen_sentence = []

@@ -149,4 +149,6 @@ def validate(val_loader,
                           'Loss {loss:.4f}\t'.format(i, len(val_loader), batch_time=batch_time,
                                                      loss=loss.item()))
 
-    return this_epoch_loss, this_epoch_sentence, this_epoch_word
+    return this_epoch_loss / len(val_loader),\
+           this_epoch_sentence / len(val_loader),\
+           this_epoch_word / len(val_loader)

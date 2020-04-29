@@ -78,6 +78,8 @@ def train(train_loader,
 
             for sent_num in range(args.max_sentences):
                 
+                #print(imgs.shape)
+                
                 p_source, topic, ht_sent, ct_sent = sentence_decoder(imgs, (h_sent, c_sent))
                 #(h_word[-1].unsqueeze(0), c_word[-1].unsqueeze(0))
                 
@@ -190,4 +192,6 @@ def train(train_loader,
                                                  data_time=data_time, loss=loss.item()))
 
     # return average loss / sentence loss / word loss for current epoch
-    return this_epoch_loss, this_epoch_sentence, this_epoch_word
+    return this_epoch_loss / len(train_loader),\
+           this_epoch_sentence / len(train_loader),\
+           this_epoch_word / len(train_loader)

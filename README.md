@@ -1,12 +1,21 @@
 # 01-par-gen
 
-### Current issues and tasks:
-1. To improve word loss:
-	- use generated phrase captions as additional input along with the topic vector
-	- to get phrase embeddings, concatenate/sum/average pre-trained DenseCap word embeddings
-	- another option: train own LSTM to learn embeddings from scratch
-	- experiment with/without densecap embeddings, update experiments
-2. Experiment with batch size, larger batch size tends to improve results (but there must be a limit to it?)
+### Summary of the current state:
+
+Type of models which have been trained:
+1. Baseline:
+- encoder with one linear layer and max pooling over regions to produce image vector,
+- decoder consisting of
+-- sentence LSTM (input: image vector, previous sentence LSTM hidden state; output: sentence topic vector) and linear layer for predicting end of the paragraph (input: sentence topic vector; output: 0/1)
+-- word LSTM (input: sentence topic vector, word embeddings, previous word LSTM hidden state; output: word scores) for sentence generation, output is passed through linear layer with subsequence softmax applied to it in order to get word probabilities
+2. Baseline + 2 linear layers are added: the first one expands sentence topic vector, the second one shrinks it back to the input dimension for word LSTM (512 -> 1024 -> 512)
+3. Baseline + 2 layer word LSTM, where the first layer is initialised with DenseCap RNN weights (not frozen) + word embeddings are initialised from DenseCap (not frozen)
+
+Various decoding strategies have been implemented (greedy search, beam search, sampling, top-n sampling, nucleus sampling). For some good description of decoding strategies: https://web.stanford.edu/class/cs224n/slides/cs224n-2019-lecture15-nlg.pdf, https://github.com/huggingface/blog/blob/master/notebooks/02_how_to_generate.ipynb
+
+Current investigations:
+1. Short draft with intermediate results (to put everything in the same picture)
+2. Implementing attention (on image regions? on pooled image representation? on topic vector?)
 
 ### Train model
 
@@ -15,7 +24,7 @@
 
 2. Run `create_input_files.py` to generate files which include word map, image features, captions and their lengths for all three data splits. Note that image features where extracted in advance, and this script simply distributes them between data splits properly.
 
-3. Run `/model/main.py` to start training the model. This script uses `config.ini`, which is found in the root directory, simply change settings in this file to train model with different configurations. Also, during validation intermediate generation results for the last batch are saved in `generation_validate` folder.
+3. Run `/model/main.py` to start training the model. This script uses `config.ini`, which is found in the root directory, simply change settings in this file to train model with different configurations.
 
 ### Generate paragraphs
 
@@ -30,27 +39,9 @@
 Dataset information:
 Visual Genome images with paragraphs, 14579 train set, 2490 validation set.
 
-Proj-Matrix: linear layer for image features\
-BS: batch size\
-LR-S: learning rate for the sentence LSTM\
-LR-W: learning rate for the word LSTM\
-NL-W: number of layers in word LSTM\
-D-W: if NL-W is not 1, then dropout is specified\
-L-S: lambda for sentence LSTM loss\
-L-W: lambda for word LSTM loss\
-C-S: clipping for sentence LSTM\
-C-W: clipping for word LSTM\
-LN-W: layer normalisation for word LSTM\
-BN-E: batch normalisation for encoder\
-VL-min: minimal validation set loss that has been achieved
-VL-min-W: word validation min loss
-VL-min-S: sentence validatin min loss
-
-| Exp Num | Feat-Extractor | Proj-Matrix | BS | LR-S | LR-W | NL-W | D-W | L-S | L-W | C-S | C-W | LN-W | BN-E | VL-min | VL-min-W | VL-min-S |
-|---|----------------|---------|----|------|------|------|-----|-----|-----|-----|-----|------|------|------|------|------|
-|  simple |       DenseCap         |     +    |  64  |   1e-3   |   1e-3   |   1   |  -   |  1   |  1   |  -   |  -  |  +  |  -    |   5.61   |   5.57   |   0.03   |
-|  no_projection |       DenseCap         |     -    |  64  |   1e-3   |   1e-3   |   1   |  -   |  1   |  1   |  -   |  -  |  +  |  -    |   5.61   |   5.50   |   0.04   |
-|  hidden_from_topic |       DenseCap         |     +    |  64  |   1e-3   |   1e-3   |   1   |  -   |  1   |  1   |  -   |  -  |  +  |  -    |   5.80   |   5.74  |   0.03   |
-|  simple_noproj_256 |       DenseCap         |     -    |  256  |   1e-3   |   1e-3   |   1   |  -   |  1   |  1   |  -   |  -  |  +  |  -    |   4.79   |   4.60  |   0.13   |
-|  simple_noproj_512 |       DenseCap         |     -    |  512  |   1e-3   |   1e-3   |   1   |  -   |  1   |  1   |  -   |  -  |  +  |  -    |   4.45   |   4.18  |   0.23   |
+| Experiment Name      | BLEU-4 | BLEU-3 | BLEU-2 | BLEU-1 | CIDEr |
+|----------------------|--------|--------|--------|--------|-------|
+|  baseline            |
+|  baseline + linear   |
+|  baseline + DenseCap | 
 

@@ -17,6 +17,8 @@ Type of models which have been trained:
 
 Various decoding strategies have been implemented (greedy search, beam search, sampling, top-n sampling, nucleus sampling). For some good description of decoding strategies: https://web.stanford.edu/class/cs224n/slides/cs224n-2019-lecture15-nlg.pdf, https://github.com/huggingface/blog/blob/master/notebooks/02_how_to_generate.ipynb
 
+A nice overview of decoding strategies (+ the most recent popular decoding strategy, nucleus sampling is introduced): https://arxiv.org/pdf/1904.09751.pdf
+
 Current investigations:
 1. Short draft with intermediate results (to put everything in the same picture)
 2. Implementing attention (on image regions? on pooled image representation? on topic vector?)

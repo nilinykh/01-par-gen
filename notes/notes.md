@@ -1,6 +1,20 @@
 Nikolai
 
 
+## 2020-05-01 
+
+  - 
+
+## 2020-04-23 
+
+  - Baseline model with no pre-training now generates very good descriptions; the problem was in the way the generation was implementaed; it was conditioned on the ground truth rather than previous prediction
+  - Different implementations of search
+	* Greedy search: generic output, frequenetly incorrect and repetitive
+	* Sampling from multinomial distribution https://docs.scipy.org/doc/numpy-1.13.0/reference/generated/numpy.random.multinomial.html for implementation see Softmax-with-temperature-test.ods
+	* Top-n sampling (temperature scaling on the top most probable words), https://cs.stackexchange.com/questions/79241/what-is-temperature-in-lstm-and-neural-networks-generally
+	* Beam-search
+	
+
 ## 2020-04-17 
 
   - Using Densecap embeddings and LSTM language model and fine-tuning them (initilaise only and then update the weights) improves the performance

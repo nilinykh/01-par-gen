@@ -47,6 +47,8 @@ class RegPool(nn.Module):
             self.bn = nn.BatchNorm1d(self.project_dim, momentum=0.9)
         elif not args.bn:
             self.bn = False
+            
+        self.relu = nn.ReLU()
 
     def __init_weights(self):
         nn.init.normal_(self.projection_matrix.weight)
@@ -59,12 +61,12 @@ class RegPool(nn.Module):
         """
         #features = nn.Dropout()(features)
         if self.linear_transformation:
-            project_vec = nn.LeakyReLU()(self.projection_matrix(features))
+            project_vec = self.relu(self.projection_matrix(features))
         else:
             project_vec = features
         project_vec_all = torch.max(project_vec, 1).values
         # L2 normalisation of features is below to test for future
-        project_vec_all = F.normalize(project_vec_all, p=2, dim=1)
+        #project_vec_all = F.normalize(project_vec_all, p=2, dim=1)
         if self.bn:
             project_vec_all = self.bn(project_vec_all)
         return project_vec_all

@@ -1,6 +1,3 @@
-
-
-
 #!/usr/bin/env python
 # 
 # File Name : bleu.py
@@ -32,7 +29,6 @@ class Bleu:
             ref = gts[id]
             
             for sent_id, sent in enumerate(hypo):
-                            
                 sent = [sent]
 
                 # Sanity check.
@@ -44,7 +40,7 @@ class Bleu:
                 bleu_scorer += (sent[0], ref)
 
         #score, scores = bleu_scorer.compute_score(option='shortest')
-        score, scores = bleu_scorer.compute_score(option='closest', verbose=1)
+        score, scores = bleu_scorer.compute_score(option='closest', verbose=0)
         #score, scores = bleu_scorer.compute_score(option='average', verbose=1)
 
         # return (bleu, bleu_info)

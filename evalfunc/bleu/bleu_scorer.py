@@ -24,8 +24,7 @@ def precook(s, n=4, out=False):
     """Takes a string as input and returns an object that can be given to
     either cook_refs or cook_test. This is optional: cook_refs and cook_test
     can take string arguments as well."""
-    #words = s.split()
-    words = s
+    words = s.split()
     counts = defaultdict(int)
     for k in range(1,n+1):
         for i in range(len(words)-k+1):
@@ -239,8 +238,8 @@ class BleuScorer(object):
                 for k in range(n):
                     bleu_list[k][-1] *= math.exp(1 - 1/ratio)
 
-            #if verbose > 1:
-            #    print(comps, reflen)
+            if verbose > 1:
+                print(comps, reflen)
 
         totalcomps['reflen'] = self._reflen
         totalcomps['testlen'] = self._testlen
@@ -256,9 +255,9 @@ class BleuScorer(object):
             for k in range(n):
                 bleus[k] *= math.exp(1 - 1/ratio)
 
-        #if verbose > 0:
-        #    print(totalcomps)
-        #    print("ratio:", ratio)
+        if verbose > 0:
+            print(totalcomps)
+            print("ratio:", ratio)
 
         self._score = bleus
         return self._score, bleu_list

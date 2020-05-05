@@ -78,7 +78,7 @@ def main(args):
         val_loader = data.DataLoader(
             ParagraphDataset(args.data_folder, args.data_name, 'VAL',
                              transform=transforms.Compose([normalize])),
-            batch_size=args.batch_size, shuffle=True,
+            batch_size=args.batch_size, shuffle=False,
             num_workers=args.workers, pin_memory=True)
 
         #test_loader = data.DataLoader(
@@ -94,14 +94,14 @@ def main(args):
 
         val_loader = data.DataLoader(
             ParagraphDataset(args.data_folder, args.data_name, 'TEST'),
-            batch_size=args.batch_size, shuffle=False,
+            batch_size=args.batch_size, shuffle=True,
             num_workers=args.workers, pin_memory=True)
 
         encoder_optimizer = None
 
         # pick X elements for generation only
-        val_iterator = iter(val_loader)
-        val_loader = list(islice(val_iterator, 4))
+        #val_iterator = iter(val_loader)
+        #val_loader = list(islice(val_iterator, 5))
 
         #test_loader = data.DataLoader(
         #    ParagraphDataset(args.data_folder, args.data_name, 'TEST',
@@ -132,16 +132,23 @@ def main(args):
     #for epoch in range(args.start_epoch, args.num_epochs):
 
     # One epoch's validation
-    _ = generate(val_loader=val_loader,
-                 encoder=encoder,
-                 sentence_decoder=sentence_decoder,
-                 word_decoder=word_decoder,
-                 logger=None,
-                 vocab_size=vocab_size,
-                 word_to_idx=word_to_idx,
-                 idx_to_word=idx_to_word,
-                 dc_embeddings=dc_embeddings,
-                 args=args)
+    b1, b2, b3, b4, c, m = generate(val_loader=val_loader,
+                                    encoder=encoder,
+                                    sentence_decoder=sentence_decoder,
+                                    word_decoder=word_decoder,
+                                    logger=None,
+                                    vocab_size=vocab_size,
+                                    word_to_idx=word_to_idx,
+                                    idx_to_word=idx_to_word,
+                                    dc_embeddings=dc_embeddings,
+                                    args=args)
+    print('BLEU 1', b1)
+    print('BLEU 2', b2)
+    print('BLEU 3', b3)
+    print('BLEU 4', b4)
+    print('CIDER', c)
+    print('METEOR', m)
+    
     
 def top_k_top_p_filtering(logits, top_k=0, top_p=0.0, filter_value=-float('Inf')):
     """ Filter a distribution of logits using top-k and/or nucleus (top-p) filtering
@@ -199,14 +206,21 @@ def generate(val_loader,
     if encoder is not None:
         encoder.eval()
 
-    cider_epoch = {}
-    cider_epoch['CIDEr'] = list()
-
     paragraphs_generated = []
+    
+    Bleu_1 = 0
+    Bleu_2 = 0
+    Bleu_3 = 0
+    Bleu_4 = 0
+    CIDEr = 0
+    METEOR = 0
 
     with torch.no_grad():
         # Batches
-        for _, (imgs, image_ids, caps, caplens) in enumerate(val_loader):
+        for image_num, (imgs, image_ids, caps, caplens) in enumerate(val_loader):
+            
+            if image_num % 50 == 0:
+                print(image_num)
 
             pars = {}
 
@@ -407,13 +421,16 @@ def generate(val_loader,
                     references_batch[image_id] = []
                 img_caps = actual[single_paragraph].tolist()
                 img_captions = list(
-                    map(lambda c: [w for w in c if w not in {word_to_idx['<start>'], word_to_idx['<pad>']}],
+                    map(lambda c: [w for w in c if w not in {word_to_idx['<start>'], word_to_idx['<pad>'], word_to_idx['<end>']}],
                         img_caps))
                 paragraph_text = []
                 for sent in img_captions:
                     this_sent_text = [idx_to_word[w] for w in sent]
                     paragraph_text.append(' '.join(this_sent_text))
-                references_batch[image_id].append(paragraph_text)
+                #if paragraph_text != [' ']:
+                if ' '.join(this_sent_text) != '':
+                    #references_batch[image_id].append(paragraph_text)
+                    references_batch[image_id].append(' '.join(this_sent_text))
             
             # Get hypotheses
             for predicted_paragraph in range(len(generated)):
@@ -421,7 +438,7 @@ def generate(val_loader,
                     image_id = image_ids[predicted_paragraph].item()
                     hypotheses_batch[image_id] = []
                 par_preds = generated[predicted_paragraph]
-                this_sentence_text = [idx_to_word[w] for w in par_preds]
+                this_sentence_text = [idx_to_word[w] for w in par_preds[1:]]
                 hypotheses_batch[image_id].append(' '.join(this_sentence_text))
                 
             #print(hypotheses_batch)
@@ -431,42 +448,49 @@ def generate(val_loader,
             # Calculate BLEU & CIDEr & METEOR & ROUGE scores
             # WARNING: at the moment, only BLEU is calculated: one hyp sentence is compared to all ref sentences
 
-            '''scorers = [
+            scorers = [
 
                 (Bleu(4), ["Bleu_1", "Bleu_2", "Bleu_3", "Bleu_4"]),
-                (Cider('coco-val-df'), "CIDEr"),
-                #(Meteor(), "METEOR"),
+                (Cider('vg-test-words'), "CIDEr"),
+                (Meteor(), "METEOR"),
                 #(Rouge(), "ROUGE_L")
             ]
 
             score = []
             method = []
             for scorer, method_i in scorers:
+                
                 score_i, _ = scorer.compute_score(references_batch, hypotheses_batch)
                 score.extend(score_i) if isinstance(score_i, list) else score.append(score_i)
                 method.extend(method_i) if isinstance(method_i, list) else method.append(method_i)
 
             score_dict = dict(zip(method, score))
-            print(score_dict)'''
-
+            #print(score_dict)
+            
+            Bleu_1 += score_dict['Bleu_1']
+            Bleu_2 += score_dict['Bleu_2']
+            Bleu_3 += score_dict['Bleu_3']
+            Bleu_4 += score_dict['Bleu_4']
+            CIDEr += score_dict['CIDEr']
+            METEOR += score_dict['METEOR']
+            
             pars['image_id'] = list(references_batch.keys())[0]
-            pars['references'] = list(references_batch.values())[0]
-            pars['hypotheses'] = list(hypotheses_batch.values())[0]
-
-            #print()
-            #print('IMAGE ID', list(references_batch.keys())[0])
-            #print('GROUND TRUTH')
-            #print(references_batch.values())
-            #print('GENERATED')
-            #print(hypotheses_batch.values())
-            #print('------------------')
+            pars['references'] = ' '.join(list(references_batch.values())[0])
+            pars['hypotheses'] = ' '.join(list(hypotheses_batch.values())[0])
 
             paragraphs_generated.append(pars)
 
-    with open('./generated_paragraphs.json', 'w') as f:
-        json.dump(paragraphs_generated, f)
+    Bleu1_av = Bleu_1 / len(val_loader)
+    Bleu2_av = Bleu_2 / len(val_loader)
+    Bleu3_av = Bleu_3 / len(val_loader)
+    Bleu4_av = Bleu_4 / len(val_loader)
+    Cider_av = CIDEr / len(val_loader)
+    Meteor_av = METEOR / len(val_loader)
 
-    return None
+    with open('./generated_paragraphs_greedy.json', 'w') as f:
+        json.dump(paragraphs_generated, f)
+        
+    return Bleu1_av, Bleu2_av, Bleu3_av, Bleu4_av, Cider_av, Meteor_av
 
 if __name__ == '__main__':
 
@@ -543,7 +567,7 @@ if __name__ == '__main__':
     top_n = config_parser.get('PARAMS-MODELS', 'top_n')
     top_p = config_parser.get('PARAMS-MODELS', 'top_p')
     beam = config_parser.get('PARAMS-MODELS', 'beam')
-
+    attention = config_parser.getboolean('PARAMS-MODELS', 'attention')
 
     api_key = config_parser.get('COMET', 'api_key')
     project_name = config_parser.get('COMET', 'project_name')
@@ -615,7 +639,7 @@ if __name__ == '__main__':
     parser.add_argument('--top_n', type=int, default=top_n, help='top n candidates when using top n sampling')
     parser.add_argument('--top_p', type=float, default=top_p, help='top p for nucleus sampling')
     parser.add_argument('--beam', type=int, default=beam, help='beam search depth')
-    
+    parser.add_argument('--attention', type=bool, default=attention, help='use attention or not')
 
     parser.add_argument('--api_key', type=str, default=api_key, help='key for the Comet logger')
     parser.add_argument('--project_name', type=str, default=project_name, help='name of the project')

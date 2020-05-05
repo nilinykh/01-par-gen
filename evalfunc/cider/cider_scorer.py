@@ -1,20 +1,20 @@
-#!/usr/bin/env python
+    #!/usr/bin/env python
 # Tsung-Yi Lin <tl483@cornell.edu>
 # Ramakrishna Vedantam <vrama91@vt.edu>
 
-import copy
 import sys
+import os
+import copy
+from collections import defaultdict
+import numpy as np
+import pdb
+import math
 
 # Use cPickle if it is installed, as it is much faster
 if 'cPickle' in sys.modules:
     import cPickle as pickle
 else:
     import pickle
-
-from collections import defaultdict
-import numpy as np
-import math
-import os
 
 def precook(s, n=4, out=False):
     """
@@ -25,8 +25,7 @@ def precook(s, n=4, out=False):
     :param n: int    : number of ngrams for which representation is calculated
     :return: term frequency vector for occuring ngrams
     """
-    #words = s.split()
-    words = s
+    words = s.split()
     counts = defaultdict(int)
     for k in range(1,n+1):
         for i in range(len(words)-k+1):
@@ -110,8 +109,9 @@ class CiderScorer(object):
             # refs, k ref captions of one image
             for ngram in set([ngram for ref in refs for (ngram,count) in ref.items()]):
                 self.document_frequency[ngram] += 1
+            # maxcounts[ngram] = max(maxcounts.get(ngram,0), count)
 
-    def compute_cider(self, df_mode = "corpus"):
+    def compute_cider(self, df_mode='corpus'):
         def counts2vec(cnts):
             """
             Function maps counts of ngram to vector of tfidf weights.
@@ -123,7 +123,7 @@ class CiderScorer(object):
             vec = [defaultdict(float) for _ in range(self.n)]
             length = 0
             norm = [0.0 for _ in range(self.n)]
-            for (ngram, term_freq) in cnts.items():
+            for (ngram,term_freq) in cnts.items():
                 # give word count 1 if it doesn't appear in reference corpus
                 df = np.log(max(1.0, self.document_frequency[ngram]))
                 # ngram index
@@ -167,8 +167,7 @@ class CiderScorer(object):
             return val
 
         # compute log reference length
-        if df_mode == "corpus":
-            self.ref_len = np.log(float(len(self.crefs)))
+        self.ref_len = np.log(float(len(self.crefs)))
 
         scores = []
         for test, refs in zip(self.ctest, self.crefs):
@@ -190,22 +189,25 @@ class CiderScorer(object):
         return scores
 
     def compute_score(self, df_mode, option=None, verbose=0):
-        # compute idf
-        if df_mode == "corpus":
+        if df_mode == 'corpus':
+            # compute idf
             self.compute_doc_freq()
             # assert to check document frequency
             assert(len(self.ctest) >= max(self.document_frequency.values()))
         else:
-            file = open('/home/xilini/par-gen/01-par-gen/evalfunc/cider/data/coco-val-df.p', 'rb')
-            docFreq = pickle.load(file, encoding='bytes')
-            self.document_frequency = docFreq
-            #self.document_frequency = defaultdict(str, ((k, v) for k, v in docFreq.items()))
+            #file = open('/home/xilini/par-gen/01-par-gen/evalfunc/cider/data/coco-val-df.p', 'rb')
+            #docFreq = pickle.load(file, encoding='bytes')
+            #self.ref_len = np.log(float(40504))
+            
+            docFreq = pickle.load(open(os.path.join('/home/xilini/par-gen/01-par-gen/evalfunc/cider/data/', \
+                                            df_mode + '.p'), 'rb'))
+            
+            self.document_frequency = docFreq['document_frequency']
             # TODO: make this a part of coco-val-df
-            self.ref_len = np.log(float(40504))
-            #self.ref_len = np.log(float(docFreq[b'ref_len']))
-
+            self.ref_len = np.log(float(docFreq['ref_len']))
+        
         # compute cider score
-        score = self.compute_cider(df_mode)
+        score = self.compute_cider()
         # debug
         # print score
         return np.mean(np.array(score)), np.array(score)

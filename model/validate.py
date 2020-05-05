@@ -7,11 +7,6 @@ import ast
 from torch import nn
 import torch.backends.cudnn as cudnn
 import torch.nn.functional as F
-
-from evalfunc.bleu.bleu import Bleu
-from evalfunc.rouge.rouge import Rouge
-from evalfunc.cider.cider import Cider
-from evalfunc.meteor.meteor import Meteor
 from torch.nn.utils.rnn import pack_padded_sequence
 
 sys.path.append('/home/xilini/par-gen/01-par-gen')
@@ -53,8 +48,8 @@ def validate(val_loader,
             # Batches
             for i, (imgs, image_ids, caps, caplens) in enumerate(val_loader):
 
-                references_batch = dict()
-                hypotheses_batch = dict()
+                #references_batch = dict()
+                #hypotheses_batch = dict()
 
                 imgs = imgs.to(device)
                 caps = caps.to(device)

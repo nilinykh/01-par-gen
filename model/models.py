@@ -193,7 +193,7 @@ class SentenceRNN(nn.Module):
         self.sentence_rnn = nn.LSTM(input_size=self.feat_dim, hidden_size=self.hidden_size,
                                     num_layers=self.num_layers_sentencernn, batch_first=True)
         self.logistic = nn.Linear(self.hidden_size, self.eos_classes)
-        self.non_lin = nn.LeakyReLU()
+        self.non_lin = nn.ReLU()
 
         if args.use_fc:
             if args.use_fc2:
@@ -367,6 +367,8 @@ class WordRNN(nn.Module):
             self.init_h = nn.Linear(self.pooling_dim, self.hidden_size)
             self.init_c = nn.Linear(self.pooling_dim, self.hidden_size)
             self.use_attention = True
+        elif not args.attention:
+            self.use_attention = False
 
     def __init_embeddings(self):
         initrange = 0.1

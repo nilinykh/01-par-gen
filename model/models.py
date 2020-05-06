@@ -48,7 +48,7 @@ class RegPool(nn.Module):
         elif not args.bn:
             self.bn = False
             
-        self.relu = nn.ReLU()
+        self.non_lin = nn.LeakyReLU()
 
     def __init_weights(self):
         nn.init.normal_(self.projection_matrix.weight)
@@ -61,12 +61,12 @@ class RegPool(nn.Module):
         """
         #features = nn.Dropout()(features)
         if self.linear_transformation:
-            project_vec = self.relu(self.projection_matrix(features))
+            project_vec = self.non_lin(self.projection_matrix(features))
         else:
             project_vec = features
         project_vec_all = torch.max(project_vec, 1).values
-        # L2 normalisation of features is below to test for future
-        #project_vec_all = F.normalize(project_vec_all, p=2, dim=1)
+        # L2 normalisation of features
+        project_vec_all = F.normalize(project_vec_all, p=2, dim=1)
         if self.bn:
             project_vec_all = self.bn(project_vec_all)
         return project_vec_all
@@ -193,15 +193,15 @@ class SentenceRNN(nn.Module):
         self.sentence_rnn = nn.LSTM(input_size=self.feat_dim, hidden_size=self.hidden_size,
                                     num_layers=self.num_layers_sentencernn, batch_first=True)
         self.logistic = nn.Linear(self.hidden_size, self.eos_classes)
-        self.non_lin = nn.ReLU()
+        self.non_lin = nn.LeakyReLU()
 
         if args.use_fc:
             if args.use_fc2:
-                self.fc1 = nn.Linear(self.hidden_size, self.pooling_dim)
+                self.fc1 = nn.Linear(self.hidden_size, self.hidden_size)
                 if args.topic_hidden:
                     self.fc2 = nn.Linear(self.pooling_dim, self.pooling_dim)
                 else:
-                    self.fc2 = nn.Linear(self.pooling_dim, self.hidden_size)
+                    self.fc2 = nn.Linear(self.hidden_size, self.hidden_size)
                 self.use_fc2 = True
                 self.use_fc = True
             else:
@@ -269,7 +269,7 @@ class SentenceRNN(nn.Module):
 
         if self.use_fc:
             if self.use_fc2:
-                topic = self.fc2(nn.ReLU()(self.fc1(out)))
+                topic = self.non_lin(self.fc2(self.non_lin(self.fc1(out))))
             else:
                 topic = self.non_lin(self.fc1(out))
         if self.no_fc:
@@ -316,7 +316,10 @@ class WordRNN(nn.Module):
                                            num_layers=self.num_layers_wordrnn, dropout=self.dropout_rate,
                                            batch_first=True)
                 if args.embeddings_pretrained:
-                    self.load_my_state_dict(args.densecap_path + 'rnn_densecap.pkl')
+                    self.load_my_state_dict(args.densecap_path + 'rnn_densecap.pkl', args.freeze)
+                    if not args.freeze:
+                        for param in self.parameters():
+                            param.requires_grad = True
             else:
                 if args.attention:
                     self.decode_step = nn.LSTMCell(input_size=self.embed_dim, hidden_size=self.hidden_size, bias=True)
@@ -326,6 +329,9 @@ class WordRNN(nn.Module):
                                            batch_first=True)
         else:
             raise Exception('Unknown RNN type.')
+            
+        #for p in self.parameters():
+        #    print(p, p.requires_grad)
 
         if args.layer_norm:
             #nn.LayerNorm
@@ -354,12 +360,13 @@ class WordRNN(nn.Module):
         elif not args.with_densecap_captions:
             self.with_densecap_captions = False
 
-        if args.use_fc:
-            self.image_to_hidden = nn.Linear(self.pooling_dim, self.hidden_size)
-            self.non_lin = nn.ReLU()
-            self.im2h = True
-        elif not args.use_fc:
-            self.im2h = False
+        #if args.use_fc:
+        #    self.image_to_hidden = nn.Linear(self.pooling_dim, self.hidden_size)
+        #    self.non_lin = nn.ReLU()
+        #    self.im2h = True
+        #elif not args.use_fc:
+        #    self.im2h = False
+        self.im2h = False
             
         if args.attention:
             self.f_beta = nn.Linear(self.hidden_size, self.pooling_dim)
@@ -389,7 +396,7 @@ class WordRNN(nn.Module):
                 self.linear.state_dict()['weight'].copy_(linear_proj_densecap['vocab_projection.weight'])
         print(self.linear.weight)
 
-    def load_my_state_dict(self, state_dict_path):
+    def load_my_state_dict(self, state_dict_path, freezing):
         own_state = self.state_dict()
         with open(state_dict_path, 'rb') as j:
             state_dict = pickle.load(j)
@@ -401,22 +408,16 @@ class WordRNN(nn.Module):
             if name == 'word_rnn.0.bias_ih':
                 own_state['decode_step.bias_ih_l0'].copy_(param)
 
-        for name1, param1 in own_state.items():
-            #print(name1)
-            if name1 == 'decode_step.weight_ih_l0':
-                param1.requires_grad = True
-                #print(param1.requires_grad)
-            if name1 == 'decode_step.weight_hh_l0':
-                param1.requires_grad = True
-            if name1 == 'decode_step.bias_ih_l0':
-                param1.requires_grad = True
-            else:
-                param1.requires_grad = True
-
-        #for name1, param1 in own_state.items():
-        #    print(name1, param1.requires_grad)
-        #print(own_state)
-
+        if freezing:
+            for name1, param1 in self.named_parameters():
+                if name1 == 'decode_step.weight_ih_l0':
+                    param1.requires_grad = False
+                if name1 == 'decode_step.weight_hh_l0':
+                    param1.requires_grad = False
+                if name1 == 'decode_step.bias_ih_l0':
+                    param1.requires_grad = False
+                    
+                
     @classmethod
     def __load_pretrained_embeddings(cls, weights_matrix):
         """

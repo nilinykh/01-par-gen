@@ -94,14 +94,14 @@ def main(args):
 
         val_loader = data.DataLoader(
             ParagraphDataset(args.data_folder, args.data_name, 'TEST'),
-            batch_size=args.batch_size, shuffle=True,
+            batch_size=args.batch_size, shuffle=False,
             num_workers=args.workers, pin_memory=True)
 
         encoder_optimizer = None
 
         # pick X elements for generation only
         #val_iterator = iter(val_loader)
-        #val_loader = list(islice(val_iterator, 5))
+        #val_loader = list(islice(val_iterator, 10))
 
         #test_loader = data.DataLoader(
         #    ParagraphDataset(args.data_folder, args.data_name, 'TEST',
@@ -286,8 +286,10 @@ def generate(val_loader,
                 # generation
                 start_token = torch.LongTensor([word_to_idx['<start>']]).to(device)
                 end_token = torch.LongTensor([word_to_idx['<end>']]).to(device)
-                if args.use_fc:
-                    topic = word_decoder.non_lin(word_decoder.image_to_hidden(topic))
+                #print(start_token)
+                #print(end_token)
+                #if args.use_fc:
+                #    topic = word_decoder.non_lin(word_decoder.image_to_hidden(topic))
                 inputs = topic
                 
                 this_gen_sentence = []
@@ -331,7 +333,7 @@ def generate(val_loader,
                         # top_n = 1 is greedy search, top_n = vocab_size is pure sampling
                         # controlling for nucleus sampling
                         if args.nucleus_sampling:
-                            logits = top_k_top_p_filtering(outputs, top_k=0.0, top_p=args.top_p)
+                            logits = top_k_top_p_filtering(outputs, top_k=args.top_n, top_p=args.top_p)
                         if not args.nucleus_sampling:
                             logits = top_k_top_p_filtering(outputs, top_k=args.top_n, top_p=0.0)
                         word_softmax = F.softmax(logits, dim=-1).squeeze()
@@ -343,7 +345,10 @@ def generate(val_loader,
 
                     embs = word_decoder.embeddings.weight.data
                     embs = torch.cat([embs, inputs.squeeze(0)], dim=0)
-                    word_to_idx['image'] = 7603
+                    #print(embs)
+                    #print(embs[7604])
+                    
+                    word_to_idx['image'] = 7604
                     start = [word_to_idx['image']]
                     start_word = [[start, 0.0]]
                     final_caption = []
@@ -487,7 +492,7 @@ def generate(val_loader,
     Cider_av = CIDEr / len(val_loader)
     Meteor_av = METEOR / len(val_loader)
 
-    with open('./generated_paragraphs_greedy.json', 'w') as f:
+    with open('./generated_paragraphs.json', 'w') as f:
         json.dump(paragraphs_generated, f)
         
     return Bleu1_av, Bleu2_av, Bleu3_av, Bleu4_av, Cider_av, Meteor_av

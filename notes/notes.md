@@ -1,6 +1,18 @@
 Nikolai
 
 
+## 2020-05-08 
+
+  - Sentence LSTM, add gradient scores for the sentence completion based on the degree to which the sentence is the last sentence
+  - Presentation in the Transforms course: S. Herdade, A. Kappeler, K. Boakye, and J. Soares. Image captioning: Transforming objects into words. In Advances in Neural Information Processing Systems, pages 11135–11145, 2019.
+  - Paper 1: Intent in image captioning
+  - Paper 2: Adding language/conceptual backrgound information to paragrpah description: Coling, deadline 2020-07-01, alternative LANTERN workshop, deadline 2020-08-21
+  - Paper 3: Transformer paper, compare the vision and language fusion between trasnformers and adaptive attention
+  - Realtion to attention and information fusion
+    * S. Dobnik and J. D. Kelleher. A model for attention-driven judgements in Type Theory with Records. In J. Hunter, M. Simons, and M. Stone, editors, JerSem: The 20th Workshop on the Semantics and Pragmatics of Dialogue, volume 20, pages 25–34, New Brunswick, NJ USA, July 16–18 2016.
+
+
+
 ## 2020-05-01 
 
   - How to add attention (similar to Lu and Ghanimifard):

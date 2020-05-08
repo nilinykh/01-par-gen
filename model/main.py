@@ -190,6 +190,8 @@ def main(args):
     val_epoch_loss = []
     val_sentence_epoch_loss = []
     val_word_epoch_loss = []
+    
+    curr_val_sentence_loss = 500
 
     # Epochs
     for epoch in range(args.start_epoch, args.num_epochs):
@@ -235,6 +237,16 @@ def main(args):
                                        args=args)
 
         #print(val_epoch_loss, val_this_epoch_sentence, val_this_epoch_word)
+        
+        #if curr_val_sentence_loss > val_this_epoch_sentence:
+        #    curr_val_sentence_loss = val_this_epoch_sentence
+        #    for param in sentence_decoder.parameters():
+        #        param.requires_grad = True
+        #    print('Sentence RNN is trained!')
+        #elif curr_val_sentence_loss < val_this_epoch_sentence:
+        #    for param in sentence_decoder.parameters():
+        #        param.requires_grad = False
+        #    print('Sentence RNN is frozen!')
 
         experiment.log_metric("val_loss", this_val_epoch_loss, step=epoch)
         experiment.log_metric("val_sentence_loss", val_this_epoch_sentence, step=epoch)

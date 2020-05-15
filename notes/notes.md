@@ -1,5 +1,23 @@
 Nikolai
 
+## 2020-05-15 
+
+  - Extracted DenseCap features
+  - Transformer presentation
+  - Multi-modal fusion possibilities:
+	* pool(visual), pool (backrgound), visual + background = 512 + 512 = 1024; confuses end of sentence detection but produces cool and rich descriptions ==> move end of sentence detection (possibly to the end of the word LSTM) ; remove end of sentence detection completely
+	* combinate visual and background into a single 512 vector with multiplication and test; does this improve end of sentence detection and also generates interesting descriptions
+	* no pooling, hence 50 x 1024 or 50 x 512; then a dense layer to 512
+  - Conceptual model overview:
+	* Information fusion (visual + background) and summarisation (pooling)
+	* Discourse planning (sentence LSTM)
+	* Sentence relaisation (word LSTM)
+	* Where does EOP (end of paragraph) fit in?
+	* See our diagram doodle
+  - Replace DenseCap (2016) with FasterRCNN (bottom-up, Anderson; Detectron2 SoTA for object detection by FB) https://github.com/facebookresearch/detectron2 
+  - Numeric prediction for EOP which conveys gradience for individual sentences leading to the stop (maybe this is not relevant since the EOP is not an LSTM (the signal about EOP is not fed back into prediction) but this relies on the sentence LSTM which is gradient)
+  
+
 
 ## 2020-05-08 
 

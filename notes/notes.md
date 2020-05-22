@@ -1,5 +1,16 @@
 Nikolai
 
+## 2020-05-22 
+
+  - Salince and attention: how humans focus on paragraphs of text; Nikolai's entity linker; how is this captured in the current Stanford corpus; does our model capture it and how can we improve the model 
+  - A. Zarcone, M. van Schijndel, J. Vogels, and V. Demberg. Salience and attention in surprisal-based accounts of language processing. Frontiers in Psychology, 7:844, 2016. [Paper](https://www.frontiersin.org/articles/10.3389/fpsyg.2016.00844/full)
+  - Surprisal modelling; information density, constant surprisal; focus on the herar
+  - What is informational density in generated captions? Are we generating too much or too little?
+  - The context of annotation; hwo does this affect the information in the description? Experiment where one person does not see an image but only heras descriptions.
+  - Remove the sentence generation part; use the number of sentences from the corpus to evaluate the descriptions
+
+
+
 ## 2020-05-15 
 
   - Extracted DenseCap features

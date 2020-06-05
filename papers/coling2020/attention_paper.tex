@@ -1,0 +1,194 @@
+%
+% File acl2020.tex
+%
+%% Based on the style files for ACL 2020, which were
+%% Based on the style files for ACL 2018, NAACL 2018/19, which were
+%% Based on the style files for ACL-2015, with some improvements
+%%  taken from the NAACL-2016 style
+%% Based on the style files for ACL-2014, which were, in turn,
+%% based on ACL-2013, ACL-2012, ACL-2011, ACL-2010, ACL-IJCNLP-2009,
+%% EACL-2009, IJCNLP-2008...
+%% Based on the style files for EACL 2006 by 
+%%e.agirre@ehu.es or Sergi.Balari@uab.es
+%% and that of ACL 08 by Joakim Nivre and Noah Smith
+
+\newcount\Comments  % 0 suppresses notes to selves in text
+\Comments=1   % TODO: set to 0 for final version
+
+\documentclass[11pt,a4paper]{article}
+\usepackage[hyperref]{acl2020}
+\usepackage{times}
+\usepackage{latexsym}
+\renewcommand{\UrlFont}{\ttfamily\small}
+
+% for comments
+\usepackage{color}
+\definecolor{darkgreen}{rgb}{0,0.5,0}
+\definecolor{purple}{rgb}{1,0,1}
+% \kibitz{color}{comment} inserts a colored comment in the text
+\newcommand{\kibitz}[2]{\ifnum\Comments=1\textcolor{#1}{#2}\fi}
+% add yourself here:
+\newcommand{\nikolai}[1]{\kibitz{red}      {[Nikolai: #1]}}
+\newcommand{\simon}[1]  {\kibitz{blue}   {[Simon: #1]}}
+\newcommand{\asad}[1]{\kibitz{purple}     {[Asad: #1]}}
+
+% This is not strictly necessary, and may be commented out,
+% but it will improve the layout of the manuscript,
+% and will typically save some space.
+\usepackage{microtype}
+
+%\aclfinalcopy % Uncomment this line for the final submission
+%\def\aclpaperid{***} %  Enter the acl Paper ID here
+
+%\setlength\titlebox{5cm}
+% You can expand the titlebox if you need extra space
+% to show all the authors. Please do not make the titlebox
+% smaller than 5cm (the original size); we will check this
+% in the camera-ready version and ask you to change it back.
+
+\newcommand\BibTeX{B\textsc{ib}\TeX}
+
+\title{Contextual knowledge is important: utilizing top-down information in generating structured and ordered image paragraphs}
+
+\author{First Author \\
+  Affiliation / Address line 1 \\
+  Affiliation / Address line 2 \\
+  Affiliation / Address line 3 \\
+  \texttt{email@domain} \\\And
+  Second Author \\
+  Affiliation / Address line 1 \\
+  Affiliation / Address line 2 \\
+  Affiliation / Address line 3 \\
+  \texttt{email@domain} \\}
+
+\date{}
+
+\begin{document}
+\maketitle
+\begin{abstract}
+abstract
+
+\end{abstract}
+
+\section{Introduction}
+
+% Learning discourse from bottom-up and top-down features (?)
+
+
+Humans are typically able to effortlessly describe real-world images when required: we easily identify objects, attributes and relations between them.
+%While describing a scene, we also quickly organise our utterances in the most fitting way possible, editing them while producing when necessary.
+Diversity, richness and complexity of such human-produced image descriptions have been observed in several benchmark image description datasets, including MSCOCO \cite{lin2014microsoft,chen2015microsoft}, Flickr8k \cite{hodosh2013}, Flickr30k \cite{young-etal-2014-image}, Visual Genome \cite{krishnavisualgenome}.
+These datasets were collected to address the task of automatic image description \cite{bernardi2016automatic}, a long-standing and active field of research, placed in intersection between computer vision and natural language processing (generation, in particular).
+This problem of mapping visual data to text can be viewed as the specific example of one of the core goals of NLG: `translating' source data into a natural language representation.
+
+In natural language generation community, the task of text generation has been typically divided into multiple sub-tasks, including \textit{content determination (selection)}, the task of deciding which parts of the source information should be included in the output description, and \textit{text structuring}, the task of ordering selected information \cite{Gatt2017}.
+However, with the rise of neural networks in many NLP areas, the generation tasks are now seen as a continuous, non-modular process of automatically learning relations between input and expected output. Specifically, neural models of image captioning \cite{kiros14,vinyals2014tell} are trying to implicitly learn what is important about an image (content selection) and how this information should be structured in the generated caption (text structuring).
+Such mechanisms as attention \cite{xu2015attend,anderson2017bottomup} further improve ability of the models to locate important parts in an image and utilize them for caption generation. Some recent advances in image captioning include application of transformer architecture \cite{vaswani2017attention,herdade2019image}.
+
+While it is clear that neural networks demonstrate good performance in generating \textit{well-structured} single-sentence image captions with \textit{relevant knowledge}, the problem of selecting and ordering information becomes significantly harder when generating multiple sentences for a single image. The corresponding task of
+\textit{image paragraph generation} has been initially introduced in \newcite{krause2016hierarchical}, proposing the challenge of generating a text, consisting of several sentences that would form a coherent whole.
+Most of the following work \cite{liang2017recurrent,chatterjee2018diverse,wang2019convolutional} has focused on \textit{generating} good, diverse and human-like paragraphs as measured by various automatic evaluation metrics like BLEU \cite{bleu} or CIDEr \cite{vedantam2014cider}.
+
+In this paper we look at the different aspect of image paragraph generation and address the problem of \textbf{information order} in the multi-sentence image captioning setting.
+We argue that utilizing top-down knowledge (information about context available to the captioner) is beneficial for the task of image paragraph generation.
+We show that the model conditioned on both low-level visual features and high-level top-down information is able to learn human-like distributions of attended objects, attributes and relations generated in the paragraph.
+We introduce several image paragraph models based on the hierarchical paragraph generator \newcite{krause2016hierarchical} and also
+demonstrate that using bottom-up information exclusively is not enough to learn good paragraph structure.
+We employ transfer learning and use model pre-trained for the dense image captioning task \cite{densecap} to obtain representations of background information, which we treat as our top-down features.
+We evaluate how close our models are compared to the human performance in terms of attending to objects in visual scenes in a particular order.
+
+% multimodality
+% \cite{barzilay-lee-2004-catching} 
+
+\section{Related Work}
+
+\paragraph{Human visual attention}
+
+\nikolai{This section needs better writing + more papers needs to be cited here: \cite{Ullman87}, \cite{Dobnik2016AMF}}
+
+Visual attention is one of the most important biological mechanisms that humans have mastered.
+Attention allows us to single out particular objects in the visual scene, significantly reducing our perceptual load \cite{Lavie04} and preventing us from being overwhelmed by typically complex real-world visual scenes.
+Our ability to attend to particular parts of the environment is based on both bottom-up information (low-level visual stimuli) and top-down information (high-level goal-related stimuli, discourse knowledge) \cite{Zarcone2016}.
+Furthermore, stimuli that attracts our attention is said to be salient, which, in turn, influences what is mentioned in image caption and in which order. Salience of objects affects our surprisal towards particular visual input: discourse-salient entities cause less surprisal (e.g. `bed' in bedroom), while vision-salient objects would increase our surprisal level (e.g. `large pink elephant' in bedroom).
+
+\paragraph{Neural image paragraph captioning}
+The task of generating more complex descriptions of images such as paragraphs has been introduced in \newcite{krause2016hierarchical} along with the dataset of image-paragraph pairs.
+The paper adopts a hierarchical structure for the model of paragraph generation: sentence RNN is conditioned on visual features and unrolled for each sentence in the paragraph, giving a sentence topic as its output.
+Then, each of these topics is used by another RNN to generate actual sentences.
+We start by implementing this hierarchical image paragraph model, since it inherits the modular nature of human image paragraph production (given an image, plan structure of your paragraph and identify its sentence topics, then incrementally generate sentences).
+\newcite{liang2017recurrent} use similar hierarchical network in addition with adversarial discriminator, that forces model to generate realistic paragraphs with smooth transitions between sentences.
+\newcite{chatterjee2018diverse} also address cross-sentence topic consistency by modelling global coherence vector, conditioned on all sentence topics.
+Different from these approaches, \newcite{melas2019} employ self-critical training technique \cite{selfcritical2016} to directly optimize a target evaluation metric for image paragraph generation.
+Lastly, \newcite{wang2019convolutional} use convolutional auto-encoder for topic modelling based on region-level image features. They demonstrate that extracted topics are more representative and contain information relevant for sentence generation.
+In this paper we similarly model better topic representations. However, we use additional language representations as part of the input to our topic generator, which is an LSTM.
+
+\paragraph{Language attention in language and vision models}
+\nikolai{wordy section, needs to be shorter, keep all information here for now}
+
+Only a limited number of models for image captioning has been supplied with both visual and background information for caption generation.
+\newcite{You2016} detect visual concepts found in the scene (objects, attributes, etc.) and extract top-down visual features.
+Both of these modalities are then fed to the RNN-based caption generator.
+Attention is applied on detected concepts to inform generator about how relevant a particular concept is at each timestamp. Different to their model, we do not use any attribute detectors to identify objects in the scene, instead relying on the output of the model pre-trained for the task of dense captioning.
+\newcite{Lu2016} emphasize that image is not always useful in generating some function words (`of', `the', etc.).
+They introduce adaptive attention, which determines when to look at the image and when it is more important to use the language model to generate the next word.
+In their work, the attention vector is the mixture of visual features and visual sentinel, a vector obtained through the additional gate function on decoder memory state.
+Our model is focused on a similar task: we are interested in deciding which type information is more important at a particular timestamp, but we also look at how \textit{merging} two modalities into a single representation performs and how it affects attention of the model.
+Closest to our work is the work by \cite{liang2017recurrent}, who apply language attention on region captions and use it to assist recurrent word generation in producing sentences in a paragraph. They embed region descriptions into the same embedding space that their word RNN is operating on. While we also believe that feeding information about semantic concepts found in an image is beneficial for the model, we propose to employ transfer learning. We use hidden states of the RNN trained for the task of dense captioning \cite{densecap} as our background information representation.
+Outside of image paragraph captioning, \newcite{vqaLU16} have proposed a joint image and question attention model for the task of visual question answering.
+\nikolai{Any work on language attention in visual dialog? I think one sentence with some citations would be nice to have.}
+
+
+\section{Approach}
+\nikolai{The stuff below needs to be updated! Nothing important to read there (yet)!}
+
+%Describe architecture of paragraph generation models (baseline + 2 modifications). Note specifically that sentence LSTM is supposed to capture discourse organisation. Examples of generated paragraphs with various decoding strategies. State that paragraphs are generic, no clear intent is observed in them for specific images. Should automatic evaluation scores for the models be reported here? If so, this might take longer time...
+
+In our experiments we largely adopt architecture of the hierarchical paragraph generation model described in \cite{krause2016hierarchical}, applying numerous changes. For all our models, we change the stopping probability threshold parameter $T_{STOP}$ from 0.5 to 0.4. At each timestamp, both sentence LSTM and word LSTM use hidden states from previous timestamps respectively. Hyperparameters of all our models are identical to the ones reported in the original paper. All models are implemented in PyTorch.
+
+\paragraph{Baseline} As our baseline, we implement hierarchical model described in the original paper. The only difference is that we use a single fully-connected layer to obtain input to the word LSTM, while the original paper uses two.
+
+\paragraph{No-FC} Our second variant of the model does not use any fully-connected layers between sentence LSTM and word LSTM, directly passing current hidden state $h_t$ of sentence LSTM as input to the word LSTM. Such change is supposed to reduce complexity of the model.
+
+\paragraph{DC-wordLSTM} Our third model has two layers in word LSTM, where the first layer is initialised with the DenseCap RNN weights and embeddings. We follow similar transfer learning strategy described in the original paper.
+
+All training is done via teacher forcing. During inference stage, we use predicted word as an input at the next timestamp. To predict the word, we test multiple decoding strategies and observe that nucleus sampling (p = 0.9) \cite{holtzman2019curious} with temperature over softmax (0.5) gives us the most interesting and coherent descriptions compared to the other decoding algorithms.
+
+
+%\paragraph{Image Representation} We first use region detector, that is pre-trained for the dense captioning task \cite{densecap} to extract features for each detected region. We pass each region through fully-connected layer, apply non-linearity, and use max pooling to obtain a single vector representation. Such representation compactly describes image and contains information about its most important features.
+%\paragraph{Sentence LSTM} We implement sentence LSTM, which is responsible for several tasks: (a) learn discourse organisation of the whole paragraph and capture what needs to be mentioned in each sentence, (b) predict, whether current sentence is the last one to be generated. We unroll sentence LSTM given the number of sentences we want to generate. It takes pooled image vector as its input along with the hidden state of its previous timestamp. We emphasize that this architecture choice is aimed at helping the model to make sentences dependent on each other. Each hidden state is passed through a fully-connected layer to predict whether current sentence should end the paragraph (we use binary cross-entropy as the loss function). Different from the original model, we directly pass hidden state as input to the Word LSTM, without feeding it first to additional fully-connected layers.
+%\paragraph{Word LSTM} Our word LSTM is responsible for word generation in each sentence given hidden state of the previous word LSTM and current hidden state of sentence LSTM. We train word LSTM with teacher forcing, passing ground-truth words at every next timestamp. During inference stage, we use various decoding strategies to generate current word, which is used as input to the next timestamp.
+
+
+\section{Conclusion}
+
+\bibliography{attention}
+\bibliographystyle{acl_natbib}
+
+\appendix
+
+\section{Appendices}
+\label{sec:appendix}
+Appendices are material that can be read, and include lemmas, formulas, proofs, and tables that are not critical to the reading and understanding of the paper. 
+Appendices should be \textbf{uploaded as supplementary material} when submitting the paper for review.
+Upon acceptance, the appendices come after the references, as shown here.
+
+\paragraph{\LaTeX-specific details:}
+Use {\small\verb|\appendix|} before any appendix section to switch the section numbering over to letters.
+
+
+\section{Supplemental Material}
+\label{sec:supplemental}
+Submissions may include non-readable supplementary material used in the work and described in the paper.
+Any accompanying software and/or data should include licenses and documentation of research review as appropriate.
+Supplementary material may report preprocessing decisions, model parameters, and other details necessary for the replication of the experiments reported in the paper.
+Seemingly small preprocessing decisions can sometimes make a large difference in performance, so it is crucial to record such decisions to precisely characterize state-of-the-art methods. 
+
+Nonetheless, supplementary material should be supplementary (rather than central) to the paper.
+\textbf{Submissions that misuse the supplementary material may be rejected without review.}
+Supplementary material may include explanations or details of proofs or derivations that do not fit into the paper, lists of
+features or feature templates, sample inputs and outputs for a system, pseudo-code or source code, and data.
+(Source code and data should be separate uploads, rather than part of the paper).
+
+The paper should not rely on the supplementary material: while the paper may refer to and cite the supplementary material and the supplementary material will be available to the reviewers, they will not be asked to review the supplementary material.
+
+\end{document}

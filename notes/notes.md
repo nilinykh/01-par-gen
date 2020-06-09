@@ -1,5 +1,50 @@
 Nikolai
 
+## 2020-06-09
+
+Paper 1:
+
+  - Background knowledge is useful for generating interesting descriptions as it provides additional richness of descriptions
+	* The background knowledge provides additional information what is worth mentioning in the image; how humans conceputalise the world and devide scenes into objects and relations between objects 
+	* The model is able to use synonyms of words that it encounters
+	* Descriptions do not only refer to what is seen
+	* The descriptions provide background information, priming; they are explciit descriptions of individual objects with focus on what is relevant; we have additional information about objects;
+	* In addition to information in the generated output text we are also priming the system with information how to describe objects; very similar to Mooney idea of providing explanations
+	* The paragraph does provide conceptual information about objects but only those that are referred to in a description; in a single text maybe not all properties of the scene are mentioned but only those that were considered relavant by a describer; a describer could describe other important information which can be extracted from the background information; attention may be subjective
+	* The model is able to hallucinate up to a point but halucination must be grounded in image; there is good question where the boundary generating grounded and ungrounded descriptions is
+	* We are not necessarily hallucinating since we are basing it on actual descriptions of several objects; we are providing a more complete description of the image and the relations we find there to help to generate the descriptions; the original model is also hallucinating
+	* Densecaps are relevant descriptions of objects
+  - How do we evaluate?
+  - See also J. Wu and R. J. Mooney. Self-critical reasoning for robust visual question answering. arXiv, arXiv:1905.09998 [cs.CV], 2019.
+  - X. Liang, Z. Hu, H. Zhang, C. Gan, and E. P. Xing. Recurrent topic-transition gan for visual paragraph generation. arXiv, arXiv:1703.07022 [cs.CV]:1–10, 2017.
+  - We have visual and linguistic topic represnetation of each image; then this informaiton is combined to get multi-modal topics; these are then attended to drive to drive the discourse LSTM which is repsonsible for generating discourse units/sentences; the Liang paper uses phrases to generate the words in sentences; they see it as fragments which should be glued together in a sentence; whereas we see it as providing a topic what can be said about the image and then the system is free to generate individual sentences from that
+  - Topic modelling: we create visual and textual topics; from these topics the system learnes how to realise these topics in idnvidual paragraph
+  - Evaluation:
+	* The produces more interesting descriptions given the baseline
+	* We need to say something that we really are learning topics; look at the attention maps for the combinaed features; attention there is over visual-language topics and the previous state of the discourse LSTM; it's modelling to what degree we take into account new topics and to what degree we are following from the previous discourse unit
+  - Parallel co-attention: visual features are passed tohtough a dense layer and then multiplied with the linguistic features; hence visual features are adapted to linguistci features which cretae our topics (affinity matrix)
+  - What to describe when?
+	* Adding more to what
+	* Adding the ability select when
+  - Models
+	* Baseline 1: Krause without end of sentence prediction
+	* Model 2: Add linguistic topics (VL Topics with co-attention) and discourse attention
+	* Model 3: Add only linguistic topics
+  - To do:
+      * Implement models with VL topics and attention (all combinations)
+	  * Visualisation of attention with and without topics
+	  * Evaluation (both beam search and samplign); qualitative evaluation to examine whether sampling is better
+	  * Measuring diversity in the generated paragraphs (using frequencies of types and other measures, N's slides)
+
+
+Paper 2:
+
+  - Paragraphs have a discourse model. 
+  - Humans structure information diffirently accross different sentences.
+  - We have a vision and language input model. How is this information structured accross different sentences?
+  - Attention map of the 
+
+
 ## 2020-05-29 
 
   Nikolai, Simon and Asad

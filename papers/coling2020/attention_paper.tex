@@ -86,7 +86,7 @@ However, with the rise of neural networks in many NLP areas, the generation task
 Such mechanisms as attention \cite{xu2015attend,anderson2017bottomup} further improve ability of the models to locate important parts in an image and utilize them for caption generation. Some recent advances in image captioning include application of transformer architecture \cite{vaswani2017attention,herdade2019image}.
 
 While it is clear that neural networks demonstrate good performance in generating \textit{well-structured} single-sentence image captions with \textit{relevant knowledge}, the problem of selecting and ordering information becomes significantly harder when generating multiple sentences for a single image. The corresponding task of
-\textit{image paragraph generation} has been initially introduced in \newcite{krause2016hierarchical}, proposing the challenge of generating a text, consisting of several sentences that would form a coherent whole.
+\textit{image paragraph generation} has been initially introduced in \cite{krause2016hierarchical}, proposing the challenge of generating a text, consisting of several sentences that would form a coherent whole.
 Most of the following work \cite{liang2017recurrent,chatterjee2018diverse,wang2019convolutional} has focused on \textit{generating} good, diverse and human-like paragraphs as measured by various automatic evaluation metrics like BLEU \cite{bleu} or CIDEr \cite{vedantam2014cider}.
 
 In this paper we look at the different aspect of image paragraph generation and address the problem of \textbf{information order} in the multi-sentence image captioning setting.
@@ -109,7 +109,7 @@ Humans are quite efficient in detecting objects and separating them from the res
 Our ability to attend to particular parts of the environment is based on both bottom-up information (low-level visual stimuli) and top-down information (high-level goal-related stimuli, discourse knowledge) \cite{Zarcone2016}.
 Stimuli that attracts our attention is said to be \textit{salient} (relevant). Salience of objects affects our \textit{surprisal} towards particular visual input: discourse-salient entities cause less surprisal (e.g. `bed' in bedroom) unlike the visually salient objects (e.g. `large pink elephant' in bedroom).
 
-Attention has also been employed in formal theories of interaction. One of the approaches has been proposed by \newcite{Dobnik2016AMF}, who link attention with judgements as defined in Type Theory of Records \cite{Cooper08typetheory}.
+Attention has also been employed in formal theories of interaction. One of the approaches has been proposed by \newcite{Dobnik2016AMF}, who link attention with judgements as defined in Type Theory of Records \cite{Cooper08typetheory}. % SD 2020-06-09 10:48:27 +0200: A more relevant description here would be thay we provide a Bayesian model of bottom-up and top-down attention in judgements classification of Type Theory... \cite{Cooperinprepa}
 They introduce a Bayesian-based framework in which attention controls the extent to which context induced judgements ($\sim$ task-based top-down information) are utilized by an agent. This allows for topic modelling at each timestamp in interaction.  Thus, it follows along the lines of our proposal about attention using both contextual and low-level visual information in selecting relevant information for each individual sentence in the image paragraph.
 
 
@@ -123,6 +123,8 @@ We start by implementing this hierarchical image paragraph model, since it inher
 Different from these approaches, \newcite{melas2019} employ self-critical training technique \cite{selfcritical2016} to directly optimize a target evaluation metric for image paragraph generation.
 Lastly, \newcite{wang2019convolutional} use convolutional auto-encoder for topic modelling based on region-level image features. They demonstrate that extracted topics are more representative and contain information relevant for sentence generation.
 In this paper we similarly model better topic representations. However, we use additional language representations as part of the input to our topic generator, which is an LSTM.
+
+% SD 2020-06-09 10:38:27 +0200: Since our approach is based on Krause we should start with other methods first and then lead to Krause and also give an overview of the main components (e.g. graph).
 
 \paragraph{Language attention in language and vision models}
 \nikolai{wordy section, needs to be shorter, keep all information here for now}
@@ -149,6 +151,8 @@ Outside of image paragraph captioning, \newcite{vqaLU16} have proposed a joint i
 %Describe architecture of paragraph generation models (baseline + 2 modifications). Note specifically that sentence LSTM is supposed to capture discourse organisation. Examples of generated paragraphs with various decoding strategies. State that paragraphs are generic, no clear intent is observed in them for specific images. Should automatic evaluation scores for the models be reported here? If so, this might take longer time...
 
 In our experiments we largely adopt architecture of the hierarchical paragraph generation model described in \cite{krause2016hierarchical}, applying numerous changes. For all our models, we change the stopping probability threshold parameter $T_{STOP}$ from 0.5 to 0.4. At each timestamp, both sentence LSTM and word LSTM use hidden states from previous timestamps respectively. Hyperparameters of all our models are identical to the ones reported in the original paper. All models are implemented in PyTorch.
+
+% SD 2020-06-09 10:44:41 +0200: We should explain Krause model better to give an intuition what is happening between different components. Or rather, we should give a description (including a diagram) of our model and then also mention in what ways it is different from Krause. Otherwise, it is hard to follow the following description.
 
 \paragraph{Baseline} As our baseline, we implement hierarchical model described in the original paper. The only difference is that we use a single fully-connected layer to obtain input to the word LSTM, while the original paper uses two.
 
@@ -197,3 +201,11 @@ features or feature templates, sample inputs and outputs for a system, pseudo-co
 The paper should not rely on the supplementary material: while the paper may refer to and cite the supplementary material and the supplementary material will be available to the reviewers, they will not be asked to review the supplementary material.
 
 \end{document}
+%%% Local Variables:
+%%% mode: latex
+%%% mode: flyspell
+%%% TeX-master: t
+%%% TeX-PDF-mode: t
+%%% coding: utf-8
+%%% ispell-local-dictionary: "british"
+%%% End:

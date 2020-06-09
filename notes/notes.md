@@ -1,6 +1,28 @@
 Nikolai
 
+## 2020-05-29 
+
+  Nikolai, Simon and Asad
+
+  - 50 visual representations of objects, 50 topic represnetations of descriptions of objects
+  - attention on both; the attention is available to the discourse information structure LSTM to help out how to realise the paragraphs
+  - top-down and bottom-up attention, cf. Lavie 2014, and S. Dobnik and J. D. Kelleher. A model for attention-driven judgements in Type Theory with Records. In J. Hunter, M. Simons, and M. Stone, editors, JerSem: The 20th Workshop on the Semantics and Pragmatics of Dialogue, volume 20, pages 25–34, New Brunswick, NJ USA, Juley 16–18 2016.
+  - NLG:
+	* E. Krahmer and K. van Deemter. Computational generation of referring expressions: A survey. Compu- tational Linguistics, 38(1):173–218, 2011.
+	* K. v. Deemter. Computational models of referring: a study in cognitive science. The MIT Press, Cam- bridge, Massachusetts and London, England, 2016.
+  - Evaluation:
+	* the actual distirbution of adaptive attention
+	* the attention graph as produced in Nikolai's previous paper over objects mentioned in the generated text
+  - end of paragraph prediction removed; replace with a cheat end of paragraph detection: generate the same number of sentences as in the ground truth
+
+Holiday
+
+  - 2 weeks in December and 2 weeks in January (21 December - 18 January)
+
+
 ## 2020-05-22 
+
+  Nikolai, Simon and Asad
 
   - Salince and attention: how humans focus on paragraphs of text; Nikolai's entity linker; how is this captured in the current Stanford corpus; does our model capture it and how can we improve the model 
   - A. Zarcone, M. van Schijndel, J. Vogels, and V. Demberg. Salience and attention in surprisal-based accounts of language processing. Frontiers in Psychology, 7:844, 2016. [Paper](https://www.frontiersin.org/articles/10.3389/fpsyg.2016.00844/full)

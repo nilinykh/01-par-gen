@@ -1,5 +1,21 @@
 Nikolai
 
+## 2020-06-18 
+
+  - ALPS, the NLP winter school in the Alps, http://lig-alps.imag.fr
+  - Evaluation
+	* Baseline: visual no attention
+	* + background information: improvement
+	* What search is used in Krause? This is not clear? Another paper claims that Krause is using beam search.
+  - CIDER: TF/IDF on bigrams
+  - METEOR: takes into account synonyms and paraphrases
+  - CIDER has the highest improvement in our cases: because of TF/IDF CIDER is biased to more specific descriptions which we observed is the case with our descriptions anyway
+  - Beam search produces very short sentences: problem with the beamsearch implementtation: uses sum rather than product
+  - Nucleus sampling is producing the best results: only choose only from words that jointly represent some probability mass; the threshold is deifned as a parameter; 0.9 works the best; this will affect the number of words we can choose from each time; and then we randomly choose one of those words;
+  - Attention is placed on the discourse LSTM; it helps the system tolearn how to realise background knowledge in the paragraph accross different sentences; because we know thta humans focus on different information when they start and proceed with describing; diversity in the sense that there some topic progression from one sentence to another; we hope that the discourse LSTM will learn how to attend to different chunks of background knowledge and visual information related to those; this gives us a discourse model; this is shown by attention maps
+  
+
+
 ## 2020-06-09
 
 Paper 1:

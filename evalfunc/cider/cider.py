@@ -15,13 +15,14 @@ class Cider:
     Main Class to compute the CIDEr metric 
 
     """
+    
     def __init__(self, df, test=None, refs=None, n=4, sigma=6.0):
         # set cider to sum over 1 to 4-grams
         self._n = n
         # set the standard deviation parameter for gaussian penalty
         self._sigma = sigma
         self._dfMode = df
-
+        
     def compute_score(self, gts, res):
         """
         Main function to compute CIDEr score
@@ -39,16 +40,17 @@ class Cider:
             hypo = res[id]
             ref = gts[id]
             
-            for sent_id, sent in enumerate(hypo):
-                sent = [sent]
+            #print('hypo', hypo)
+            #print('ref', ref)
+            #ref = [' '.join(ref)]
 
-                # Sanity check.
-                assert(type(sent) is list)
-                assert(len(sent) == 1)
-                assert(type(ref) is list)
-                assert(len(ref) > 0)
+            # Sanity check.
+            assert(type(hypo) is list)
+            assert(len(hypo) == 1)
+            assert(type(ref) is list)
+            assert(len(ref) > 0)
 
-                cider_scorer += (sent[0], ref)
+            cider_scorer += (hypo[0], ref)
 
         (score, scores) = cider_scorer.compute_score(self._dfMode)
 

@@ -10,6 +10,13 @@ import time
 from itertools import islice
 import ast
 
+import matplotlib
+import matplotlib.pyplot as plt
+import numpy as np
+import skimage
+import cv2
+import imageio
+
 import torch.backends.cudnn as cudnn
 import torch.optim
 from torch.utils import data
@@ -17,18 +24,28 @@ import torchvision.transforms as transforms
 from torch import nn
 import torch.nn.functional as F
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
-from models import Encoder, RegPool, SentenceRNN, WordRNN
+from models import RegPool, SentenceRNN, WordRNN
 from datasets import *
 from utils import *
 from evalfunc.bleu.bleu import Bleu
 from evalfunc.rouge.rouge import Rouge
 from evalfunc.cider.cider import Cider
 from evalfunc.meteor.meteor import Meteor
+from evalfunc.spice.spice import Spice
+
+import operator
+from queue import PriorityQueue
 
 import numpy as np
+from PIL import Image
+import heapq
 
 device = torch.device("cuda")
 cudnn.benchmark = True
+
+# nipy_spectral, gist_rainbow, seismic, hot
+cmap = matplotlib.cm.get_cmap('nipy_spectral')
+#cmap.set_bad(color="k", alpha=5.0)
 
 
 def main(args):
@@ -41,7 +58,7 @@ def main(args):
         word_to_idx = os.path.join(args.densecap_path, 'word_to_idx' + '.json')
         dc_embeddings = torch.load(os.path.join(args.densecap_path, 'densecap_emb.pt'))
     else:
-        word_to_idx = os.path.join(args.data_folder, 'WORDMAP_' + args.data_name + '.json')
+        word_to_idx = os.path.join(args.data_folder, 'wordmap_' + args.data_name + '.json')
         dc_embeddings = None
 
     if args.embeddings_pretrained:
@@ -54,7 +71,7 @@ def main(args):
             idx_to_word = json.load(j)
             vocab_size = len(word_to_idx)
     else:
-        word_to_idx = os.path.join(args.data_folder, 'WORDMAP_' + args.data_name + '.json')
+        word_to_idx = os.path.join(args.data_folder, 'wordmap_' + args.data_name + '.json')
         with open(word_to_idx, 'r') as j:
             word_to_idx = json.load(j)
         idx_to_word = {v: k for k, v in word_to_idx.items()}
@@ -62,55 +79,25 @@ def main(args):
 
     args.vocab_size = vocab_size
 
-
-    # Initialize / load checkpoint
-    #if not args.checkpoint:
-
-    if args.encoder_type == 'resnet512':
-        encoder = Encoder()
+        
+    encoder = RegPool(args)
+    if args.feature_linear:
         encoder_optimizer = torch.optim.Adam(params=filter(lambda p: p.requires_grad,
                                                            encoder.parameters()),
                                              lr=args.encoder_lr)
-        # Normalisation for ResNet
-        normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                                         std=[0.229, 0.224, 0.225])
-
-        val_loader = data.DataLoader(
-            ParagraphDataset(args.data_folder, args.data_name, 'VAL',
-                             transform=transforms.Compose([normalize])),
-            batch_size=args.batch_size, shuffle=False,
-            num_workers=args.workers, pin_memory=True)
-
-        #test_loader = data.DataLoader(
-        #    ParagraphDataset(args.data_folder, args.data_name, 'TEST',
-        #                     transform=transforms.Compose([normalize])),
-        #    batch_size=args.batch_size, shuffle=True,
-        #    num_workers=args.workers, pin_memory=True)
-
-    elif args.encoder_type == 'densecap':
-        encoder = RegPool(args)
-        # Load train and val datasets
-        print('Loading DenseCap features...')
-
-        val_loader = data.DataLoader(
-            ParagraphDataset(args.data_folder, args.data_name, 'TEST'),
-            batch_size=args.batch_size, shuffle=False,
-            num_workers=args.workers, pin_memory=True)
-
+    elif not args.feature_linear:
         encoder_optimizer = None
+        
+    val_loader = data.DataLoader(
+        ParagraphDataset(args.data_folder, args.data_name, 'TEST'),
+        batch_size=args.batch_size, shuffle=False,
+        num_workers=args.workers, pin_memory=True)
 
-        # pick X elements for generation only
-        #val_iterator = iter(val_loader)
-        #val_loader = list(islice(val_iterator, 10))
-
-        #test_loader = data.DataLoader(
-        #    ParagraphDataset(args.data_folder, args.data_name, 'TEST',
-        #                     transform=transforms.Compose([normalize])),
-        #    batch_size=args.batch_size, shuffle=True,
-        #    num_workers=args.workers, pin_memory=True)
-
-    else:
-        raise Exception('Unrecognized encoder type.')
+    if args.set_size != 0:
+        val_iterator = iter(val_loader)
+        val_loader = list(islice(val_iterator, args.set_size))
+    elif args.set_size == 0:
+        val_loader = val_loader
 
     sentence_decoder = SentenceRNN(args)
     word_decoder = WordRNN(args)
@@ -132,7 +119,7 @@ def main(args):
     #for epoch in range(args.start_epoch, args.num_epochs):
 
     # One epoch's validation
-    b1, b2, b3, b4, c, m = generate(val_loader=val_loader,
+    b1, b2, b3, b4, c, m, s = generate(val_loader=val_loader,
                                     encoder=encoder,
                                     sentence_decoder=sentence_decoder,
                                     word_decoder=word_decoder,
@@ -148,37 +135,16 @@ def main(args):
     print('BLEU 4', b4)
     print('CIDER', c)
     print('METEOR', m)
+    print('SPICE', s)
     
-    
-def top_k_top_p_filtering(logits, top_k=0, top_p=0.0, filter_value=-float('Inf')):
-    """ Filter a distribution of logits using top-k and/or nucleus (top-p) filtering
-    https://gist.github.com/thomwolf/1a5a29f6962089e871b94cbd09daf317
-        Args:
-            logits: logits distribution shape (..., vocabulary size)
-            top_k >0: keep only top k tokens with highest probability (top-k filtering).
-            top_p >0.0: keep the top tokens with cumulative probability >= top_p (nucleus filtering).
-    """
-    top_k = min(top_k, logits.size(-1))  # Safety check
-    
-    if top_k > 0:
-        # Remove all tokens with a probability less than the last token of the top-k
-        indices_to_remove = logits < torch.topk(logits, top_k)[0][..., -1, None]
-        logits[indices_to_remove] = filter_value
-
-    if top_p > 0.0:
-        sorted_logits, sorted_indices = torch.sort(logits, descending=True)
-        cumulative_probs = torch.cumsum(F.softmax(sorted_logits, dim=-1), dim=-1)
-
-        # Remove tokens with cumulative probability above the threshold
-        sorted_indices_to_remove = cumulative_probs >= top_p
-        # Shift the indices to the right to keep also the first token above the threshold
-        sorted_indices_to_remove[..., 1:] = sorted_indices_to_remove[..., :-1].clone()
-        sorted_indices_to_remove[..., 0] = 0
-
-        indices_to_remove = sorted_indices_to_remove.scatter(dim=-1, index=sorted_indices, src=sorted_indices_to_remove)
-        logits[indices_to_remove] = filter_value
-        
-    return logits
+    # POINT
+    with open('./scores/res-lang-att-nucleus.json', 'w') as j:
+        j.write(f'BLEU 1 \t {b1} \n')
+        j.write(f'BLEU 2 \t {b2} \n')
+        j.write(f'BLEU 3 \t {b3} \n')
+        j.write(f'BLEU 4 \t {b4} \n')
+        j.write(f'CIDEr \t {c} \n')
+        j.write(f'METEOR \t {m} \n')
 
     
 def generate(val_loader,
@@ -191,15 +157,6 @@ def generate(val_loader,
              idx_to_word,
              dc_embeddings,
              args):
-    """
-    Performs generation for the single epoch.
-
-    :param val_loader: DataLoader for validation data.
-    :param encoder: encoder model
-    :param decoder: decoder model
-    :param criterion: loss layer
-    :return: BLEU-4 score
-    """
 
     sentence_decoder.eval()
     word_decoder.eval()
@@ -208,294 +165,259 @@ def generate(val_loader,
 
     paragraphs_generated = []
     
+    print(sentence_decoder)
+    print(word_decoder)
+    
     Bleu_1 = 0
     Bleu_2 = 0
     Bleu_3 = 0
     Bleu_4 = 0
     CIDEr = 0
     METEOR = 0
+    SPICE = 0
+    
+    scorers = [
 
+        (Bleu(4), ["Bleu_1", "Bleu_2", "Bleu_3", "Bleu_4"]),
+        (Cider('corpus'), "CIDEr"),
+        #vg-test-words
+        #(Meteor(), "METEOR")
+    ]
+    
+    #for the purpose of making sure generated texts make sense
+    references_batch = dict()
+    hypotheses_batch = dict()
+    
     with torch.no_grad():
-        # Batches
-        for image_num, (imgs, image_ids, caps, caplens) in enumerate(val_loader):
+        for image_num, (image_features, image_ids, caps, caplens, phrase_scores, bboxes) in enumerate(val_loader):
             
             if image_num % 50 == 0:
                 print(image_num)
-
-            pars = {}
-
-            #for the purpose of making sure generated texts make sense
-            references_batch = dict()
-            hypotheses_batch = dict()
-
-            # Move to GPU, if available
-            imgs = imgs.to(device)
+            
+            image_features = image_features.to(device)
             image_ids = image_ids.to(device)
             caps = caps.to(device)
-            caplens = caplens.to(device)
+            caplens = caplens.squeeze(1).to(device)
+            phrase_scores = phrase_scores.to(device)
+            args.batch_size = image_features.shape[0]
 
-            imgs = encoder(imgs)
-            args.batch_size = imgs.shape[0]
+            loss = 0
+            word_loss = 0
 
-            caplens_f, init_inx = caplens_eos(caplens, args.max_sentences)
-
-            if args.encoder_type == 'resnet512':
-                # Prepare images for sentence decoder
-                imgs = imgs.view(args.batch_size, -1, args.resnet512_feat_dim)
-                #num_pixels = imgs.size(1)
-                imgs = imgs.mean(dim=1)
-
-
-            h_sent = torch.zeros(args.num_layers_sentencernn, imgs.shape[0], args.hidden_size)
-            c_sent = torch.zeros(args.num_layers_sentencernn, imgs.shape[0], args.hidden_size)
-            h_word = torch.zeros(args.num_layers_wordrnn, imgs.shape[0], args.hidden_size)
-            c_word = torch.zeros(args.num_layers_wordrnn, imgs.shape[0], args.hidden_size)
+            h_sent = c_sent = h_word = c_word = torch.zeros(1, args.batch_size, args.hidden_size)
+            
             h_word = h_word.to(device)
             c_word = c_word.to(device)
+            h_sent = h_sent.to(device)
+            c_sent = c_sent.to(device)
+            
+            # initial sentence topic is zero topic
+            init_topic = torch.zeros(1, args.batch_size, args.hidden_size)
             
             generated = []
             actual = []
-
-            for sent_num in range(args.max_sentences):
+            
+            multimodal_vector = encoder(image_features, phrase_scores)            
+            topics = torch.zeros(args.batch_size, args.max_sentences, 512).to(device)
+            
+            if not args.use_attention:
                 
-
-                p_source, topic, ht_sent, ct_sent = sentence_decoder(imgs, (h_sent, c_sent))
-
-                h_sent = ht_sent
-                c_sent = ct_sent
-
-                p_predicted = nn.Sigmoid()(p_source)
-                p_target = torch.LongTensor(caplens_f[init_inx].long().squeeze(1)).to(device)
-                p_target = p_target.type_as(p_source)
-                init_inx += 1
-
-                #print(init_inx)
-                #print(p_source)
-                #print(p_target)
-                #print(p_predicted)
-                #print(sentrnn_loss)
+                feats = torch.max(multimodal_vector, dim=1).values.unsqueeze(1)
+                feats = feats.expand(-1, args.max_sentences, -1)
+                topics, (_, _) = sentence_decoder.sentence_rnn(feats)
+                    
+            if args.use_attention:
+                                
+                attention_plot = np.zeros((6, 50))
+                att_plot_sentence_labels = []
                 
-                if p_predicted > 0.4:
-                    break
+                input_vector = multimodal_vector.to(device)
+                
+                hidden_previous = h_sent.squeeze(0).to(device)
+                cell_previous = c_sent.squeeze(0).to(device) # batch_size x hidden_size
+                topic_previous = init_topic.squeeze(0).to(device) # concat dimension (batch_size) x hidden_size
+                
+                alphas = torch.zeros(args.batch_size, args.max_sentences, args.num_boxes).to(device)
+                                
+                for step in range(args.max_sentences):
+                    
+                    if caplens.squeeze()[step].item() != 0:
 
-                # WordRNN
-                current_captions = caps[:, sent_num, :]
-                current_caplens = caplens.squeeze(1)[:, sent_num]
-                max_seq_length = current_caplens[torch.argmax(current_caplens, dim=0)]
+                        attention_topic, alpha = sentence_decoder.attention(input_vector, hidden_previous)
+                        gate = sentence_decoder.sigmoid(sentence_decoder.f_beta(hidden_previous))
+                        context = gate * attention_topic
+                        topic_input = torch.cat((topic_previous, context), dim=1)
+                        hidden_previous, cell_previous = sentence_decoder.sentence_rnn(topic_input, (hidden_previous, cell_previous))
+                        new_topic = hidden_previous
+                        topic_previous = new_topic
+                        topics[:, step, :] = new_topic
+                        alphas[:, step, :] = alpha
+                        attention_plot[step, :] = alphas[:, step].cpu().numpy()
+                        att_plot_sentence_labels.append('S{step}')
+
+
+            for t in range(args.max_sentences):
+                
+                topic = topics[:, t]
 
                 # generation
                 start_token = torch.LongTensor([word_to_idx['<start>']]).to(device)
                 end_token = torch.LongTensor([word_to_idx['<end>']]).to(device)
-                #print(start_token)
-                #print(end_token)
-                #if args.use_fc:
-                #    topic = word_decoder.non_lin(word_decoder.image_to_hidden(topic))
-                inputs = topic
-                
+                topic = topic.unsqueeze(1)
+                                
                 this_gen_sentence = []
                 temp = []
                 final_caption = []
                 
-                if args.decoding_strategy == 'greedy':
-                    for i in range(args.max_words):
-                        #if i == 1:
-                        #    inputs = word_decoder.embeddings(start_token).unsqueeze(1)
-                        hiddens, (h_word, c_word) = word_decoder.decode_step(inputs, (h_word, c_word))
-                        outputs = word_decoder.linear(hiddens)
-                        outputs = F.softmax(outputs, dim=-1)
-                        topv, topi = outputs.topk(1)
-                        word_idx = topi.squeeze(0).detach()
-                        this_gen_sentence.append(word_idx.item())
-                        inputs = word_decoder.embeddings(word_idx)
-                     
-                if args.decoding_strategy == 'sampling':
-                    for i in range(args.max_words):
-                        #if i == 1:
-                        #    inputs = word_decoder.embeddings(start_token).unsqueeze(1)
-                        hiddens, (h_word, c_word) = word_decoder.decode_step(inputs, (h_word, c_word))
-                        outputs = word_decoder.linear(hiddens)
-                        if args.temperature:
-                            outputs = outputs.div(args.temperature_value)
-                        word_softmax = F.softmax(outputs, dim=-1).squeeze()
-                        word_idx = torch.multinomial(word_softmax, 1)[0].to(device)
-                        this_gen_sentence.append(word_idx.item())
-                        #print(word_decoder.embeddings(word_idx).shape)
-                        inputs = word_decoder.embeddings(word_idx).unsqueeze(0).unsqueeze(0)
-
-                if args.decoding_strategy == 'topn_sampling':
-                    for i in range(args.max_words):
-                        #if i == 1:
-                        #    inputs = word_decoder.embeddings(start_token).unsqueeze(1)
-                        hiddens, (h_word, c_word) = word_decoder.decode_step(inputs, (h_word, c_word))
-                        outputs = word_decoder.linear(hiddens)
-                        if args.temperature:
-                            outputs = outputs.div(args.temperature_value)
-                        # top_n = 1 is greedy search, top_n = vocab_size is pure sampling
-                        # controlling for nucleus sampling
-                        if args.nucleus_sampling:
-                            logits = top_k_top_p_filtering(outputs, top_k=args.top_n, top_p=args.top_p)
-                        if not args.nucleus_sampling:
-                            logits = top_k_top_p_filtering(outputs, top_k=args.top_n, top_p=0.0)
-                        word_softmax = F.softmax(logits, dim=-1).squeeze()
-                        word_idx = torch.multinomial(word_softmax, 1)[0].to(device)
-                        this_gen_sentence.append(word_idx.item())
-                        inputs = word_decoder.embeddings(word_idx).unsqueeze(0).unsqueeze(0)
+                if caplens.squeeze()[t].item() != 0:
+                                        
+                    if args.decoding_strategy == 'greedy':
+                        decoder_input = topic
+                        for i in range(args.max_words - 1):
+                            hiddens, (h_word, c_word) = word_decoder.decode_step(decoder_input, (h_word, c_word))
+                            outputs = word_decoder.linear(hiddens.squeeze(1))
+                            outputs = F.log_softmax(outputs, dim=-1)
+                            topv, topi = outputs.data.topk(1)
+                            topi = topi.view(-1)
+                            this_gen_sentence.append(topi.item())
+                            decoder_input = word_decoder.embeddings(topi).unsqueeze(1)
+                                                                                    
+                    if args.decoding_strategy == 'sampling':
+                        decoder_input = topic
+                        for i in range(args.max_words):
+                            hiddens, (h_word, c_word) = word_decoder.decode_step(decoder_input, (h_word, c_word))
+                            outputs = word_decoder.linear(hiddens.squeeze(1))
+                            if args.temperature:
+                                outputs = outputs.div(args.temperature_value)
+                            word_softmax = F.softmax(outputs, dim=-1)
+                            word_idx = torch.multinomial(word_softmax, 1)[0].to(device)
+                            this_gen_sentence.append(word_idx.item())
+                            decoder_input = word_decoder.embeddings(word_idx).unsqueeze(1)
                         
-                if args.decoding_strategy == 'beam':
-
-                    embs = word_decoder.embeddings.weight.data
-                    embs = torch.cat([embs, inputs.squeeze(0)], dim=0)
-                    #print(embs)
-                    #print(embs[7604])
-                    
-                    word_to_idx['image'] = 7604
-                    start = [word_to_idx['image']]
-                    start_word = [[start, 0.0]]
-                    final_caption = []
-                    
-                    #print('start', start)
-                    #print('start word', start_word)
-                    
-                    while len(start_word[0][0]) < args.max_words:
+                    if args.decoding_strategy == 'topn_sampling':
+                        decoder_input = topic
+                        for i in range(args.max_words):
+                            hiddens, (h_word, c_word) = word_decoder.decode_step(decoder_input, (h_word, c_word))
+                            outputs = word_decoder.linear(hiddens.squeeze(1))
+                            if args.temperature:
+                                outputs = outputs.div(args.temperature_value)
+                            # top_n = 1 is greedy search, top_n = vocab_size is pure sampling
+                            # use either nucleus, either top-k
+                            # you can use both, just change top_k in the first loop from 0.0 to args.top_n
+                            if args.nucleus_sampling:
+                                logits = top_k_top_p_filtering(outputs, top_k=0.0, top_p=args.top_p)
+                            if not args.nucleus_sampling:
+                                logits = top_k_top_p_filtering(outputs, top_k=args.top_n, top_p=0.0)
+                            word_softmax = F.softmax(logits, dim=-1)
+                            word_idx = torch.multinomial(word_softmax, 1)[0].to(device)
+                            this_gen_sentence.append(word_idx.item())
+                            decoder_input = word_decoder.embeddings(word_idx).unsqueeze(1)
                         
-                        temp = []
-                        
-                        for s in start_word:
+                    if args.decoding_strategy == 'beam':
+                        embs = word_decoder.embeddings.weight.data
+                        embs = torch.cat([embs, topic.squeeze(1)], dim=0)
+                        word_to_idx['<sentence_topic>'] = 7606
+                        target_tensor = torch.zeros(1, 50)
+                        x, (h_word, c_word) = beam_decode(target_tensor, embs, word_to_idx, word_decoder, 
+                                                          (h_word, c_word), args.beam, 20)
+                        for item in x[0][0]:
+                            this_gen_sentence.append(item)
                             
-                            #print('S', s)
-                            
-                            word_in = embs[torch.LongTensor([s[0][-1]])].unsqueeze(0)
-                            hiddens, (h_word, c_word) = word_decoder.decode_step(word_in, (h_word, c_word))
-                            outputs = word_decoder.linear(hiddens)
-                            probs = F.softmax(outputs, dim=-1).squeeze(0)
-                            probs = probs.cpu()
-                            word_preds = np.argsort(probs[0])[-args.beam:]
-                            #print('word preds', word_preds)
-
-                            for w in word_preds:
-                                #print('SSSS', s)
-                                next_cap, prob = s[0][:], s[1]
-                                #print('curr cap', next_cap)
-                                #print('curr prob', prob)
-                                next_cap.append(w.item())
-                                new_prob = prob + probs[0][w]
-                                #print(w)
-                                #print(prob, probs[0][w])
-                                #print('final prob', new_prob)
-                                temp.append([next_cap, new_prob])
-                            
-                        start_word = temp
-                        start_word = sorted(start_word, reverse=False, key=lambda l: l[1])
-                        #print('after sorting', start_word)
-                        start_word = start_word[-args.beam:]
-                        #print('after removing', start_word)
-                        
-                    start_word = start_word[-1][0]
-                    #print('FINAL START WORD', start_word)
-                    intermediate_caption = [i for i in start_word[1:]]
-                
-                    for i in intermediate_caption:
-                        if i != '<end>':
-                            final_caption.append(i)
-                        else:
+                                                    
+                    gen_sentence_filtered = []
+                    for i in this_gen_sentence:
+                        if i != end_token.item():
+                            gen_sentence_filtered.append(i)
+                        elif i == end_token.item():
+                            gen_sentence_filtered.append(end_token.item())
                             break
-                    for i in final_caption:
-                        this_gen_sentence.append(i)
-                        
-                        
-                        
-                gen_sentence_filtered = []
-                for i in this_gen_sentence:
-                    if i != end_token.item():
-                        gen_sentence_filtered.append(i)
-                    else:
-                        gen_sentence_filtered.append(end_token.item())
-                        break
-                
-                generated.append(gen_sentence_filtered)
-                actual.append(current_captions)
-                
-            # EVALUATION
-            
-            # str(int(w))
-            
+                            
+                    generated.append(gen_sentence_filtered)
+                    actual.append(caps.squeeze(0)[t])
+
+            image_id = image_ids.item()
             # Get references
             for single_paragraph in range(len(actual)):
                 if single_paragraph == 0:
                     image_id = image_ids[single_paragraph].item()
                     references_batch[image_id] = []
                 img_caps = actual[single_paragraph].tolist()
-                img_captions = list(
-                    map(lambda c: [w for w in c if w not in {word_to_idx['<start>'], word_to_idx['<pad>'], word_to_idx['<end>']}],
-                        img_caps))
+                img_captions = []
+                for i in img_caps:
+                    if i not in {word_to_idx['<start>'], word_to_idx['<pad>'], word_to_idx['<end>']}:
+                        img_captions.append(i)                
                 paragraph_text = []
-                for sent in img_captions:
-                    this_sent_text = [idx_to_word[w] for w in sent]
-                    paragraph_text.append(' '.join(this_sent_text))
-                #if paragraph_text != [' ']:
-                if ' '.join(this_sent_text) != '':
-                    #references_batch[image_id].append(paragraph_text)
-                    references_batch[image_id].append(' '.join(this_sent_text))
-            
+                this_sent_text = [idx_to_word[w] for w in img_captions]
+                this_sent_text[-2:] = [''.join(this_sent_text[-2:])]
+                paragraph_text.append(' '.join(this_sent_text))
+                for this_sent_text in paragraph_text:
+                    if ' '.join(this_sent_text) != '':
+                        references_batch[image_id].append(' '.join(paragraph_text))
+                # each reference is a single hypothesis
+                references_batch[image_id] = [' '.join(references_batch[image_id])]
+                        
             # Get hypotheses
-            for predicted_paragraph in range(len(generated)):
-                if predicted_paragraph == 0:
-                    image_id = image_ids[predicted_paragraph].item()
+            for pred_sentence in range(len(generated)):
+                if pred_sentence == 0:
                     hypotheses_batch[image_id] = []
-                par_preds = generated[predicted_paragraph]
-                this_sentence_text = [idx_to_word[w] for w in par_preds[1:]]
+                this_sent_preds = generated[pred_sentence]
+                # [2:][:-1]
+                if args.decoding_strategy == 'beam':
+                    this_sentence_text = [idx_to_word[w] for w in this_sent_preds[2:][:-1]]
+                else:
+                    this_sentence_text = [idx_to_word[w] for w in this_sent_preds[1:][:-1]]
+                this_sentence_text[-2:] = [''.join(this_sentence_text[-2:])]
                 hypotheses_batch[image_id].append(' '.join(this_sentence_text))
+            for img, par in hypotheses_batch.items():
+                new_par = ' '.join(par)
+                hypotheses_batch[img] = [new_par]
                 
-            #print(hypotheses_batch)
-
-            assert len(references_batch.keys()) == len(hypotheses_batch.keys())
-
-            # Calculate BLEU & CIDEr & METEOR & ROUGE scores
-            # WARNING: at the moment, only BLEU is calculated: one hyp sentence is compared to all ref sentences
-
-            scorers = [
-
-                (Bleu(4), ["Bleu_1", "Bleu_2", "Bleu_3", "Bleu_4"]),
-                (Cider('vg-test-words'), "CIDEr"),
-                (Meteor(), "METEOR"),
-                #(Rouge(), "ROUGE_L")
-            ]
-
-            score = []
-            method = []
-            for scorer, method_i in scorers:
-                
-                score_i, _ = scorer.compute_score(references_batch, hypotheses_batch)
-                score.extend(score_i) if isinstance(score_i, list) else score.append(score_i)
-                method.extend(method_i) if isinstance(method_i, list) else method.append(method_i)
-
-            score_dict = dict(zip(method, score))
-            #print(score_dict)
+            # ATTENTION PLOTS
+            # NEEDS TO BE ADAPTED FOR MULTIPLE FILES
+            #if args.use_attention:
+            #    this_image_id = list(references_batch.keys())[0]
+            #    attention_plot = attention_plot[:len(att_plot_sentence_labels), :]
+            #    image_path = show_image(this_image_id)
+            #    #print(image_path)
+            #    #plot_attention(image_path, res, attention_plot)
+            #    visualize_pred(image_path, att_plot_sentence_labels, bboxes, attention_plot)
             
-            Bleu_1 += score_dict['Bleu_1']
-            Bleu_2 += score_dict['Bleu_2']
-            Bleu_3 += score_dict['Bleu_3']
-            Bleu_4 += score_dict['Bleu_4']
-            CIDEr += score_dict['CIDEr']
-            METEOR += score_dict['METEOR']
-            
-            pars['image_id'] = list(references_batch.keys())[0]
-            pars['references'] = ' '.join(list(references_batch.values())[0])
-            pars['hypotheses'] = ' '.join(list(hypotheses_batch.values())[0])
 
-            paragraphs_generated.append(pars)
+    assert len(references_batch.keys()) == len(hypotheses_batch.keys())
 
-    Bleu1_av = Bleu_1 / len(val_loader)
-    Bleu2_av = Bleu_2 / len(val_loader)
-    Bleu3_av = Bleu_3 / len(val_loader)
-    Bleu4_av = Bleu_4 / len(val_loader)
-    Cider_av = CIDEr / len(val_loader)
-    Meteor_av = METEOR / len(val_loader)
+    score = []
+    method = []
+    for scorer, method_i in scorers:
 
-    with open('./generated_paragraphs.json', 'w') as f:
+        score_i, _ = scorer.compute_score(references_batch, hypotheses_batch)
+        score.extend(score_i) if isinstance(score_i, list) else score.append(score_i)
+        method.extend(method_i) if isinstance(method_i, list) else method.append(method_i)
+
+    score_dict = dict(zip(method, score))
+
+    Bleu_1 += score_dict['Bleu_1']
+    Bleu_2 += score_dict['Bleu_2']
+    Bleu_3 += score_dict['Bleu_3']
+    Bleu_4 += score_dict['Bleu_4']
+    CIDEr += score_dict['CIDEr']
+    #METEOR += score_dict['METEOR']
+    #SPICE += score_dict['SPICE']
+
+    #print(references_batch)
+    for item in references_batch:
+        pars = {}
+        pars['image_id'] = item
+        pars['references'] = ' '.join(references_batch[item])
+        pars['hypotheses'] = ' '.join(hypotheses_batch[item])
+        paragraphs_generated.append(pars)
+    
+    # POINT
+    with open('./scores/lang-att-nucleus.json', 'w') as f:
         json.dump(paragraphs_generated, f)
         
-    return Bleu1_av, Bleu2_av, Bleu3_av, Bleu4_av, Cider_av, Meteor_av
+    return Bleu_1, Bleu_2, Bleu_3, Bleu_4, CIDEr, METEOR, SPICE
+
+
 
 if __name__ == '__main__':
 
@@ -572,7 +494,9 @@ if __name__ == '__main__':
     top_n = config_parser.get('PARAMS-MODELS', 'top_n')
     top_p = config_parser.get('PARAMS-MODELS', 'top_p')
     beam = config_parser.get('PARAMS-MODELS', 'beam')
-    attention = config_parser.getboolean('PARAMS-MODELS', 'attention')
+    use_attention = config_parser.getboolean('PARAMS-MODELS', 'use_attention')
+    multimodal = config_parser.getboolean('PARAMS-MODELS', 'multimodal')
+    set_size = config_parser.get('PARAMS-MODELS', 'set_size')
 
     api_key = config_parser.get('COMET', 'api_key')
     project_name = config_parser.get('COMET', 'project_name')
@@ -644,7 +568,9 @@ if __name__ == '__main__':
     parser.add_argument('--top_n', type=int, default=top_n, help='top n candidates when using top n sampling')
     parser.add_argument('--top_p', type=float, default=top_p, help='top p for nucleus sampling')
     parser.add_argument('--beam', type=int, default=beam, help='beam search depth')
-    parser.add_argument('--attention', type=bool, default=attention, help='use attention or not')
+    parser.add_argument('--use_attention', type=bool, default=use_attention, help='use attention or not')
+    parser.add_argument('--multimodal', type=bool, default=multimodal, help='use both vision and language as input or not')
+    parser.add_argument('--set_size', type=int, default=set_size, help='how many images to test on')
 
     parser.add_argument('--api_key', type=str, default=api_key, help='key for the Comet logger')
     parser.add_argument('--project_name', type=str, default=project_name, help='name of the project')

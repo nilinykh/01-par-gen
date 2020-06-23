@@ -27,17 +27,14 @@ class Bleu:
         for id in imgIds:
             hypo = res[id]
             ref = gts[id]
-            
-            for sent_id, sent in enumerate(hypo):
-                sent = [sent]
 
-                # Sanity check.
-                assert(type(sent) is list)
-                assert(len(sent) == 1)
-                assert(type(ref) is list)
-                assert(len(ref) >= 1)
+            # Sanity check.
+            assert(type(hypo) is list)
+            assert(len(hypo) == 1)
+            assert(type(ref) is list)
+            assert(len(ref) >= 1)
 
-                bleu_scorer += (sent[0], ref)
+            bleu_scorer += (hypo[0], ref)
 
         #score, scores = bleu_scorer.compute_score(option='shortest')
         score, scores = bleu_scorer.compute_score(option='closest', verbose=0)

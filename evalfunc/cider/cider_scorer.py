@@ -105,6 +105,7 @@ class CiderScorer(object):
         The term frequency is stored in the object
         :return: None
         '''
+        #print(self.crefs)
         for refs in self.crefs:
             # refs, k ref captions of one image
             for ngram in set([ngram for ref in refs for (ngram,count) in ref.items()]):
@@ -203,6 +204,7 @@ class CiderScorer(object):
                                             df_mode + '.p'), 'rb'))
             
             self.document_frequency = docFreq['document_frequency']
+            #print(self.document_frequency)
             # TODO: make this a part of coco-val-df
             self.ref_len = np.log(float(docFreq['ref_len']))
         

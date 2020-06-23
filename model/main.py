@@ -1,8 +1,10 @@
 '''
-full training and validation loop
+
+training and validation loops
+
 '''
 
-# do not forget to set CUDA_VISIBLE_DEVICES to any of the gpus you would like to use (!!!)
+# set CUDA_VISIBLE_DEVICES
 
 import argparse
 import sys
@@ -14,20 +16,16 @@ import torch.optim
 from torch.utils import data
 import torchvision.transforms as transforms
 from torch import nn
-from models import Encoder, RegPool, SentenceRNN, WordRNN
+from models import RegPool, SentenceRNN, WordRNN
 from datasets import *
 from utils import *
 from train import *
-from validate import *
 device = torch.device("cuda")
 cudnn.benchmark = True
 
 sys.path.append('/home/xilini/par-gen/01-par-gen')
 
 def main(args):
-    """
-    Training and validation.
-    """
 
     experiment = Experiment(api_key=args.api_key,
                             project_name=args.project_name, workspace=args.workspace)
@@ -35,8 +33,6 @@ def main(args):
     hyper_params = {
         'batch_size': args.batch_size,
         'num_epochs': args.num_epochs,
-        'rnn_type': args.rnn_arch,
-        'encoder_type': args.encoder_type,
         'rnn_hidden_init': args.rnn_hidden_init,
         'embeddings_pretrained': args.embeddings_pretrained,
         'freeze': args.freeze,
@@ -46,14 +42,9 @@ def main(args):
         'word_decoder_lr': args.word_lr,
         'lambda_sentence': args.lambda_sentence,
         'lambda_word': args.lambda_word,
-        'max_sentence': args.max_sentences,
+        'max_sentences': args.max_sentences,
         'max_words': args.max_words,
-        'encoder_dropout': args.encoder_dropout,
-        'word_dropout': args.word_dropout,
         'wordlstm_dropout': args.wordlstm_dropout,
-        'dropout_fc': args.dropout_fc,
-        'dropout_stopping': args.dropout_stopping,
-        'layer_norm': args.layer_norm,
         'encoder_weight_decay': args.encoder_weight_decay,
         'sentence_weight_decay': args.sentence_weight_decay,
         'word_weight_decay': args.word_weight_decay,
@@ -62,13 +53,13 @@ def main(args):
 
     experiment.log_parameters(hyper_params)
 
-    if args.with_densecap_captions:
-        print('Loading DenseCap embeddings...')
-        word_to_idx = os.path.join(args.densecap_path, 'word_to_idx' + '.json')
-        dc_embeddings = torch.load(os.path.join(args.densecap_path, 'densecap_emb.pt'))
-    else:
-        word_to_idx = os.path.join(args.data_folder, 'WORDMAP_' + args.data_name + '.json')
-        dc_embeddings = None
+    #if args.with_densecap_captions:
+    #    print('Loading DenseCap embeddings...')
+    #    word_to_idx = os.path.join(args.densecap_path, 'word_to_idx' + '.json')
+    #    dc_embeddings = torch.load(os.path.join(args.densecap_path, 'densecap_emb.pt'))
+    #else:
+    #    word_to_idx = os.path.join(args.data_folder, 'wordmap_' + args.data_name + '.json')
+    #    dc_embeddings = None
 
     if args.embeddings_pretrained:
         print('Loading DenseCap vocabulary...')
@@ -80,7 +71,7 @@ def main(args):
             idx_to_word = json.load(j)
             vocab_size = len(word_to_idx)
     else:
-        word_to_idx = os.path.join(args.data_folder, 'WORDMAP_' + args.data_name + '.json')
+        word_to_idx = os.path.join(args.data_folder, 'wordmap_' + args.data_name + '.json')
         with open(word_to_idx, 'r') as j:
             word_to_idx = json.load(j)
         idx_to_word = {v: k for k, v in word_to_idx.items()}
@@ -88,66 +79,32 @@ def main(args):
 
     args.vocab_size = vocab_size
 
-    if args.encoder_type == 'resnet512':
-        encoder = Encoder()
+    encoder = RegPool(args)
+    if args.feature_linear:
         encoder_optimizer = torch.optim.Adam(params=filter(lambda p: p.requires_grad,
                                                            encoder.parameters()),
                                              lr=args.encoder_lr)
-        # Normalisation for ResNet
-        normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                                         std=[0.229, 0.224, 0.225])
+    elif not args.feature_linear:
+        encoder_optimizer = None
 
-        train_loader = data.DataLoader(
-            ParagraphDataset(args.data_folder, args.data_name, 'VAL',
-                             transform=transforms.Compose([normalize])),
-            batch_size=args.batch_size, shuffle=True,
-            num_workers=args.workers, pin_memory=True)
+    # Load train and val datasets
+    print('Loading Datasets...')
 
-        val_loader = data.DataLoader(
-            ParagraphDataset(args.data_folder, args.data_name, 'VAL',
-                             transform=transforms.Compose([normalize])),
-            batch_size=args.batch_size, shuffle=True,
-            num_workers=args.workers, pin_memory=True)
+    train_loader = data.DataLoader(
+        ParagraphDataset(args.data_folder, args.data_name, 'TRAIN'),
+        batch_size=args.batch_size, shuffle=True,
+        num_workers=args.workers, pin_memory=True)
 
-    elif args.encoder_type == 'densecap':
-        encoder = RegPool(args)
-        if args.feature_linear:
-            encoder_optimizer = torch.optim.Adam(params=filter(lambda p: p.requires_grad,
-                                                               encoder.parameters()),
-                                                 lr=args.encoder_lr)
-        elif not args.feature_linear:
-            encoder_optimizer = None
-
-        # Load train and val datasets
-        print('Loading DenseCap features...')
-
-        train_loader = data.DataLoader(
-            ParagraphDataset(args.data_folder, args.data_name, 'TRAIN'),
-            batch_size=args.batch_size, shuffle=True,
-            num_workers=args.workers, pin_memory=True)
-
-        val_loader = data.DataLoader(
-            ParagraphDataset(args.data_folder, args.data_name, 'VAL'),
-            batch_size=args.batch_size, shuffle=True,
-            num_workers=args.workers, pin_memory=True)
-
-        # datasets for testing overfitting
-        #train_iterator = iter(train_loader)
-        # 5 batches of X samples
-        #train_loader = list(islice(train_iterator, 5))
-        #val_loader = train_loader
-
-    else:
-        raise Exception('Unrecognized encoder type.')
-
-    #print(len(train_loader))
-    #print(len(val_loader))
+    val_loader = data.DataLoader(
+        ParagraphDataset(args.data_folder, args.data_name, 'VAL'),
+        batch_size=args.batch_size, shuffle=True,
+        num_workers=args.workers, pin_memory=True)
 
     sentence_decoder = SentenceRNN(args)
     word_decoder = WordRNN(args)
 
-    if args.sentence_weight_decay != 0 and args.word_weight_decay != 0:
-        print('Using weight decay, L2 regularisation')
+    #if args.sentence_weight_decay != 0 and args.word_weight_decay != 0:
+    #    print('Using weight decay, L2 regularisation')
 
     sentence_optimizer = torch.optim.Adam(list(sentence_decoder.parameters()), lr=args.sentence_lr,
                                           weight_decay=args.sentence_weight_decay)
@@ -156,9 +113,7 @@ def main(args):
     sentence_decoder.to(device)
     word_decoder.to(device)
     encoder.to(device)
-
-    #densecap_embedding_layer = nn.Embedding(len(word_to_idx), 512)
-
+    
     print('IMAGE ENCODER', encoder)
     print('SENTENCE DECODER', sentence_decoder)
     print('WORD DECODER', word_decoder)
@@ -167,20 +122,9 @@ def main(args):
 
     epochs_since_improvement = 0
 
-    # Move to GPU
-
-    #sentence_decoder = sentence_decoder.to(device)
-    #word_decoder = word_decoder.to(device)
-    #encoder = encoder.to(device)
-
     # Loss functions
-    criterion_sent = nn.BCEWithLogitsLoss(reduction='none').to(device)
-    criterion_word = nn.CrossEntropyLoss(reduction='none', ignore_index=0).to(device)
-
-    #sentence_lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(sentence_optimizer, 'min',
-    #                                                                   verbose=True, patience=1)
-    #word_lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(word_optimizer, 'min',
-    #                                                               verbose=True, patience=1)
+    criterion_sent = nn.NLLLoss().to(device)
+    criterion_word = nn.CrossEntropyLoss(ignore_index=0).to(device)
 
     initial_best_loss = args.best_val_loss
 
@@ -197,83 +141,53 @@ def main(args):
     for epoch in range(args.start_epoch, args.num_epochs):
 
         # One epoch's training
-        epoch_loss,\
-        this_epoch_sentence,\
-        this_epoch_word = train(train_loader=train_loader,
-                                encoder=encoder,
-                                sentence_decoder=sentence_decoder,
-                                word_decoder=word_decoder,
-                                criterion_sent=criterion_sent,
-                                criterion_word=criterion_word,
-                                encoder_optimizer=encoder_optimizer,
-                                sentence_optimizer=sentence_optimizer,
-                                word_optimizer=word_optimizer,
-                                word_to_idx=word_to_idx,
-                                dc_embeddings=dc_embeddings,
-                                epoch=epoch,
-                                logger=experiment,
-                                args=args)
-
-        #print(epoch_loss, this_epoch_sentence, this_epoch_word)
-
-        experiment.log_metric("train_loss", epoch_loss, step=epoch)
-        experiment.log_metric("train_sentence_loss", this_epoch_sentence, step=epoch)
-        experiment.log_metric("train_word_loss", this_epoch_word, step=epoch)
-
-        # One epoch's validation
-        this_val_epoch_loss,\
-        val_this_epoch_sentence,\
-        val_this_epoch_word = validate(val_loader=val_loader,
+        print('Training...')
+        this_epoch_word = forward_pass(data_loader=train_loader,
                                        encoder=encoder,
                                        sentence_decoder=sentence_decoder,
                                        word_decoder=word_decoder,
-                                       criterion_sent=criterion_sent,
                                        criterion_word=criterion_word,
-                                       logger=experiment,
-                                       vocab_size=vocab_size,
+                                       encoder_optimizer=encoder_optimizer,
+                                       sentence_optimizer=sentence_optimizer,
+                                       word_optimizer=word_optimizer,
                                        word_to_idx=word_to_idx,
-                                       idx_to_word=idx_to_word,
-                                       dc_embeddings=dc_embeddings,
-                                       args=args)
+                                       epoch=epoch,
+                                       logger=experiment,
+                                       args=args,
+                                       mode='train')
 
-        #print(val_epoch_loss, val_this_epoch_sentence, val_this_epoch_word)
-        
-        #if curr_val_sentence_loss > val_this_epoch_sentence:
-        #    curr_val_sentence_loss = val_this_epoch_sentence
-        #    for param in sentence_decoder.parameters():
-        #        param.requires_grad = True
-        #    print('Sentence RNN is trained!')
-        #elif curr_val_sentence_loss < val_this_epoch_sentence:
-        #    for param in sentence_decoder.parameters():
-        #        param.requires_grad = False
-        #    print('Sentence RNN is frozen!')
+        experiment.log_metric("train_word_loss", this_epoch_word, step=epoch)
 
-        experiment.log_metric("val_loss", this_val_epoch_loss, step=epoch)
-        experiment.log_metric("val_sentence_loss", val_this_epoch_sentence, step=epoch)
+        # One epoch's validation
+        print('Validating...')
+        val_this_epoch_word = forward_pass(data_loader=val_loader,
+                                           encoder=encoder,
+                                           sentence_decoder=sentence_decoder,
+                                           word_decoder=word_decoder,
+                                           criterion_word=criterion_word,
+                                           encoder_optimizer=None,
+                                           sentence_optimizer=None,
+                                           word_optimizer=None,
+                                           word_to_idx=word_to_idx,
+                                           epoch=epoch,
+                                           logger=experiment,
+                                           args=args,
+                                           mode='validate')
+
+
         experiment.log_metric("val_word_loss", val_this_epoch_word, step=epoch)
 
-        train_epoch_loss.append(epoch_loss)
-        train_sentence_epoch_loss.append(this_epoch_sentence)
         train_word_epoch_loss.append(this_epoch_word)
-        val_epoch_loss.append(this_val_epoch_loss)
-        val_sentence_epoch_loss.append(val_this_epoch_sentence)
         val_word_epoch_loss.append(val_this_epoch_word)
-
-        plot_loss(train_epoch_loss, val_epoch_loss, args.exp_num, loss_type='full')
-        plot_loss(train_sentence_epoch_loss, val_sentence_epoch_loss, args.exp_num,
-                  loss_type='sentence')
         plot_loss(train_word_epoch_loss, val_word_epoch_loss, args.exp_num, loss_type='word')
 
-        #sentence_lr_scheduler.step(val_this_epoch_sentence)
-        #word_lr_scheduler.step(val_this_epoch_word)
-
         # Check if there was an improvement
-        if initial_best_loss == 0 and initial_best_loss < this_val_epoch_loss:
+        if initial_best_loss == 0 and initial_best_loss < val_this_epoch_word:
             is_best = True
-            initial_best_loss = this_val_epoch_loss
-        elif initial_best_loss > this_val_epoch_loss:
+            initial_best_loss = val_this_epoch_word
+        elif initial_best_loss > val_this_epoch_word:
             is_best = True
-            initial_best_loss = this_val_epoch_loss
+            initial_best_loss = val_this_epoch_word
         else:
             is_best = False
 
@@ -287,7 +201,7 @@ def main(args):
                         encoder_optimizer,
                         sentence_optimizer,
                         word_optimizer,
-                        this_val_epoch_loss,
+                        val_this_epoch_word,
                         is_best,
                         args.exp_num)
 
@@ -359,7 +273,8 @@ if __name__ == '__main__':
     feature_linear = config_parser.getboolean('PARAMS-MODELS', 'feature_linear')
     topic_hidden = config_parser.getboolean('PARAMS-WORD', 'topic_hidden')
     with_densecap_captions = config_parser.getboolean('PARAMS-MODELS', 'with_densecap_captions')
-    attention = config_parser.getboolean('PARAMS-MODELS', 'attention')
+    use_attention = config_parser.getboolean('PARAMS-MODELS', 'use_attention')
+    multimodal = config_parser.getboolean('PARAMS-MODELS', 'multimodal')
 
     api_key = config_parser.get('COMET', 'api_key')
     project_name = config_parser.get('COMET', 'project_name')
@@ -423,7 +338,8 @@ if __name__ == '__main__':
     parser.add_argument('--feature_linear', type=bool, default=feature_linear, help='add linear layer for image features or not')
     parser.add_argument('--topic_hidden', type=bool, default=topic_hidden, help='initialise word LSTM from image topic or not')
     parser.add_argument('--with_densecap_captions', type=bool, default=with_densecap_captions, help='use densecap captions to create language topic or not')
-    parser.add_argument('--attention', type=bool, default=attention, help='use attention or not')
+    parser.add_argument('--use_attention', type=bool, default=use_attention, help='use attention or not')
+    parser.add_argument('--multimodal', type=bool, default=multimodal, help='use both vision and language as input or not')
 
     parser.add_argument('--api_key', type=str, default=api_key, help='key for the Comet logger')
     parser.add_argument('--project_name', type=str, default=project_name, help='name of the project')

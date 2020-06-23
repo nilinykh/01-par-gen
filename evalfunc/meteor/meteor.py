@@ -36,13 +36,9 @@ class Meteor:
         eval_line = 'EVAL'
         self.lock.acquire()
         for i in imgIds:
-            
-            for sent_id, sent in enumerate(res[i]):
-                sent = [sent]
-            
-                assert(len(sent) == 1)
-                stat = self._stat(sent[0], gts[i])
-                eval_line += ' ||| {}'.format(stat)
+            assert(len(res[i]) == 1)
+            stat = self._stat(res[i][0], gts[i])
+            eval_line += ' ||| {}'.format(stat)
 
         # Send to METEOR
         self.meteor_p.stdin.write(eval_line + '\n')

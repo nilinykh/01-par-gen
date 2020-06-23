@@ -1,9 +1,6 @@
-
 import sys
 import time
 import torch.backends.cudnn as cudnn
-import ast
-from torch.nn.utils.rnn import pack_padded_sequence
 
 sys.path.append('/home/xilini/par-gen/01-par-gen')
 from utils import *
@@ -11,187 +8,156 @@ from utils import *
 device = torch.device("cuda")
 cudnn.benchmark = True
 
-def train(train_loader,
-          encoder,
-          sentence_decoder,
-          word_decoder,
-          criterion_sent,
-          criterion_word,
-          encoder_optimizer,
-          sentence_optimizer,
-          word_optimizer,
-          word_to_idx,
-          dc_embeddings,
-          epoch,
-          logger,
-          args):
+alpha_c = 0.5
 
-    '''
-    single epoch training
-    '''
+criterion = HierarchicalXEntropyLoss(weight_word_loss=1.0)
 
-    encoder.train()
-    sentence_decoder.train()
-    word_decoder.train()
+def forward_pass(data_loader,
+                 encoder,
+                 sentence_decoder,
+                 word_decoder,
+                 criterion_word,
+                 encoder_optimizer,
+                 sentence_optimizer,
+                 word_optimizer,
+                 word_to_idx,
+                 epoch,
+                 logger,
+                 args,
+                 mode):
+    
+    if mode == 'train':
+        encoder.train()
+        sentence_decoder.train()
+        word_decoder.train()
+    elif mode == 'validate':
+        encoder.eval()
+        sentence_decoder.eval()
+        word_decoder.eval()
 
     # Set timers
-    batch_time = AverageMeter()  # forward prop. + back prop. time
-    data_time = AverageMeter()  # data loading time
+    batch_time = AverageMeter()
+    data_time = AverageMeter()
     start = time.time()
 
-    this_epoch_loss = 0
-    this_epoch_sentence = 0
     this_epoch_word = 0
 
-    with logger.train():
-        for i, (imgs, image_ids, caps, caplens) in enumerate(train_loader):
+    #with logger.train():
+        
+    for batch_num, (image_features, image_ids, caps, caplens, phrase_scores, _) in enumerate(data_loader):
 
-            data_time.update(time.time() - start)
+        data_time.update(time.time() - start)
 
-            imgs = imgs.to(device)
-            caps = caps.to(device)
-            caplens = caplens.to(device)
-            image_ids = image_ids.to(device)
+        image_features = image_features.to(device)
+        image_ids = image_ids.to(device)
+        caps = caps.to(device)
+        caplens = caplens.squeeze(1).to(device)
+        phrase_scores = phrase_scores.to(device)
+        args.batch_size = image_features.shape[0]
 
-            imgs = encoder(imgs)
+        loss = 0
+        word_loss = 0
 
-            if args.encoder_type == 'resnet512':
-                # Prepare images for sentence decoder
-                imgs = imgs.view(imgs.shape[0], -1, args.resnet512_feat_dim)
-                #num_pixels = imgs.size(1)
-                imgs = imgs.mean(dim=1)
+        h_sent = c_sent = h_word = c_word = torch.zeros(1, args.batch_size, args.hidden_size)
 
-            caplens_f, init_inx = caplens_eos(caplens, args.max_sentences)
+        alphas = torch.zeros(args.batch_size, args.max_sentences, args.max_words).to(device)
+        #print('alphas', alphas.shape)
 
-            loss = 0
-            sentence_loss = 0
-            word_loss = 0
+        # initial sentence topic is zero topic
+        init_topic = torch.zeros(1, args.batch_size, args.hidden_size)
 
-            h_sent = torch.zeros(args.num_layers_sentencernn, imgs.shape[0], args.hidden_size)
-            c_sent = torch.zeros(args.num_layers_sentencernn, imgs.shape[0], args.hidden_size)
-            h_word = torch.zeros(args.num_layers_wordrnn, imgs.shape[0], args.hidden_size)
-            c_word = torch.zeros(args.num_layers_wordrnn, imgs.shape[0], args.hidden_size)
+        # lengths of the paragraphs in current minibatch (e.g., 6 sentences, 3 sentence, etc.)
+        # note: caplens is the length of sentences in the paragraph with 0 when there is no sentences
+        minibatch_lengths = torch.zeros(args.batch_size)
+        for sample_num, sample in enumerate(caplens.squeeze(1)):
+            unique_values, counts = torch.unique(sample, return_counts=True)
+            if 0 in unique_values:
+                this_sample_length = counts[1:].sum()
+            else:
+                this_sample_length = counts.sum()
+            minibatch_lengths[sample_num] = this_sample_length
 
-            #print('START')
-            #print(h_sent, c_sent)
-            #print(h_word, c_word)
+        # we need to look at the topics of sentences which are NON-EMPTY
+        sorting_order = torch.zeros(args.batch_size, args.max_sentences).long()
+        _, idxs = torch.sort(minibatch_lengths, descending=True)
 
-            for sent_num in range(args.max_sentences):
-                
-                #print(imgs.shape)
-                
-                p_source, topic, ht_sent, ct_sent = sentence_decoder(imgs, (h_sent, c_sent))
-                #(h_word[-1].unsqueeze(0), c_word[-1].unsqueeze(0))
-                
-                h_sent = ht_sent
-                c_sent = ct_sent
+        image_features = image_features[idxs]
+        image_ids = image_ids[idxs]
+        caps = caps[idxs]
+        caplens = caplens[idxs]
+        phrase_scores = phrase_scores[idxs]
+        minibatch_lengths = minibatch_lengths[idxs]
 
-                p_target = torch.LongTensor(caplens_f[init_inx].long().squeeze(1)).to(device)
-                p_target = p_target.type_as(p_source)
-                sentrnn_loss = criterion_sent(p_source, p_target)
-                init_inx += 1
+        # for word-level prediction scores
+        word_rnn_out = []
 
-                #print('p source', p_source)
-                #print('p target', p_target)
-                #print('sentence loss', sentrnn_loss)
-                #print('h sentence', h_sent)
-                #print('c sentence', c_sent)
+        # 1. output of the encoder
+        encoder_out = encoder(image_features, phrase_scores)            
+        #print('encoder out', encoder_out, encoder_out.shape)
 
-                # WordRNN
-                current_captions = caps[:, sent_num, :]
-                current_caplens = caplens.squeeze(1)[:, sent_num]
-                max_seq_length = current_caplens[torch.argmax(current_caplens, dim=0)]
+        # 2. repeat encoder output 6 times
+        features_repeated = encoder_out.unsqueeze(1).expand(-1, args.max_sentences, -1, -1)
+        #print('feat repeated', features_repeated, features_repeated.shape)
 
-                #print('topic', topic)
-                #print('current captions', current_captions)
-                #print('current caplens', current_caplens)
-                #print('current max seq length', max_seq_length)
+        # 3. produce 6 different topics
+        hiddens, alphas = sentence_decoder(features_repeated,
+                                           init_topic,
+                                           h_sent,
+                                           c_sent,
+                                           minibatch_lengths,
+                                           sorting_order,
+                                           caplens)
 
-                sorted_scores,\
-                sorted_caps,\
-                sorted_caplens,\
-                _,\
-                ht_word, ct_word = word_decoder(topic,
-                                                current_captions,
-                                                current_caplens,
-                                                imgs.shape[0], (h_word, c_word))
+        for sent_num in range(args.max_sentences):
+            if caplens[0, sent_num] == 0:
+                break 
+            # 1. pick indexes of existing sentences only
+            non_zero_idxs = caplens[:, sent_num] > 0
+            # 2. take existing topics based on their indixes
+            topic = hiddens[:, sent_num][non_zero_idxs]
+            # 3. pick captions and caption lengths for the existing sentences
+            current_caps = caps[:, sent_num][non_zero_idxs]
+            current_caplens = caplens[:, sent_num][non_zero_idxs]
+            # 4. word-level forward pass
+            sorted_scores, (h_word, c_word) = word_decoder(topic,
+                                                           current_caps,
+                                                           current_caplens,
+                                                           args.batch_size, non_zero_idxs, (h_word, c_word))
+            word_rnn_out.append(sorted_scores)
 
-                #print('returned scores', sorted_scores, sorted_scores.shape)
-                #print('returned captions', sorted_caps, sorted_caps.shape)
-                #print('returned sort ind', sort_ind)
-                #print('returned caplens', sorted_caplens)
-                
-                h_word = ht_word
-                c_word = ct_word
+        # 5. prepare targets
+        targets = prepare_hierarchical_targets(args.max_sentences,
+                                               caplens,
+                                               caps)
+        batch_time.update(time.time() - start)
+        start = time.time()
 
-                if args.topic_hidden:
-                    sorted_targets = sorted_caps[:, 1:max_seq_length]
-                else:
-                    sorted_targets = pack_padded_sequence(sorted_caps,
-                                                   sorted_caplens,
-                                                   batch_first=True)[0]
+        # LOSS
+        loss = criterion(word_rnn_out, targets)
 
-                wordrnn_loss = criterion_word(sorted_scores, sorted_targets)
-                
-                #print(criterion_word)
-                #print(sorted_scores, sorted_scores.shape)
-                #print(sorted_targets, sorted_targets.shape)
-                #print('scores', scores, scores.shape)
-                #print('targets', targets, targets.shape)
-                #print('word loss', wordrnn_loss)
-
-                #print('END')
-                #print('====================')
-                #print()
-
-                #sentence_loss += torch.sum(sentrnn_loss) / imgs.shape[0]
-                #word_loss += torch.sum(wordrnn_loss) / imgs.shape[0]
-                
-                #print(sentrnn_loss, sentrnn_loss.shape)
-                #print(wordrnn_loss, wordrnn_loss.shape)
-                
-                sentence_loss += torch.mean(sentrnn_loss)
-                word_loss += torch.mean(wordrnn_loss)
-                
-                #print('sentence', sentence_loss)
-                #print('word', word_loss)
-
-            batch_time.update(time.time() - start)
-            start = time.time()
-
-            loss += (sentence_loss * args.lambda_sentence) + (word_loss * args.lambda_word)
-
-            #print('loss', loss)
-            this_epoch_sentence += sentence_loss.item() * args.lambda_sentence
-            this_epoch_word += word_loss.item() * args.lambda_word
-            this_epoch_loss += (this_epoch_sentence + this_epoch_word)
-
+        if mode == 'train':
             sentence_optimizer.zero_grad()
             word_optimizer.zero_grad()
             if args.feature_linear:
                 encoder_optimizer.zero_grad()
-
             loss.backward()
-
             if args.clipping:
                 torch.nn.utils.clip_grad_norm_(sentence_decoder.parameters(), args.sent_grad_clip)
                 torch.nn.utils.clip_grad_norm_(word_decoder.parameters(), args.word_grad_clip)
-
             sentence_optimizer.step()
             word_optimizer.step()
             if args.feature_linear:
                 encoder_optimizer.step()
+                
+        this_epoch_word += loss.item()
+        
+        # Print status
+        if batch_num % int(args.print_freq) == 0:
+            print('Epoch: [{0}][{1}/{2}]\t'
+                  'Batch Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
+                  'Data Load Time {data_time.val:.3f} ({data_time.avg:.3f})\t'
+                  'Loss {loss:.4f}\t'.format(epoch, batch_num, len(data_loader),
+                                             batch_time=batch_time,
+                                             data_time=data_time, loss=loss.item()))
 
-            # Print status
-            if i % int(args.print_freq) == 0:
-                print('Epoch: [{0}][{1}/{2}]\t'
-                      'Batch Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
-                      'Data Load Time {data_time.val:.3f} ({data_time.avg:.3f})\t'
-                      'Loss {loss:.4f}\t'.format(epoch, i, len(train_loader),
-                                                 batch_time=batch_time,
-                                                 data_time=data_time, loss=loss.item()))
-
-    # return average loss / sentence loss / word loss for current epoch
-    return this_epoch_loss / len(train_loader),\
-           this_epoch_sentence / len(train_loader),\
-           this_epoch_word / len(train_loader)
+    return this_epoch_word  / len(data_loader)

@@ -1,5 +1,117 @@
 Nikolai
 
+## 2020-06-18 
+
+  - ALPS, the NLP winter school in the Alps, http://lig-alps.imag.fr
+  - Evaluation
+	* Baseline: visual no attention
+	* + background information: improvement
+	* What search is used in Krause? This is not clear? Another paper claims that Krause is using beam search.
+  - CIDER: TF/IDF on bigrams
+  - METEOR: takes into account synonyms and paraphrases
+  - CIDER has the highest improvement in our cases: because of TF/IDF CIDER is biased to more specific descriptions which we observed is the case with our descriptions anyway
+  - Beam search produces very short sentences: problem with the beamsearch implementtation: uses sum rather than product
+  - Nucleus sampling is producing the best results: only choose only from words that jointly represent some probability mass; the threshold is deifned as a parameter; 0.9 works the best; this will affect the number of words we can choose from each time; and then we randomly choose one of those words;
+  - Attention is placed on the discourse LSTM; it helps the system tolearn how to realise background knowledge in the paragraph accross different sentences; because we know thta humans focus on different information when they start and proceed with describing; diversity in the sense that there some topic progression from one sentence to another; we hope that the discourse LSTM will learn how to attend to different chunks of background knowledge and visual information related to those; this gives us a discourse model; this is shown by attention maps
+  
+
+
+## 2020-06-09
+
+Paper 1:
+
+  - Background knowledge is useful for generating interesting descriptions as it provides additional richness of descriptions
+	* The background knowledge provides additional information what is worth mentioning in the image; how humans conceputalise the world and devide scenes into objects and relations between objects 
+	* The model is able to use synonyms of words that it encounters
+	* Descriptions do not only refer to what is seen
+	* The descriptions provide background information, priming; they are explciit descriptions of individual objects with focus on what is relevant; we have additional information about objects;
+	* In addition to information in the generated output text we are also priming the system with information how to describe objects; very similar to Mooney idea of providing explanations
+	* The paragraph does provide conceptual information about objects but only those that are referred to in a description; in a single text maybe not all properties of the scene are mentioned but only those that were considered relavant by a describer; a describer could describe other important information which can be extracted from the background information; attention may be subjective
+	* The model is able to hallucinate up to a point but halucination must be grounded in image; there is good question where the boundary generating grounded and ungrounded descriptions is
+	* We are not necessarily hallucinating since we are basing it on actual descriptions of several objects; we are providing a more complete description of the image and the relations we find there to help to generate the descriptions; the original model is also hallucinating
+	* Densecaps are relevant descriptions of objects
+  - How do we evaluate?
+  - See also J. Wu and R. J. Mooney. Self-critical reasoning for robust visual question answering. arXiv, arXiv:1905.09998 [cs.CV], 2019.
+  - X. Liang, Z. Hu, H. Zhang, C. Gan, and E. P. Xing. Recurrent topic-transition gan for visual paragraph generation. arXiv, arXiv:1703.07022 [cs.CV]:1–10, 2017.
+  - We have visual and linguistic topic represnetation of each image; then this informaiton is combined to get multi-modal topics; these are then attended to drive to drive the discourse LSTM which is repsonsible for generating discourse units/sentences; the Liang paper uses phrases to generate the words in sentences; they see it as fragments which should be glued together in a sentence; whereas we see it as providing a topic what can be said about the image and then the system is free to generate individual sentences from that
+  - Topic modelling: we create visual and textual topics; from these topics the system learnes how to realise these topics in idnvidual paragraph
+  - Evaluation:
+	* The produces more interesting descriptions given the baseline
+	* We need to say something that we really are learning topics; look at the attention maps for the combinaed features; attention there is over visual-language topics and the previous state of the discourse LSTM; it's modelling to what degree we take into account new topics and to what degree we are following from the previous discourse unit
+  - Parallel co-attention: visual features are passed tohtough a dense layer and then multiplied with the linguistic features; hence visual features are adapted to linguistci features which cretae our topics (affinity matrix)
+  - What to describe when?
+	* Adding more to what
+	* Adding the ability select when
+  - Models
+	* Baseline 1: Krause without end of sentence prediction
+	* Model 2: Add linguistic topics (VL Topics with co-attention) and discourse attention
+	* Model 3: Add only linguistic topics
+  - To do:
+      * Implement models with VL topics and attention (all combinations)
+	  * Visualisation of attention with and without topics
+	  * Evaluation (both beam search and samplign); qualitative evaluation to examine whether sampling is better
+	  * Measuring diversity in the generated paragraphs (using frequencies of types and other measures, N's slides)
+
+
+Paper 2:
+
+  - Paragraphs have a discourse model. 
+  - Humans structure information diffirently accross different sentences.
+  - We have a vision and language input model. How is this information structured accross different sentences?
+  - Attention map of the 
+
+
+## 2020-05-29 
+
+  Nikolai, Simon and Asad
+
+  - 50 visual representations of objects, 50 topic represnetations of descriptions of objects
+  - attention on both; the attention is available to the discourse information structure LSTM to help out how to realise the paragraphs
+  - top-down and bottom-up attention, cf. Lavie 2014, and S. Dobnik and J. D. Kelleher. A model for attention-driven judgements in Type Theory with Records. In J. Hunter, M. Simons, and M. Stone, editors, JerSem: The 20th Workshop on the Semantics and Pragmatics of Dialogue, volume 20, pages 25–34, New Brunswick, NJ USA, Juley 16–18 2016.
+  - NLG:
+	* E. Krahmer and K. van Deemter. Computational generation of referring expressions: A survey. Compu- tational Linguistics, 38(1):173–218, 2011.
+	* K. v. Deemter. Computational models of referring: a study in cognitive science. The MIT Press, Cam- bridge, Massachusetts and London, England, 2016.
+  - Evaluation:
+	* the actual distirbution of adaptive attention
+	* the attention graph as produced in Nikolai's previous paper over objects mentioned in the generated text
+  - end of paragraph prediction removed; replace with a cheat end of paragraph detection: generate the same number of sentences as in the ground truth
+
+Holiday
+
+  - 2 weeks in December and 2 weeks in January (21 December - 18 January)
+
+
+## 2020-05-22 
+
+  Nikolai, Simon and Asad
+
+  - Salince and attention: how humans focus on paragraphs of text; Nikolai's entity linker; how is this captured in the current Stanford corpus; does our model capture it and how can we improve the model 
+  - A. Zarcone, M. van Schijndel, J. Vogels, and V. Demberg. Salience and attention in surprisal-based accounts of language processing. Frontiers in Psychology, 7:844, 2016. [Paper](https://www.frontiersin.org/articles/10.3389/fpsyg.2016.00844/full)
+  - Surprisal modelling; information density, constant surprisal; focus on the herar
+  - What is informational density in generated captions? Are we generating too much or too little?
+  - The context of annotation; hwo does this affect the information in the description? Experiment where one person does not see an image but only heras descriptions.
+  - Remove the sentence generation part; use the number of sentences from the corpus to evaluate the descriptions
+
+
+
+## 2020-05-15 
+
+  - Extracted DenseCap features
+  - Transformer presentation
+  - Multi-modal fusion possibilities:
+	* pool(visual), pool (backrgound), visual + background = 512 + 512 = 1024; confuses end of sentence detection but produces cool and rich descriptions ==> move end of sentence detection (possibly to the end of the word LSTM) ; remove end of sentence detection completely
+	* combinate visual and background into a single 512 vector with multiplication and test; does this improve end of sentence detection and also generates interesting descriptions
+	* no pooling, hence 50 x 1024 or 50 x 512; then a dense layer to 512
+  - Conceptual model overview:
+	* Information fusion (visual + background) and summarisation (pooling)
+	* Discourse planning (sentence LSTM)
+	* Sentence relaisation (word LSTM)
+	* Where does EOP (end of paragraph) fit in?
+	* See our diagram doodle
+  - Replace DenseCap (2016) with FasterRCNN (bottom-up, Anderson; Detectron2 SoTA for object detection by FB) https://github.com/facebookresearch/detectron2 
+  - Numeric prediction for EOP which conveys gradience for individual sentences leading to the stop (maybe this is not relevant since the EOP is not an LSTM (the signal about EOP is not fed back into prediction) but this relies on the sentence LSTM which is gradient)
+  
+
 
 ## 2020-05-08 
 

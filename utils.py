@@ -397,7 +397,7 @@ def save_checkpoint(data_name,
     filename = f'checkpoint.pth.tar'
     best_filename = f'BEST_checkpoint.pth.tar'
 
-    torch.save(state, pathname + filename)
+    #torch.save(state, pathname + filename)
     if is_best:
         torch.save(state, pathname + best_filename)
 
@@ -615,11 +615,18 @@ class BeamSearchNode(object):
         self.wordid = wordId
         self.logp = logProb
         self.leng = length
-        self.alpha_penalty = 0.7
-
+        self.alpha_penalty = 0.9
+        
+    def __lt__(self, other):
+        assert isinstance(other, BeamSearchNode)
+        return self.logp < other.logp
+    
     def eval(self, alpha=1.0):
+        length_penalty = ((5.0 + self.leng) ** self.alpha_penalty) / (6.0 ** self.alpha_penalty)
         reward = 0
-        return self.logp / float(self.leng - 1 + 1e-6) + alpha * reward
+        # length normalisation
+        #return self.logp / float(self.leng - 1 + 1e-6) + alpha * reward
+        return self.logp / float(length_penalty)
     
 def beam_decode(target_tensor, embs, word_to_idx, word_decoder, decoder_hiddens, beam_width, topk):
 
@@ -647,7 +654,7 @@ def beam_decode(target_tensor, embs, word_to_idx, word_decoder, decoder_hiddens,
         nodes = PriorityQueue()
 
         # start the queue
-        nodes.put((-node.eval(), idx, node))
+        nodes.put((-node.eval(), node))
         qsize = 1
 
         # start beam search
@@ -656,12 +663,12 @@ def beam_decode(target_tensor, embs, word_to_idx, word_decoder, decoder_hiddens,
             if qsize > 4000: break
                             
             # fetch the best node
-            score, idx, n = nodes.get()
+            score, n = nodes.get()
             decoder_input = n.wordid
             decoder_hidden = n.h
 
             if n.wordid.item() == EOS_TOKEN and n.prevNode != None:
-                endnodes.append((score, idx, n))
+                endnodes.append((score, n))
                 # if we reached maximum # of sentences required
                 if len(endnodes) >= number_required:
                     break
@@ -680,23 +687,23 @@ def beam_decode(target_tensor, embs, word_to_idx, word_decoder, decoder_hiddens,
             
             for new_k in range(beam_width):
                 
-                length_penalty = ((5.0 + n.leng) ** n.alpha_penalty) / (6.0 ** n.alpha_penalty)
+                #length_penalty = ((5.0 + n.leng) ** n.alpha_penalty) / (6.0 ** n.alpha_penalty)
                                 
                 decoded_t = indexes[0][new_k].view(1, -1)
                 log_p = log_prob[0][new_k].item()
                 
-                #new_log = (n.logp + log_p) / (n.leng ** 1)
+                #new_log = (n.logp + log_p) / (n.leng ** 0.1)
                 new_log = n.logp + log_p
                 #new_log = (n.logp + log_p) / length_penalty
                 
                 node = BeamSearchNode(decoder_hidden, n, decoded_t, new_log, n.leng + 1)
                 score = -node.eval()
-                nextnodes.append((score, idx + new_k, node))
+                nextnodes.append((score, node))
                 
             # put them into queue
             for i in range(len(nextnodes)):
-                score, dummy_idx, nn = nextnodes[i]
-                nodes.put((score, dummy_idx + i, nn))
+                score, nn = nextnodes[i]
+                nodes.put((score, nn))
                 # increase qsize
             qsize += len(nextnodes) - 1
 
@@ -705,7 +712,7 @@ def beam_decode(target_tensor, embs, word_to_idx, word_decoder, decoder_hiddens,
             endnodes = [nodes.get() for _ in range(topk)]
 
         utterances = []
-        for score, dummyidx, n in sorted(endnodes, key=operator.itemgetter(0)):
+        for score, n in sorted(endnodes, key=operator.itemgetter(0)):
             utterance = []
             utterance.append(n.wordid.item())
             # back trace

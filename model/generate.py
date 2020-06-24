@@ -138,7 +138,7 @@ def main(args):
     print('SPICE', s)
     
     # POINT
-    with open('./scores/res-lang-att-nucleus.json', 'w') as j:
+    with open('./scores/res-lang-att-beam3-30k.json', 'w') as j:
         j.write(f'BLEU 1 \t {b1} \n')
         j.write(f'BLEU 2 \t {b2} \n')
         j.write(f'BLEU 3 \t {b3} \n')
@@ -181,7 +181,7 @@ def generate(val_loader,
         (Bleu(4), ["Bleu_1", "Bleu_2", "Bleu_3", "Bleu_4"]),
         (Cider('corpus'), "CIDEr"),
         #vg-test-words
-        #(Meteor(), "METEOR")
+        (Meteor(), "METEOR")
     ]
     
     #for the purpose of making sure generated texts make sense
@@ -319,7 +319,7 @@ def generate(val_loader,
                         word_to_idx['<sentence_topic>'] = 7606
                         target_tensor = torch.zeros(1, 50)
                         x, (h_word, c_word) = beam_decode(target_tensor, embs, word_to_idx, word_decoder, 
-                                                          (h_word, c_word), args.beam, 20)
+                                                          (h_word, c_word), args.beam, 30)
                         for item in x[0][0]:
                             this_gen_sentence.append(item)
                             
@@ -400,7 +400,7 @@ def generate(val_loader,
     Bleu_3 += score_dict['Bleu_3']
     Bleu_4 += score_dict['Bleu_4']
     CIDEr += score_dict['CIDEr']
-    #METEOR += score_dict['METEOR']
+    METEOR += score_dict['METEOR']
     #SPICE += score_dict['SPICE']
 
     #print(references_batch)
@@ -412,7 +412,7 @@ def generate(val_loader,
         paragraphs_generated.append(pars)
     
     # POINT
-    with open('./scores/lang-att-nucleus.json', 'w') as f:
+    with open('./scores/lang-att-beam3-30k.json', 'w') as f:
         json.dump(paragraphs_generated, f)
         
     return Bleu_1, Bleu_2, Bleu_3, Bleu_4, CIDEr, METEOR, SPICE

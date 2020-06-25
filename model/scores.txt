@@ -11,7 +11,7 @@ Notation:
 
   MODEL TYPE      |   BLEU 1   |   BLEU 2  |   BLEU 3   |   BLEU 4   |   CIDEr   |   METEOR   |
 
-========= NORMAL GREEDY ==========
+	========= NORMAL GREEDY ==========
 
   Multimodal -
   Attention  -         30.5         15.1        8.3          4.7         13.9         11.5
@@ -51,7 +51,7 @@ Notation:
 
 	======== BEAM WITH ENSURING MIN LENGTH (10) ========
 
-	Multimodal -
+  Multimodal -
   Attention  -         38.8         22.0        12.5         7.1         17.9         14.3
   Beam 2
 

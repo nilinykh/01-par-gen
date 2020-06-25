@@ -138,7 +138,7 @@ def main(args):
     print('SPICE', s)
     
     # POINT
-    with open('./scores/res-lang-att-beam3-30k.json', 'w') as j:
+    with open('./scores/res-lang+att+beam2-30k_minlength.json', 'w') as j:
         j.write(f'BLEU 1 \t {b1} \n')
         j.write(f'BLEU 2 \t {b2} \n')
         j.write(f'BLEU 3 \t {b3} \n')
@@ -191,7 +191,7 @@ def generate(val_loader,
     with torch.no_grad():
         for image_num, (image_features, image_ids, caps, caplens, phrase_scores, bboxes) in enumerate(val_loader):
             
-            if image_num % 50 == 0:
+            if image_num % 2 == 0:
                 print(image_num)
             
             image_features = image_features.to(device)
@@ -320,7 +320,7 @@ def generate(val_loader,
                         target_tensor = torch.zeros(1, 50)
                         x, (h_word, c_word) = beam_decode(target_tensor, embs, word_to_idx, word_decoder, 
                                                           (h_word, c_word), args.beam, 30)
-                        for item in x[0][0]:
+                        for item in x[0][-1]:
                             this_gen_sentence.append(item)
                             
                                                     
@@ -412,7 +412,7 @@ def generate(val_loader,
         paragraphs_generated.append(pars)
     
     # POINT
-    with open('./scores/lang-att-beam3-30k.json', 'w') as f:
+    with open('./scores/lang+att+beam2-30k_minlength.json', 'w') as f:
         json.dump(paragraphs_generated, f)
         
     return Bleu_1, Bleu_2, Bleu_3, Bleu_4, CIDEr, METEOR, SPICE

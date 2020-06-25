@@ -628,6 +628,50 @@ class BeamSearchNode(object):
         #return self.logp / float(self.leng - 1 + 1e-6) + alpha * reward
         return self.logp / float(length_penalty)
     
+def block_ngram_repeats(cur_len, log_probs, curr_sequence):
+    block_ngram_repeat = 2
+    if cur_len > 1:
+        curr_seqs = curr_sequence.queue
+        alive_sequences = []
+        for score, n in sorted(curr_seqs, key=operator.itemgetter(0)):
+            utterance = []
+            utterance.append(n.wordid.item())
+            # back trace
+            while n.prevNode != None:
+                n = n.prevNode
+                utterance.append(n.wordid.item())
+            alive_sequences.append(utterance[::-1])
+        alive_sequences = alive_sequences[-3:]
+        #print('alive seqs', alive_sequences)
+        for path_idx in range(len(alive_sequences)):
+            hyp = alive_sequences[path_idx]
+            ngrams = set()
+            fail = False
+            gram = []
+            for i in range(len(hyp) - 1):
+                # Last n tokens, n = block_ngram_repeat
+                gram = (gram + [hyp[i]])[-block_ngram_repeat:]
+                
+                # skip the blocking if any token in gram is excluded
+                #if set(gram) & self.exclusion_tokens:
+                #    continue
+                
+                if tuple(gram) in ngrams:
+                    #print('fail')
+                    fail = True
+                ngrams.add(tuple(gram))
+            if fail:
+                log_probs[0][path_idx] = -10e20
+    return log_probs
+
+
+def ensure_min_length(leng, log_probs, eos_token):
+    min_length = 10 + 2
+    if leng <= min_length:
+        log_probs[:, eos_token] = -1e20
+    return log_probs
+
+    
 def beam_decode(target_tensor, embs, word_to_idx, word_decoder, decoder_hiddens, beam_width, topk):
 
     IMAGE_TOKEN = word_to_idx['<sentence_topic>']
@@ -666,7 +710,7 @@ def beam_decode(target_tensor, embs, word_to_idx, word_decoder, decoder_hiddens,
             score, n = nodes.get()
             decoder_input = n.wordid
             decoder_hidden = n.h
-
+            
             if n.wordid.item() == EOS_TOKEN and n.prevNode != None:
                 endnodes.append((score, n))
                 # if we reached maximum # of sentences required
@@ -681,13 +725,24 @@ def beam_decode(target_tensor, embs, word_to_idx, word_decoder, decoder_hiddens,
             #decoder_output = decoder_output.div(1.5)
             decoder_output = F.log_softmax(decoder_output, dim=-1)
             
+            #print('len', n.leng)
+            #print('prob before', decoder_output[:, EOS_TOKEN])
+            
+            decoder_output = ensure_min_length(n.leng, decoder_output, EOS_TOKEN)
+            
+            #print('prob after', decoder_output[:, EOS_TOKEN])
+            #print()
+            
             # PUT HERE REAL BEAM SEARCH OF TOP
             log_prob, indexes = torch.topk(decoder_output, beam_width)
+            
+            #log_prob = block_ngram_repeats(n.leng, log_prob, nodes)
+            
             nextnodes = []
             
             for new_k in range(beam_width):
                 
-                #length_penalty = ((5.0 + n.leng) ** n.alpha_penalty) / (6.0 ** n.alpha_penalty)
+                length_penalty = ((5.0 + n.leng) ** n.alpha_penalty) / (6.0 ** n.alpha_penalty)
                                 
                 decoded_t = indexes[0][new_k].view(1, -1)
                 log_p = log_prob[0][new_k].item()
@@ -719,9 +774,14 @@ def beam_decode(target_tensor, embs, word_to_idx, word_decoder, decoder_hiddens,
             while n.prevNode != None:
                 n = n.prevNode
                 utterance.append(n.wordid.item())
+             
             utterance = utterance[::-1]
             utterances.append(utterance)
+            
+        #print(utterances)
+        
         decoded_batch.append(utterances)
+        
     return decoded_batch, decoder_hidden
 
 

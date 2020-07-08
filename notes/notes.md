@@ -1,6 +1,14 @@
 Nikolai
 
-## 2020-06-18 
+## 2020-07-08
+  - Train some more models: model with background input, model with background input and attention
+  - Expected: good generations, probably better than those generated with visual information only
+  - Motivation for multimodal features: why do we construct them exactly the way it is done? Grounding motivation: learning linear layer to map two modalities together and ground language and vision into the same space with ReLU. Knowledge motivation: learn to choose between visual and background information, learn to decide which type of modality is more important for the current timestamp. Motivation for choosing strategy to build multimodal vector is crucial.
+  - Human evaluation set-up: how natural the paragraph is? Evaluate across different properties: syntactic structure, choice of words, coherence, interestingness (already entailed by naturalness?), repetitiveness (we do not want repetitions)
+  - Leave some feedback fields in human evaluation and ask humans to add any comments they would like to add.
+  
+
+## 2020-06-18
 
   - ALPS, the NLP winter school in the Alps, http://lig-alps.imag.fr
   - Evaluation
@@ -13,7 +21,7 @@ Nikolai
   - Beam search produces very short sentences: problem with the beamsearch implementtation: uses sum rather than product
   - Nucleus sampling is producing the best results: only choose only from words that jointly represent some probability mass; the threshold is deifned as a parameter; 0.9 works the best; this will affect the number of words we can choose from each time; and then we randomly choose one of those words;
   - Attention is placed on the discourse LSTM; it helps the system tolearn how to realise background knowledge in the paragraph accross different sentences; because we know thta humans focus on different information when they start and proceed with describing; diversity in the sense that there some topic progression from one sentence to another; we hope that the discourse LSTM will learn how to attend to different chunks of background knowledge and visual information related to those; this gives us a discourse model; this is shown by attention maps
-  
+
 
 
 ## 2020-06-09
@@ -21,7 +29,7 @@ Nikolai
 Paper 1:
 
   - Background knowledge is useful for generating interesting descriptions as it provides additional richness of descriptions
-	* The background knowledge provides additional information what is worth mentioning in the image; how humans conceputalise the world and devide scenes into objects and relations between objects 
+	* The background knowledge provides additional information what is worth mentioning in the image; how humans conceputalise the world and devide scenes into objects and relations between objects
 	* The model is able to use synonyms of words that it encounters
 	* Descriptions do not only refer to what is seen
 	* The descriptions provide background information, priming; they are explciit descriptions of individual objects with focus on what is relevant; we have additional information about objects;
@@ -55,13 +63,13 @@ Paper 1:
 
 Paper 2:
 
-  - Paragraphs have a discourse model. 
+  - Paragraphs have a discourse model.
   - Humans structure information diffirently accross different sentences.
   - We have a vision and language input model. How is this information structured accross different sentences?
-  - Attention map of the 
+  - Attention map of the
 
 
-## 2020-05-29 
+## 2020-05-29
 
   Nikolai, Simon and Asad
 
@@ -81,11 +89,11 @@ Holiday
   - 2 weeks in December and 2 weeks in January (21 December - 18 January)
 
 
-## 2020-05-22 
+## 2020-05-22
 
   Nikolai, Simon and Asad
 
-  - Salince and attention: how humans focus on paragraphs of text; Nikolai's entity linker; how is this captured in the current Stanford corpus; does our model capture it and how can we improve the model 
+  - Salince and attention: how humans focus on paragraphs of text; Nikolai's entity linker; how is this captured in the current Stanford corpus; does our model capture it and how can we improve the model
   - A. Zarcone, M. van Schijndel, J. Vogels, and V. Demberg. Salience and attention in surprisal-based accounts of language processing. Frontiers in Psychology, 7:844, 2016. [Paper](https://www.frontiersin.org/articles/10.3389/fpsyg.2016.00844/full)
   - Surprisal modelling; information density, constant surprisal; focus on the herar
   - What is informational density in generated captions? Are we generating too much or too little?
@@ -94,7 +102,7 @@ Holiday
 
 
 
-## 2020-05-15 
+## 2020-05-15
 
   - Extracted DenseCap features
   - Transformer presentation
@@ -108,12 +116,12 @@ Holiday
 	* Sentence relaisation (word LSTM)
 	* Where does EOP (end of paragraph) fit in?
 	* See our diagram doodle
-  - Replace DenseCap (2016) with FasterRCNN (bottom-up, Anderson; Detectron2 SoTA for object detection by FB) https://github.com/facebookresearch/detectron2 
+  - Replace DenseCap (2016) with FasterRCNN (bottom-up, Anderson; Detectron2 SoTA for object detection by FB) https://github.com/facebookresearch/detectron2
   - Numeric prediction for EOP which conveys gradience for individual sentences leading to the stop (maybe this is not relevant since the EOP is not an LSTM (the signal about EOP is not fed back into prediction) but this relies on the sentence LSTM which is gradient)
-  
 
 
-## 2020-05-08 
+
+## 2020-05-08
 
   - Sentence LSTM, add gradient scores for the sentence completion based on the degree to which the sentence is the last sentence
   - Presentation in the Transforms course: S. Herdade, A. Kappeler, K. Boakye, and J. Soares. Image captioning: Transforming objects into words. In Advances in Neural Information Processing Systems, pages 11135–11145, 2019.
@@ -125,7 +133,7 @@ Holiday
 
 
 
-## 2020-05-01 
+## 2020-05-01
 
   - How to add attention (similar to Lu and Ghanimifard):
   * In addition to visual embedding we also have ambedding from the phrases generated by DenseCap
@@ -133,7 +141,7 @@ Holiday
   * Motivation: DenseCap descriptions will be descriptions of the most visible objects in the scene; in DenseCap we can control the number of region proposals from which unique objects are identified (there are constraints on how objects are combined); the number of identified objects is not the same for images; (1) we could take the visual features of these identified objects as a vector of attended objects for example; (2) we take the actual LSTM hidden state of the generated descriptions of these proposals; in both cases we are testing the effects of transfer learning
   * MaxPooling is now performing the task of attention; MaxPooling also from DenseCap regions and DenseCap description vectors; maybe in later versions replace with attention
   * Where to introduce attention; before Sentence LSTM to generate sentence topics or at the level of Word LSTM to generate individual words?
-  * 
+  *
   * S. Ullman. Visual routines. Cognition, 18(1–3):97–159, 1984.
   - Where to introduce attention?
 	* Attention over visual features and the DenseCap features: what is relevant in the image to describe?
@@ -144,7 +152,7 @@ Holiday
 	   * Getting the automatic scores for the current models
 	* Calculations of CIDEr: how to interpret the score; experiment with ground truth being slightly randomly modified; the effect on the score
   - Pragmatic descriptions of perceptual stimuli Emiel van Miltenberg: [paper](https://www.aclweb.org/anthology/E17-4001.pdf)
-   * Nucleus model with temperature is the best (comparing the generations manually) 
+   * Nucleus model with temperature is the best (comparing the generations manually)
 
 On the intent in image description tasks
 
@@ -162,7 +170,7 @@ On the intent in image description tasks
 	  * attention
 
 
-## 2020-04-23 
+## 2020-04-23
 
   - Baseline model with no pre-training now generates very good descriptions; the problem was in the way the generation was implementaed; it was conditioned on the ground truth rather than previous prediction
   - Different implementations of search
@@ -170,15 +178,15 @@ On the intent in image description tasks
 	* Sampling from multinomial distribution https://docs.scipy.org/doc/numpy-1.13.0/reference/generated/numpy.random.multinomial.html for implementation see Softmax-with-temperature-test.ods
 	* Top-n sampling (temperature scaling on the top most probable words), https://cs.stackexchange.com/questions/79241/what-is-temperature-in-lstm-and-neural-networks-generally
 	* Beam-search
-	
 
-## 2020-04-17 
+
+## 2020-04-17
 
   - Using Densecap embeddings and LSTM language model and fine-tuning them (initilaise only and then update the weights) improves the performance
   - A system without the denscap language model generates fragmented phrases (which seem to be good) but the syntax is fragmented
   - In packing sentences, now we do not calculate loss on padded tokens
-  - Results: 
-	* Baseline 1: 
+  - Results:
+	* Baseline 1:
   - Next?
 	* Double checking of the code
 	* Create Topic/language embeddings: take an image, create denscap descriptions, take the hidden state of the last word of the LSTM and save this as a topic represnetation for each region; 50 regions; then max polling and finally we get Topic embeddings; concatenate topic embeddings and visual embeddings; start generating sentences from that; visual and language pipeline; the sentence genrator needs to learn how to select information and generate from that
@@ -229,8 +237,8 @@ On the intent in image description tasks
     * experiment: start training with 128 BS and then later increase the batch size; and then increase the BS to 256; large BS as fine tuning? S's expectation is that this will only speed up the training; N's expectation is that we would actually reach lower validation; compare where BS is constant, e.g. 256 with a case where BS is first 128 and then switched to 256; a case of fine tuning
     * experiment: represent dense-cap captions as a document topic vector; NAACL in New Orleans a keynote on poetry egenration; a best paper on story generation; both papers some represnettaion; having denscap texts summarised as a vector would tell us what is interesting in the picture; attention on what is interesting to describe in this picture for humans;
     * pass the densacap through some sentence embeddings encoder; pre-trained embeddings for dense-caps, encode densecaps to a semantics vector which represents the attention through language in the model
-    
-  
+
+
 
 
 ## 2020-03-20
@@ -270,8 +278,8 @@ On the intent in image description tasks
   - Different evaluation scores
   - Generated sentences
   - https://cs.stanford.edu/people/ranjaykrishna/im2p/index.html
-  - 
-  
+  -
+
 
 
 ## 2020-02-18
@@ -286,5 +294,3 @@ On the intent in image description tasks
   - M. Tanti and A. C. K. Gatt. Quantifying the amount of visual information used by neural caption generators. In Proceedings of the 1st Workshop on Shortcomings in Vision and Language (SiVL’18), ECCV, 2018.
   - M. Tanti, A. Gatt, and K. P. Camilleri. Where to put the image in an image caption generator. Natural Language Engineering, 24(3):467–489, 2018.
   - A. Ramisa, J. Wang, Y. Lu, E. Dellandrea, F. Moreno-Noguer, and R. Gaizauskas. Combining geometric, textual and visual features for predicting prepositions in image descriptions. In Proceedings of the 2015 Conference on Empirical Methods in Natural Language Processing, pages 214–220, Lisbon, Portugal, 7–21 September 2015. Association for Computational Linguistics.
-
-    

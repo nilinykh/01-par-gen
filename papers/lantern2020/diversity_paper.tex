@@ -1,0 +1,432 @@
+%
+% File acl2020.tex
+%
+%% Based on the style files for ACL 2020, which were
+%% Based on the style files for ACL 2018, NAACL 2018/19, which were
+%% Based on the style files for ACL-2015, with some improvements
+%%  taken from the NAACL-2016 style
+%% Based on the style files for ACL-2014, which were, in turn,
+%% based on ACL-2013, ACL-2012, ACL-2011, ACL-2010, ACL-IJCNLP-2009,
+%% EACL-2009, IJCNLP-2008...
+%% Based on the style files for EACL 2006 by 
+%%e.agirre@ehu.es or Sergi.Balari@uab.es
+%% and that of ACL 08 by Joakim Nivre and Noah Smith
+
+\newcount\Comments  % 0 suppresses notes to selves in text
+\Comments=1   % TODO: set to 0 for final version
+
+\documentclass[11pt,a4paper]{article}
+\usepackage[hyperref]{acl2020}
+\usepackage{times}
+\usepackage{latexsym}
+\renewcommand{\UrlFont}{\ttfamily\small}
+
+% for comments
+\usepackage{color}
+\usepackage{multirow}
+\definecolor{darkgreen}{rgb}{0,0.5,0}
+\definecolor{purple}{rgb}{1,0,1}
+% \kibitz{color}{comment} inserts a colored comment in the text
+\newcommand{\kibitz}[2]{\ifnum\Comments=1\textcolor{#1}{#2}\fi}
+% add yourself here:
+\newcommand{\nikolai}[1]{\kibitz{red}      {[Nikolai: #1]}}
+\newcommand{\simon}[1]  {\kibitz{blue}   {[Simon: #1]}}
+\newcommand{\asad}[1]{\kibitz{purple}     {[Asad: #1]}}
+
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{hhline}
+
+\newcommand{\R}{\mathbb{R}}
+
+% This is not strictly necessary, and may be commented out,
+% but it will improve the layout of the manuscript,
+% and will typically save some space.
+\usepackage{microtype}
+
+%\aclfinalcopy % Uncomment this line for the final submission
+%\def\aclpaperid{***} %  Enter the acl Paper ID here
+
+%\setlength\titlebox{5cm}
+% You can expand the titlebox if you need extra space
+% to show all the authors. Please do not make the titlebox
+% smaller than 5cm (the original size); we will check this
+% in the camera-ready version and ask you to change it back.
+
+\newcommand\BibTeX{B\textsc{ib}\TeX}
+
+\title{Contextual knowledge is important: utilizing top-down information in generating structured and ordered image paragraphs}
+
+\author{First Author \\
+  Affiliation / Address line 1 \\
+  Affiliation / Address line 2 \\
+  Affiliation / Address line 3 \\
+  \texttt{email@domain} \\\And
+  Second Author \\
+  Affiliation / Address line 1 \\
+  Affiliation / Address line 2 \\
+  Affiliation / Address line 3 \\
+  \texttt{email@domain} \\}
+
+\date{}
+
+\begin{document}
+\maketitle
+\begin{abstract}
+abstract
+
+\end{abstract}
+
+\section{Introduction}
+
+% Learning discourse from bottom-up and top-down features (?)
+
+
+Humans are typically able to effortlessly describe real-world images when required: we easily identify objects, attributes and relations between them.
+%While describing a scene, we also quickly organise our utterances in the most fitting way possible, editing them while producing when necessary.
+Diversity, richness and complexity of such human-produced image descriptions have been observed in several benchmark image description datasets, including MSCOCO \cite{lin2014microsoft,chen2015microsoft}, Flickr8k \cite{hodosh2013}, Flickr30k \cite{young-etal-2014-image}, Visual Genome \cite{krishnavisualgenome}.
+These datasets were collected to address the task of automatic image description \cite{bernardi2016automatic}, a long-standing and active field of research, placed in intersection between computer vision and natural language processing (generation, in particular).
+This problem of mapping visual data to text can be viewed as the specific example of one of the core goals of NLG: `translating' source data into a natural language representation.
+
+In natural language generation community, the task of text generation has been typically divided into multiple sub-tasks, including \textit{content determination (selection)}, the task of deciding which parts of the source information should be included in the output description, and \textit{text structuring}, the task of ordering selected information \cite{Gatt2017}.
+However, with the rise of neural networks in many NLP areas, the generation tasks are now seen as a continuous, non-modular process of automatically learning relations between input and expected output. Specifically, neural models of image captioning \cite{kiros14,vinyals2014tell} are trying to implicitly learn what is important about an image (content selection) and how this information should be structured in the generated caption (text structuring).
+Such mechanisms as attention \cite{xu2015attend,anderson2017bottomup} further improve ability of the models to locate important parts in an image and utilize them for caption generation. Some recent advances in image captioning include application of transformer architecture \cite{vaswani2017attention,herdade2019image}.
+
+While it is clear that neural networks demonstrate good performance in generating \textit{well-structured} single-sentence image captions with \textit{relevant knowledge}, the problem of selecting and ordering information becomes significantly harder when generating multiple sentences for a single image. The corresponding task of
+\textit{image paragraph generation} has been initially introduced in \newcite{krause2016hierarchical}, proposing the challenge of generating a text, consisting of several sentences that would form a coherent whole.
+Most of the following work \cite{liang2017recurrent,chatterjee2018diverse,wang2019convolutional} has focused on \textit{generating} good, diverse and human-like paragraphs as measured by various automatic evaluation metrics like BLEU \cite{bleu} or CIDEr \cite{vedantam2014cider}.
+
+In this paper we look at the different aspect of image paragraph generation and address the problem of \textbf{information order} in the multi-sentence image captioning setting.
+We argue that utilizing top-down knowledge (information about context available to the captioner) is beneficial for the task of image paragraph generation.
+We show that the model conditioned on both low-level visual features and high-level top-down information is able to learn human-like distributions of attended objects, attributes and relations generated in the paragraph.
+We introduce several image paragraph models based on the hierarchical paragraph generator \newcite{krause2016hierarchical} and also
+demonstrate that using bottom-up information exclusively is not enough to learn good paragraph structure.
+We employ transfer learning and use model pre-trained for the dense image captioning task \cite{densecap} to obtain representations of background information, which we treat as our top-down features.
+We evaluate how close our models are compared to the human performance in terms of attending to objects in visual scenes in a particular order.
+
+% multimodality
+% \cite{barzilay-lee-2004-catching} 
+
+\section{Related Work}
+
+\nikolai{This whole section needs to be shrinked. Or not?}
+
+\paragraph{Human visual attention}
+Humans are quite efficient in detecting objects and separating them from the rest of the visual scene \cite{Ullman87}. We are also fluent in using visual attention, which allows us to single out particular objects in the visual scene, significantly reducing our perceptual load when needed \cite{Lavie04}, therefore, preventing us from being overwhelmed by typically complex real-world visual scenes.
+Our ability to attend to particular parts of the environment is based on both bottom-up information (low-level visual stimuli) and top-down information (high-level goal-related stimuli, discourse knowledge) \cite{Zarcone2016}.
+Stimuli that attracts our attention is said to be \textit{salient} (relevant). Salience of objects affects our \textit{surprisal} towards particular visual input: discourse-salient entities cause less surprisal (e.g. `bed' in bedroom) unlike the visually salient objects (e.g. `large pink elephant' in bedroom).
+
+Attention has also been employed in formal theories of interaction. One of the approaches has been proposed by \newcite{Dobnik2016AMF}, who link attention with judgements as defined in Type Theory of Records \cite{Cooper08typetheory}.
+They introduce a Bayesian-based framework in which attention controls the extent to which context induced judgements ($\sim$ task-based top-down information) are utilized by an agent. This allows for topic modelling at each timestamp in interaction.  Thus, it follows along the lines of our proposal about attention using both contextual and low-level visual information in selecting relevant information for each individual sentence in the image paragraph.
+
+
+\paragraph{Neural image paragraph captioning}
+The task of generating more complex descriptions of images such as paragraphs has been introduced in \newcite{krause2016hierarchical} along with the dataset of image-paragraph pairs.
+The paper adopts a hierarchical structure for the model of paragraph generation: sentence RNN is conditioned on visual features and unrolled for each sentence in the paragraph, giving a sentence topic as its output.
+Then, each of these topics is used by another RNN to generate actual sentences.
+We start by implementing this hierarchical image paragraph model, since it inherits the modular nature of human image paragraph production (given an image, plan structure of your paragraph and identify its sentence topics, then incrementally generate sentences).
+\newcite{liang2017recurrent} use similar hierarchical network in addition with adversarial discriminator, that forces model to generate realistic paragraphs with smooth transitions between sentences.
+\newcite{chatterjee2018diverse} also address cross-sentence topic consistency by modelling global coherence vector, conditioned on all sentence topics.
+Different from these approaches, \newcite{melas2019} employ self-critical training technique \cite{selfcritical2016} to directly optimize a target evaluation metric for image paragraph generation.
+Lastly, \newcite{wang2019convolutional} use convolutional auto-encoder for topic modelling based on region-level image features. They demonstrate that extracted topics are more representative and contain information relevant for sentence generation.
+In this paper we similarly model better topic representations. However, we use additional language representations as part of the input to our topic generator, which is an LSTM.
+
+\paragraph{Language attention in language and vision models}
+\nikolai{wordy section, needs to be shorter, keep all information here for now}
+
+Only a limited number of models for image captioning has been supplied with both visual and background information for caption generation.
+\newcite{You2016} detect visual concepts found in the scene (objects, attributes, etc.) and extract top-down visual features.
+Both of these modalities are then fed to the RNN-based caption generator.
+Attention is applied on detected concepts to inform generator about how relevant a particular concept is at each timestamp. Different to their model, we do not use any attribute detectors to identify objects in the scene, instead relying on the output of the model pre-trained for the task of dense captioning.
+\newcite{Lu2016} emphasize that image is not always useful in generating some function words (`of', `the', etc.).
+They introduce adaptive attention, which determines when to look at the image and when it is more important to use the language model to generate the next word.
+In their work, the attention vector is the mixture of visual features and visual sentinel, a vector obtained through the additional gate function on decoder memory state.
+Our model is focused on a similar task: we are interested in deciding which type information is more important at a particular timestamp, but we also look at how \textit{merging} two modalities into a single representation performs and how it affects attention of the model.
+Closest to our work is the work by \cite{liang2017recurrent}, who apply language attention on region captions and use it to assist recurrent word generation in producing sentences in a paragraph. They embed region descriptions into the same embedding space that their word RNN is operating on. While we also believe that feeding information about semantic concepts found in an image is beneficial for the model, we propose to employ transfer learning. We use hidden states of the RNN trained for the task of dense captioning \cite{densecap} as our background information representation.
+Outside of image paragraph captioning, \newcite{vqaLU16} have proposed a joint image and question attention model for the task of visual question answering.
+\nikolai{Any work on language attention in visual dialog? I think one sentence with some citations would be nice to have.}
+
+
+\section{Approach}
+\paragraph{Overview}
+As our base model in the experiments, we implement the hierarchical image paragraph generation model by \cite{krause2016hierarchical}.
+We change most parts of this model when implementing various model configurations, which we describe below.
+To identify image regions and extract their corresponding features,
+We also utilize the pre-trained model for dense captioning \cite{densecap}.
+For our language representations, we use hidden states from the last layer of the DenseCap RNN, which is supposed to generate region descriptions in the original architecture.
+We fuse both modalities into a single vector represented by an affinity matrix, similar to \newcite{Xu2015} and \newcite{vqaLU16}.
+This matrix captures similarities between visual and language representations for all combinations of regions.
+Then, the similarity vector is used by a two-level hierarchical paragraph generator.
+First, the sentence-level LSTM transforms its input into the sentence topics, capturing information flow between sentences.
+Second, each of the topics is employed by word-level LSTM to generate a sentence.
+Finally, all generated sentences per image are concatenated to form a final paragraph. An overview of our model is shown in Fig.
+We also deploy various strategies for decoding and analyse differences in corresponding generated paragraphs.
+\nikolai{model structure scheme is in progress, not sure there will be space for decoding strategies though}
+
+Note that we were not able to acquire a source code for the original hierarchical model.
+Therefore, our model's performance in terms of automatic evaluation might not necessarily be comparable to the one described in \newcite{krause2016hierarchical}.
+Though we report automatic evaluation scores, in this paper, we instead focus on showing that background knowledge incorporated in the paragraph generation model leads to more detailed and diverse image descriptions.
+
+\subsection{Input Features}
+
+\paragraph{Visual Features} Here, we describe our image representation in terms of its regions.
+We first dissect our image into multiple salient regions and extract their corresponding convolutional features, using the region detector introduced for the task of dense captioning \cite{densecap}\footnote{Available at: https://github.com/jcjohnson/densecap}.
+Here we provide only a brief overview of this 
+procedure: first, a resized image is passed through the VGG-16 network \cite{Simonyan2014} to output a feature map of the image.
+A region proposal network is conditioned on the feature map to identify the set of salient image regions, which are then mapped back onto the feature map to provide us with corresponding map regions.
+Each of these map regions is then fed to the two-layer perceptron to obtain a set of the final region features ${\{v_1, ..., v_M\}}$, with each feature dimension being ${1 \times D}$.
+Finally, each image is represented by the matrix of the region features $V \in \R\sp{M \times D}$, which are passed through the simple feed-forward layer $W_v \in \R\sp{D \times H}$ followed by ReLU non-linearity.
+These visual feature vectors provide us with fine-grained image representation on the object level.
+
+\paragraph{Language Features} As a part of the dense captioning task, a single layer LSTM \cite{lstm97} is conditioned on region features to produce descriptions in natural language.
+We propose to utilize its outputs as language features, which provide us with additional information about detected objects.
+Specifically, we condition pretrained LSTM on region features to obtain a set of outputs ${Y = \{y_m, ..., y_M\}}$, where $y_m \in \R\sp{1 \times T \times H}$.
+We use mean pooling over the \textit{T} dimension, which determines a number of words in each description and receive a single representation per region.
+Our final matrix of language features per image $L \in \R\sp{M \times H}$ captures semantic information about objects from detected regions.
+\nikolai{do not forget to mention RNN-GAN work on paragraphs, which also uses densecap regions, but they learn embeddings of words in phrases directly}
+
+\paragraph{Multimodal Features} We wish to leverage language features in our paragraph generation model that is conditioned on visual information.
+Similar to \cite{vqaLU16}, we teach our model to co-attend to both of these modalities simultaneously.
+Specifically, we use our region feature map $V$ and language features $L$ to compute the following matrix $C$:
+
+\begin{equation}
+    C = ReLU(L^TW_vV),
+\end{equation}
+
+where $W_v$ is used to learn a mapping from vision space to language space. The final multimodal vector $C \in \R\sp{M \times H}$ is used as a multimodal input to our paragraph generator.
+
+\subsection{Sentence LSTM}
+Our sentence-level LSTM is responsible for modeling topics of each of the individual sentences in the paragraph.
+At each timestamp, it is conditioned either on visual or multimodal features, and its output is a set of hidden states $\{h_1, ..., h_S\}$ of length $S$, where each state is used as an input to the word-level LSTM.
+In its nature, sentence LSTM has to simultaneously complete at least two tasks: produce a topic with relevant information for each sentence, while preserving some type of \textit{ordering} between topics.
+Such topic ordering is essential for keeping a smooth transition between sentences (discourse items) in the paragraph (mini-discourse).
+
+To assist sentence LSTM in its multiple objectives, we propose to use attention on the sentence topic level.
+Attention alleviates the task of weighing specific parts of the input as more important for a particular sentence, thus allowing sentence LSTM to learn more precise sentence representations and sentence order.
+In particular, we use soft version of global attention as introduced in \cite{bahdanau2014neural} and applied in image captioning \cite{xu2015attend,luong2015effective}.
+
+\nikolai{I separate between sentence inputs and word inputs by using varsigma for sentence input, and omega for word input, original input is simply x}
+Let $\oplus$, $\sigma$ and $\odot$ denote concatenation, logistic sigmoid function and element-wise multiplication respectively.
+At each time step our attention module receives a feature vector $x$ and previous hidden state $h^\varsigma_{s-1}$ of the sentence LSTM to produce attended input features $\hat{x}^\varsigma_s$.
+With both $W_m$ and $W_a$ denoting trainable parameters, attention first computes the attention weights $\alpha_{i,s}$ for each element $x_i$ in the input feature $x$ using additive (concatenative) alignment function as follows:
+
+\begin{equation}
+    a(x, h^\varsigma_{s-1})_{i,s} = W_a^\top \tanh (W_m[x_i \oplus h^\varsigma_{s-1}])
+\end{equation}
+
+\begin{equation}
+    \alpha_s = \frac{exp(a_{i,s})}{\sum_{j}^{M}exp(a_j))}
+\end{equation}
+
+Then, the sum of the elements in the combined vector of attention weights and input features is calculated, and passed to the sentence LSTM as its input:
+
+\begin{equation}
+    \hat{x}^\varsigma_s = \sum_{i=1}^{M} \alpha_{i,s} \odot x_i
+\end{equation}
+
+To demonstrate the difference between simple methods to represent collection of image regions and attention, we also use max-pooling in our experiments to obtain inputs for the sentence LSTM:
+
+\begin{equation}
+    \hat{x}^\varsigma_s =  max_{i=1}^M(x)
+\end{equation}
+
+\subsection{Word LSTM}
+Our word LSTM is a single-layer LSTM similar to \newcite{krause2016hierarchical}.
+We create \textit{S} copies of word LSTM (one for each sentence), and use concatenation of the corresponding hidden state of sentence LSTM with the learned embeddings of the words in the target sentence $y_s$ as its input:
+
+\begin{equation}
+   x^\omega_s = [h^\varsigma_s \oplus Ey_s ]
+\end{equation}
+
+Our word embedding matrix $E \in \R\sp{K \times H}$ is learned from scratch, $K$ is the vocabulary size.
+Each copy of word LSTM is unrolled for $M$ timestamps and at each step its hidden step is used to predict a probability distribution over the words in the vocabulary.
+The final set of sentences is concatenated together to form a paragraph.
+
+\subsection{Learning Objective}
+Our hierarchical networks are trained end-to-end with each corresponding image-paragraph pair $(x, y)$ from training data.
+Our training loss is a simple cross-entropy loss on the word level:
+
+\begin{equation}
+    loss_{\omega}(x, y) = - \sum_{i=1}^{S}\sum_{j=1}^{M_i} log(p_{j,s})
+\end{equation}
+
+where $p_{j,s}$ is the softmax probability of the $j^{th}$ word in the $i^{th}$ sentence given all previously generated words for the current sentence $y_{1:j-1,i}$.
+For our first sentence, hidden states for both LSTMs are initialized with zeros.
+For every next sentence, both LSTMs use last hidden states generated for the previous sentence from the corresponding layers.
+During training, we use teacher forcing and feed ground-truth words as target words at each timestamp.
+We use Adam \cite{adam14} as our optimizer and choose the best model based on the validation loss (early stopping).
+
+Note that different from previous work, we do not implement sentence-level loss for the end of paragraph prediction.
+Instead, we generate the same number of sentences for each image, as we find in its ground-truth paragraph.
+We leave the task of predicting the number of sentences to generate in a paragraph for future work.
+
+\begin{table*}[h]
+\small
+\centering
+% \begin{tabularx}{\columnwidth}{|l|r|r|}
+\begin{tabular}{|r|r|r|r|r|r|r|r|r|r|}
+\hline
+ \multirow{2}{*}{\textbf{Model}} &
+  \multicolumn{2}{|c|}{\textbf{Input Feature}}  & \multirow{2}{*}{\textbf{Attention}} &
+ \multirow{2}{*}{\textbf{CIDEr}} & \multirow{2}{*}{\textbf{METEOR}} & \multirow{2}{*}{\textbf{BLEU-1}} &
+ \multirow{2}{*}{\textbf{BLEU-2}} & \multirow{2}{*}{\textbf{BLEU-3}} & \multirow{2}{*}{\textbf{BLEU-4}}  \\
+ %\hline
+ & Visual  &  Language & & & & & &  \\
+ \hline
+ IMG & \checkmark &  &  & 17.85 & 14.31 & 38.76 & 21.92 & 12.51 & 7.06 \\
+\hline
+ IMG+LNG & \checkmark &  \checkmark &  & 18.42 & 14.39 & 39.47 & 22.49 & 12.81 & 7.18 \\
+\hline
+ IMG+ATT & \checkmark &  &   \checkmark & \textbf{20.28} & \textbf{14.54} & \textbf{39.79} & \textbf{22.64} & \textbf{12.91} & 7.27 \\
+\hline
+IMG+LNG+ATT &\checkmark & \checkmark &  \checkmark & 18.51 & 14.50 & 39.23 & 22.45 & 12.88 & \textbf{7.30}  \\
+\hline
+  \end{tabular}
+  \caption{Scores for automatic evaluation metrics. Each model is named based on the input it takes. Use of language features and attention is additionally specified.}
+  \label{tab:metrics}
+\end{table*}
+
+\section{Experiments}
+
+We use beam search with beam width $B = 2$ to generate each sentence.
+Also, similar to \newcite{opennmt2017}, we ensure that each generated sentence consists of at least $C$ words.
+Our experiments has shown that controlling for minimum length provides us with better overall automatic evaluation metric scores.
+
+% model explanation
+
+\section{Evaluation}
+
+Our primary research question is whether supplying image paragraph models with additional background information affects the sentence diversity of generated paragraphs without hurting their accuracy.
+Therefore, we evaluate our models in terms of two important dimensions: \textit{accuracy} and \textit{diversity}.
+Accurate models are required to produce paragraphs grounded in an image and do not mention any irrelevant/incorrect information.
+Also, these paragraphs must be diverse enough to describe salient image objects and avoid nonsense repetitions within and between sentences.
+
+\subsection{Accuracy}
+Typically, a variety of n-gram based automatic metrics is used to measure the correctness/accuracy of image captions.
+Here, we evaluate our models across six different metrics: CIDEr \cite{vedantam2014cider}, METEOR \cite{meteor14}, and BLEU \cite{bleu}.
+The results are presented in Table~\ref{tab:metrics}.
+Our worst performing model is provided with visual input only, indicating that such input alone is not enough to produce better paragraphs as denoted by automatic evaluation scores.
+We observe a minor boost across BLEU scores when our model is given background information or includes attention on the sentence level.
+However, since both CIDEr and METEOR have shown to correlate better with human judgments than BLEU metric, we emphasize that both of these scores benefit from both language information and attention.
+Our best performing model uses attention on its sentence topics without incorporating semantic knowledge about objects.
+However, note that models that incorporate \textit{LNG} as part of their input show better performance overall than the model, which is given visual information only.
+
+\subsection{Diversity}
+In order for paragraphs to be as close as possible to the human performance when describing images, they have to mention both various and diverse objects from sentence to sentence.
+Diversity in image descriptions has shown to be an important problem in captioning tasks and corresponding benchmark datasets \cite{devlin2015language,lindh_generating_2018}.
+However, a standard evaluation metric to measure diversity in image descriptions has not yet been introduced, indicating an open question in evaluation research.
+
+\begin{table*}[]
+    \footnotesize
+    \centering
+    \begin{tabular}{|l|c|c|c|c|}
+    \hline
+       \textbf{Model}  &  \textbf{Voc Size} & \textbf{\# of unique nouns} & \textbf{\% of rep. nouns per par.} & \textbf{unique word overlap with GT} \\
+    \hline
+      IMG   & 400 & 295 & 49 & 6.8\% \\
+    \hline
+      IMG+LNG   & \textbf{425} & \textbf{320} & \textbf{47} & \textbf{7.2\%} \\
+    \hline
+      IMG+ATT   & 413 & 313 & 48 & 7.0\% \\
+    \hline
+      IMG+LNG+ATT   & 403 & 298 & 51 & 6.9\% \\
+    \hline
+    \hline
+      GT & \textbf{5835} & \textbf{3865} & \textbf{21} & \textbf{100\%} \\
+    \hline
+    \end{tabular}
+    \caption{General statistics for generated image paragraphs.}
+    \label{tab:stats}
+\end{table*}
+
+Here, we start by providing some general statistics about generated paragraphs.
+As Table~\ref{tab:stats} demonstrates, the model that incorporates language information has the largest vocabulary size compared to all other models.
+It also generates more unique nouns in paragraphs, which can be used as a rough (and quite idealistic) indicator of the number of image objects which are mentioned.
+Though our model with language as its input produces many repetitive nouns per paragraph compared to the ground-truth, it is still slightly better than other configurations.
+Finally, it has the largest overlap with human-produced paragraphs in terms of word types.
+
+In order to evaluate the diversity of paragraphs automatically, we use Self-BLEU \cite{Zhu2018selfbleu}.
+This metric has been specifically proposed to assess the similarity between two sentences, and it can be used to measure how much one sentence resembles another.
+Higher self-Bleu indicates less diversity, e.g., more n-gram matching between sentences.
+We calculate Self-BLEU as follows: we split each generated paragraph into sentences and use one sentence as hypothesis and the others are regarded as reference.
+Then, BLEU score is calculated for every sentence in every paragraph, and the average BLEU score over the paragraphs is used as the Self-BLEU score of the whole set.
+
+\begin{table}[h]
+    \footnotesize
+    \centering
+    \begin{tabular}{|l|c|c|c|c|}
+    \hline
+       \textbf{Model}  &  \textbf{SB-1} & \textbf{SB-2} & \textbf{SB-3} & \textbf{SB-4} \\
+    \hline
+      IMG   & 78.18 & 66.69 & 57.45 & 49.90 \\
+    \hline
+      IMG+LNG   & 77.93 & 66.26 & 56.81 & 48.87 \\
+    \hline
+      IMG+ATT   & 77.75 & 66.37 & 57.27 & 49.84 \\
+    \hline
+      IMG+LNG+ATT   & \textbf{77.24} & \textbf{65.49} & \textbf{56.33} & \textbf{48.91} \\
+    \hline
+    \hline
+      \textbf{GT}   & \textbf{49.63} & \textbf{27.70} & \textbf{15.55} & \textbf{8.52} \\
+     \hline
+    \end{tabular}
+    \caption{Self-Bleu scores for all models. GT indicates scores for ground-truth paragraphs from the test set.}
+    \label{tab:self_bleu}
+\end{table}
+
+As table~\ref{tab:self_bleu} shows, ground-truth paragraphs are unsurprisingly the most diverse ones in terms of repetitions of n-grams between sentences.
+All our models fall behind and by a large margin.
+However, a clear systematic trend is present: models with \textit{LNG} as part of their input, demonstrate lower self-Bleu scores, compared to the scores by the models that are conditioned solely on visual information and incorporate attention on the sentence level.
+This finding indicates that contextual language information might help learn to generate more unique descriptions from sentence to sentence in an image paragraph.
+
+
+% write up section on self bleu
+% temperature-related experiments (?)
+% compare all model generations for quality/diversity with temperature, make a graph with curves
+% the importance of temperature for evaluating models based on quality and diversity
+% using temperature as overall evaluation of models in their quality and diversity
+
+
+% T = 15
+% D = 4096
+% M = 50
+% S = 6
+% K = vocabulary length
+
+%As the next step, \newcite{krause2016hierarchical} use max pooling on region features to obtain a single vector $v_p \in \R\sp{P}$, which would capture the most important information about image as a whole.
+%While this approach would make individual image regions highly salient, it is unclear whether this would capture importance of many other important objects described in the multi-sentence image description.
+%As an alternative, mean pooling can be used to describe image as a set of regions. However, this would scatter the model's focus on many different regions, which could affect its ability to attend to the most important regions when generating a sentence.
+
+\section{Conclusion}
+
+\bibliography{diversity}
+\bibliographystyle{acl_natbib}
+
+\appendix
+
+\section{Appendices}
+\label{sec:appendix}
+Appendices are material that can be read, and include lemmas, formulas, proofs, and tables that are not critical to the reading and understanding of the paper. 
+Appendices should be \textbf{uploaded as supplementary material} when submitting the paper for review.
+Upon acceptance, the appendices come after the references, as shown here.
+
+\paragraph{\LaTeX-specific details:}
+Use {\small\verb|\appendix|} before any appendix section to switch the section numbering over to letters.
+
+
+\section{Supplemental Material}
+\label{sec:supplemental}
+Submissions may include non-readable supplementary material used in the work and described in the paper.
+Any accompanying software and/or data should include licenses and documentation of research review as appropriate.
+Supplementary material may report preprocessing decisions, model parameters, and other details necessary for the replication of the experiments reported in the paper.
+Seemingly small preprocessing decisions can sometimes make a large difference in performance, so it is crucial to record such decisions to precisely characterize state-of-the-art methods. 
+
+Nonetheless, supplementary material should be supplementary (rather than central) to the paper.
+\textbf{Submissions that misuse the supplementary material may be rejected without review.}
+Supplementary material may include explanations or details of proofs or derivations that do not fit into the paper, lists of
+features or feature templates, sample inputs and outputs for a system, pseudo-code or source code, and data.
+(Source code and data should be separate uploads, rather than part of the paper).
+
+The paper should not rely on the supplementary material: while the paper may refer to and cite the supplementary material and the supplementary material will be available to the reviewers, they will not be asked to review the supplementary material.
+
+\end{document}

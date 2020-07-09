@@ -150,39 +150,43 @@ Outside of image paragraph captioning, \newcite{vqaLU16} have proposed a joint i
 \section{Approach}
 \paragraph{Overview}
 As our base model in the experiments, we implement the hierarchical image paragraph generation model by \cite{krause2016hierarchical}.
-We change most parts of this model when implementing various model configurations, which we describe below.
+We change most parts of this model when implementing various model configurations, which we describe below. % SD 2020-07-08 13:38:46 +0200: "Below" made me think this will be in the following section but you mean "here".
 To identify image regions and extract their corresponding features,
 We also utilize the pre-trained model for dense captioning \cite{densecap}.
 For our language representations, we use hidden states from the last layer of the DenseCap RNN, which is supposed to generate region descriptions in the original architecture.
-We fuse both modalities into a single vector represented by an affinity matrix, similar to \newcite{Xu2015} and \newcite{vqaLU16}.
-This matrix captures similarities between visual and language representations for all combinations of regions.
+We fuse both modalities into a single vector represented by an affinity matrix, similar to \newcite{Xu2015} and \newcite{vqaLU16}. 
+This matrix captures similarities between visual and language representations for all combinations of regions. % SD 2020-07-08 13:36:07 +0200: We need to say a bit more how the fusion is done.
 Then, the similarity vector is used by a two-level hierarchical paragraph generator.
 First, the sentence-level LSTM transforms its input into the sentence topics, capturing information flow between sentences.
 Second, each of the topics is employed by word-level LSTM to generate a sentence.
 Finally, all generated sentences per image are concatenated to form a final paragraph. An overview of our model is shown in Fig.
 We also deploy various strategies for decoding and analyse differences in corresponding generated paragraphs.
 \nikolai{model structure scheme is in progress, not sure there will be space for decoding strategies though}
+% SD 2020-07-08 13:42:12 +0200: This would be important as it would be easier fo the reader to see what the differences between us and Krause are. Also, later on when we describe the individual components we can refer back to it.
 
 Note that we were not able to acquire a source code for the original hierarchical model.
 Therefore, our model's performance in terms of automatic evaluation might not necessarily be comparable to the one described in \newcite{krause2016hierarchical}.
 Though we report automatic evaluation scores, in this paper, we instead focus on showing that background knowledge incorporated in the paragraph generation model leads to more detailed and diverse image descriptions.
+% SD 2020-07-08 13:39:42 +0200: This should come earlier at the beginning of the section. As a base we take the model from Krause. We do not have the code so we make our own implementation. Secondly, we also make some modifications because we think they are more suitable. These are: (i)... (ii).... (n) and then their description. We can comment on the differences in results later when we discuss results.
 
 \subsection{Input Features}
 
 \paragraph{Visual Features} Here, we describe our image representation in terms of its regions.
 We first dissect our image into multiple salient regions and extract their corresponding convolutional features, using the region detector introduced for the task of dense captioning \cite{densecap}\footnote{Available at: https://github.com/jcjohnson/densecap}.
-Here we provide only a brief overview of this 
-procedure: first, a resized image is passed through the VGG-16 network \cite{Simonyan2014} to output a feature map of the image.
+% SD 2020-07-08 13:44:24 +0200: Here we provide only a brief overview of this 
+procedure: first,
+First, a resized image is passed through the VGG-16 network \cite{Simonyan2014} to output a feature map of the image.
 A region proposal network is conditioned on the feature map to identify the set of salient image regions, which are then mapped back onto the feature map to provide us with corresponding map regions.
 Each of these map regions is then fed to the two-layer perceptron to obtain a set of the final region features ${\{v_1, ..., v_M\}}$, with each feature dimension being ${1 \times D}$.
 Finally, each image is represented by the matrix of the region features $V \in \R\sp{M \times D}$, which are passed through the simple feed-forward layer $W_v \in \R\sp{D \times H}$ followed by ReLU non-linearity.
 These visual feature vectors provide us with fine-grained image representation on the object level.
+% SD 2020-07-08 13:45:35 +0200: We don't take the final predictions but an output of some final layer - which ones?
 
-\paragraph{Language Features} As a part of the dense captioning task, a single layer LSTM \cite{lstm97} is conditioned on region features to produce descriptions in natural language.
+\paragraph{Language Features} As a part of the dense captioning task, a single layer LSTM \cite{lstm97} is conditioned on region features to produce descriptions of these regions in natural language.
 We propose to utilize its outputs as language features, which provide us with additional information about detected objects.
 Specifically, we condition pretrained LSTM on region features to obtain a set of outputs ${Y = \{y_m, ..., y_M\}}$, where $y_m \in \R\sp{1 \times T \times H}$.
-We use mean pooling over the \textit{T} dimension, which determines a number of words in each description and receive a single representation per region.
-Our final matrix of language features per image $L \in \R\sp{M \times H}$ captures semantic information about objects from detected regions.
+We use mean pooling over the \textit{T} dimension, which determines a number of words in each description and receives a single representation per region. % SD 2020-07-08 13:50:49 +0200: Is the T dimension the final softmax/sigmoid that we then map to words?
+Our final matrix of language features per image $L \in \R\sp{M \times H}$ captures semantic information about objects from detected regions. % SD 2020-07-08 13:52:07 +0200: Could come at the beginning to state the motivation why we are using this.
 \nikolai{do not forget to mention RNN-GAN work on paragraphs, which also uses densecap regions, but they learn embeddings of words in phrases directly}
 
 \paragraph{Multimodal Features} We wish to leverage language features in our paragraph generation model that is conditioned on visual information.
@@ -194,8 +198,11 @@ Specifically, we use our region feature map $V$ and language features $L$ to com
 \end{equation}
 
 where $W_v$ is used to learn a mapping from vision space to language space. The final multimodal vector $C \in \R\sp{M \times H}$ is used as a multimodal input to our paragraph generator.
+% SD 2020-07-08 13:54:16 +0200: Explain the motivation behind this: we want to create visual and language topics. The dense layer is intended to learn these topics that are supported by visual and language information to a different degree and are relevant for the final training objective.
+
 
 \subsection{Sentence LSTM}
+% SD 2020-07-08 13:56:54 +0200: to be compatible with the story we are presenting let us call this Dsicourse LSTM that predicts the topics on the basis of which sentences are generated and "Word LSTM" Sentence LSTM that relaises individual sentences by predicting the relevant sequences of words.
 Our sentence-level LSTM is responsible for modeling topics of each of the individual sentences in the paragraph.
 At each timestamp, it is conditioned either on visual or multimodal features, and its output is a set of hidden states $\{h_1, ..., h_S\}$ of length $S$, where each state is used as an input to the word-level LSTM.
 In its nature, sentence LSTM has to simultaneously complete at least two tasks: produce a topic with relevant information for each sentence, while preserving some type of \textit{ordering} between topics.
@@ -430,3 +437,7 @@ features or feature templates, sample inputs and outputs for a system, pseudo-co
 The paper should not rely on the supplementary material: while the paper may refer to and cite the supplementary material and the supplementary material will be available to the reviewers, they will not be asked to review the supplementary material.
 
 \end{document}
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: t
+%%% End:

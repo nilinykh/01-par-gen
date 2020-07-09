@@ -1,5 +1,47 @@
 Nikolai
 
+
+## 2020-07-08 
+
+  - Draft of the paper
+  - Two models of information fusion:
+	* Grounded object model: but the groudning is circular; denscap regions are used to predict the descriptions but then these descriptions are fused back with the dense-cap representations
+	* Language as background knowledge model: dense-cap descriptions are used as a background knowledge support for the generation; the model can attend either on densecap regions (something visually interesting to describe) or on a chunked phrase coming from nackground knowledge
+  - Evaluate grounded object model for language only, and language and attention
+  - Setup human evaluation experiment: categores
+	* Naturalness of description
+	* Choice of words
+	* Syntactic structure
+	* Coherence of the text
+
+
+## 2020-06-26 
+
+  - Interpretation of the beam search and lenght of sentence: https://arxiv.org/pdf/1808.09582.pdf
+  - BLEU and CIDeR
+	* our BLEU scores are lower than Krause (30 vs 41 for BLEU1) but our CIDeR scores are higher (18 vs 13.5)
+	* we are catching less wods, n-grams than the original implementation compared to ground truth
+	* those that we do ctach are more unique and identifying for this image; goes with the principles of GRE
+  - METEOR
+    * Krause: 15.9; ours 12.8; works on synonyms
+	* how many content words (vs functional words) did we get; normalised by the length of the prediction and penalised by the fact whether we predict them as single chunks or distributively
+  - CIDeR
+    * TF/IDF of each generated word
+	* create a vector for n...4 grams
+	* words not present are 0
+	* take cosine similarity between the generated vectors and ground truth vectors
+  - Actual generations
+	* attention focuses on describing (only) objects in the focus of attention, e.g. the bus
+	* backrgound knowledge adds spatial descriptions and relations between objects, information coming from densecaps; tge focus is to mention all the objects in the scene and their relations
+	* with attention and background: the attention/focus on the object is still quite strong but we see a combination of both (which is good)
+	* the other thing: attention is acting as visual attention
+  - Gecko workshop with nice recorded talks https://sites.google.com/view/gecko2020/home (also relevant for this paper)
+  - Next
+	* Evaluations of generations by others (rank the generations from the best to worst), select images that are easy (one visually focuse dobject and some background objects) and hard (no visually focused object)
+	* Skeleton of the headings/argument points for the paper; define the focus of the paper; identify missing arguments
+
+
+
 ## 2020-06-18 
 
   - ALPS, the NLP winter school in the Alps, http://lig-alps.imag.fr

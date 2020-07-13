@@ -81,9 +81,12 @@ def main(args):
 
     encoder = RegPool(args)
     if args.feature_linear:
-        encoder_optimizer = torch.optim.Adam(params=filter(lambda p: p.requires_grad,
-                                                           encoder.parameters()),
-                                             lr=args.encoder_lr)
+        if args.multimodal or (not args.multimodal and not args.background):
+            encoder_optimizer = torch.optim.Adam(params=filter(lambda p: p.requires_grad,
+                                                               encoder.parameters()),
+                                                 lr=args.encoder_lr)
+        else:
+            encoder_optimizer = None
     elif not args.feature_linear:
         encoder_optimizer = None
 
@@ -275,6 +278,7 @@ if __name__ == '__main__':
     with_densecap_captions = config_parser.getboolean('PARAMS-MODELS', 'with_densecap_captions')
     use_attention = config_parser.getboolean('PARAMS-MODELS', 'use_attention')
     multimodal = config_parser.getboolean('PARAMS-MODELS', 'multimodal')
+    background = config_parser.getboolean('PARAMS-MODELS', 'background')
 
     api_key = config_parser.get('COMET', 'api_key')
     project_name = config_parser.get('COMET', 'project_name')
@@ -340,6 +344,7 @@ if __name__ == '__main__':
     parser.add_argument('--with_densecap_captions', type=bool, default=with_densecap_captions, help='use densecap captions to create language topic or not')
     parser.add_argument('--use_attention', type=bool, default=use_attention, help='use attention or not')
     parser.add_argument('--multimodal', type=bool, default=multimodal, help='use both vision and language as input or not')
+    parser.add_argument('--background', type=bool, default=background, help='use background information only or not')
 
     parser.add_argument('--api_key', type=str, default=api_key, help='key for the Comet logger')
     parser.add_argument('--project_name', type=str, default=project_name, help='name of the project')

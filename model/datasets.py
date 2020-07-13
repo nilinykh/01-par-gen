@@ -46,6 +46,10 @@ class ParagraphDataset(Dataset):
         # Load caption lengths (completely into memory)
         with open(os.path.join(data_folder, self.split + '_caplens_' + data_name + '.json'), 'r') as j:
             self.caplens = json.load(j)
+            
+        # Load phrases to language information
+        with open(os.path.join(data_folder, 'densecap_phrases_' + self.split + '.json'), 'r') as j:
+            self.phrases = json.load(j)
 
         # PyTorch transformation pipeline for the image (normalizing, etc.)
         self.transform = transform
@@ -55,8 +59,15 @@ class ParagraphDataset(Dataset):
 
     def __getitem__(self, i):
         
-        
         image_id = int(self.image_ids[i].split('/')[-1].split('.jpg')[0])
+        
+        densecap_phrases = self.phrases[str(image_id)]
+        # get phrase lengths
+        phrase_lengths = []
+        for phrase in densecap_phrases:
+            phrase_lengths.append(len(phrase.split()))
+        phrase_lengths = torch.FloatTensor(phrase_lengths)
+        
         image = torch.FloatTensor(self.imgs[i])
         
         phrase_scores = self.densecap[i]
@@ -77,7 +88,7 @@ class ParagraphDataset(Dataset):
         #print(this_densecap)
 
         #print(image, image_id, captions, caplen, phrase_scores, bboxes)
-        return image, image_id, captions, caplen, phrase_scores, bboxes
+        return image, image_id, captions, caplen, phrase_scores, bboxes, phrase_lengths
         #return image, image_id, captions, caplen, this_densecap
 
     def __len__(self):

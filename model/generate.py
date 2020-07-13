@@ -82,9 +82,12 @@ def main(args):
         
     encoder = RegPool(args)
     if args.feature_linear:
-        encoder_optimizer = torch.optim.Adam(params=filter(lambda p: p.requires_grad,
-                                                           encoder.parameters()),
-                                             lr=args.encoder_lr)
+        if args.multimodal or (not args.multimodal and not args.background):
+            encoder_optimizer = torch.optim.Adam(params=filter(lambda p: p.requires_grad,
+                                                               encoder.parameters()),
+                                                 lr=args.encoder_lr)
+        else:
+            encoder_optimizer = None
     elif not args.feature_linear:
         encoder_optimizer = None
         
@@ -138,7 +141,7 @@ def main(args):
     print('SPICE', s)
     
     # POINT
-    with open('./scores/res-lang+att+beam2-30k_minlength.json', 'w') as j:
+    with open('./scores/res-test.json', 'w') as j:
         j.write(f'BLEU 1 \t {b1} \n')
         j.write(f'BLEU 2 \t {b2} \n')
         j.write(f'BLEU 3 \t {b3} \n')
@@ -189,7 +192,7 @@ def generate(val_loader,
     hypotheses_batch = dict()
     
     with torch.no_grad():
-        for image_num, (image_features, image_ids, caps, caplens, phrase_scores, bboxes) in enumerate(val_loader):
+        for image_num, (image_features, image_ids, caps, caplens, phrase_scores, bboxes, phrase_lengths) in enumerate(val_loader):
             
             if image_num % 2 == 0:
                 print(image_num)
@@ -199,6 +202,7 @@ def generate(val_loader,
             caps = caps.to(device)
             caplens = caplens.squeeze(1).to(device)
             phrase_scores = phrase_scores.to(device)
+            phrase_lengths = phrase_lengths.to(device)
             args.batch_size = image_features.shape[0]
 
             loss = 0
@@ -217,7 +221,7 @@ def generate(val_loader,
             generated = []
             actual = []
             
-            multimodal_vector = encoder(image_features, phrase_scores)            
+            multimodal_vector = encoder(image_features, phrase_scores, phrase_lengths)            
             topics = torch.zeros(args.batch_size, args.max_sentences, 512).to(device)
             
             if not args.use_attention:
@@ -319,20 +323,18 @@ def generate(val_loader,
                         word_to_idx['<sentence_topic>'] = 7606
                         target_tensor = torch.zeros(1, 50)
                         x, (h_word, c_word) = beam_decode(target_tensor, embs, word_to_idx, word_decoder, 
-                                                          (h_word, c_word), args.beam, 30)
+                                                          (h_word, c_word), args.beam, 10)
+                        #print('curr len', len(x[0]))
+                        # question: how to sample from topk sentences ???
+                        # the most probable, or t-th most probable ??? t-th most probable seems to introduce more diversity ?
+                        # sampling t-th most probable motivation: makes paragraphs more diverse
+                        # also, input might not be enough
+                        # also, the most probable sentence is supposed to alwas describe scene as a whole
+                        # other sentences will most likely describe scene details, and that's what we want to be in the t+1 sentences
                         for item in x[0][-1]:
                             this_gen_sentence.append(item)
                             
-                                                    
-                    gen_sentence_filtered = []
-                    for i in this_gen_sentence:
-                        if i != end_token.item():
-                            gen_sentence_filtered.append(i)
-                        elif i == end_token.item():
-                            gen_sentence_filtered.append(end_token.item())
-                            break
-                            
-                    generated.append(gen_sentence_filtered)
+                    generated.append(this_gen_sentence)
                     actual.append(caps.squeeze(0)[t])
 
             image_id = image_ids.item()
@@ -361,13 +363,18 @@ def generate(val_loader,
                 if pred_sentence == 0:
                     hypotheses_batch[image_id] = []
                 this_sent_preds = generated[pred_sentence]
-                # [2:][:-1]
                 if args.decoding_strategy == 'beam':
-                    this_sentence_text = [idx_to_word[w] for w in this_sent_preds[2:][:-1]]
+                    this_sentence_text = []
+                    for w in this_sent_preds[2:]:
+                        if idx_to_word[w] != '<end>':
+                            this_sentence_text.append(idx_to_word[w])
+                        else:
+                            break
                 else:
                     this_sentence_text = [idx_to_word[w] for w in this_sent_preds[1:][:-1]]
-                this_sentence_text[-2:] = [''.join(this_sentence_text[-2:])]
-                hypotheses_batch[image_id].append(' '.join(this_sentence_text))
+                this_sentence_text = [' '.join(this_sentence_text)]
+                this_sentence_text = [this_sentence_text[0].replace(' .', '.')]
+                hypotheses_batch[image_id].append(''.join(this_sentence_text))
             for img, par in hypotheses_batch.items():
                 new_par = ' '.join(par)
                 hypotheses_batch[img] = [new_par]
@@ -412,7 +419,7 @@ def generate(val_loader,
         paragraphs_generated.append(pars)
     
     # POINT
-    with open('./scores/lang+att+beam2-30k_minlength.json', 'w') as f:
+    with open('./scores/test.json', 'w') as f:
         json.dump(paragraphs_generated, f)
         
     return Bleu_1, Bleu_2, Bleu_3, Bleu_4, CIDEr, METEOR, SPICE
@@ -497,6 +504,7 @@ if __name__ == '__main__':
     use_attention = config_parser.getboolean('PARAMS-MODELS', 'use_attention')
     multimodal = config_parser.getboolean('PARAMS-MODELS', 'multimodal')
     set_size = config_parser.get('PARAMS-MODELS', 'set_size')
+    background = config_parser.getboolean('PARAMS-MODELS', 'background')
 
     api_key = config_parser.get('COMET', 'api_key')
     project_name = config_parser.get('COMET', 'project_name')
@@ -571,6 +579,7 @@ if __name__ == '__main__':
     parser.add_argument('--use_attention', type=bool, default=use_attention, help='use attention or not')
     parser.add_argument('--multimodal', type=bool, default=multimodal, help='use both vision and language as input or not')
     parser.add_argument('--set_size', type=int, default=set_size, help='how many images to test on')
+    parser.add_argument('--background', type=bool, default=background, help='use background information only or not')
 
     parser.add_argument('--api_key', type=str, default=api_key, help='key for the Comet logger')
     parser.add_argument('--project_name', type=str, default=project_name, help='name of the project')

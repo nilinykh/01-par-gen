@@ -704,7 +704,7 @@ def beam_decode(target_tensor, embs, word_to_idx, word_decoder, decoder_hiddens,
         # start beam search
         while True:
             # give up when decoding takes too long
-            if qsize > 4000: break
+            if qsize > 50000: break
                             
             # fetch the best node
             score, n = nodes.get()
@@ -722,12 +722,15 @@ def beam_decode(target_tensor, embs, word_to_idx, word_decoder, decoder_hiddens,
             decoder_input = embs[decoder_input]
             decoder_output, decoder_hidden = word_decoder.decode_step(decoder_input, decoder_hidden)
             decoder_output = word_decoder.linear(decoder_output.squeeze(1))
-            #decoder_output = decoder_output.div(1.5)
+            
+            
+            #decoder_output = decoder_output.div(0.5)
             decoder_output = F.log_softmax(decoder_output, dim=-1)
             
             #print('len', n.leng)
             #print('prob before', decoder_output[:, EOS_TOKEN])
             
+            # MIN LENGTH
             decoder_output = ensure_min_length(n.leng, decoder_output, EOS_TOKEN)
             
             #print('prob after', decoder_output[:, EOS_TOKEN])
@@ -774,11 +777,9 @@ def beam_decode(target_tensor, embs, word_to_idx, word_decoder, decoder_hiddens,
             while n.prevNode != None:
                 n = n.prevNode
                 utterance.append(n.wordid.item())
-             
+            
             utterance = utterance[::-1]
             utterances.append(utterance)
-            
-        #print(utterances)
         
         decoded_batch.append(utterances)
         

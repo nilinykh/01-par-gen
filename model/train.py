@@ -44,7 +44,7 @@ def forward_pass(data_loader,
 
     #with logger.train():
         
-    for batch_num, (image_features, image_ids, caps, caplens, phrase_scores, _) in enumerate(data_loader):
+    for batch_num, (image_features, image_ids, caps, caplens, phrase_scores, _, phrase_lengths) in enumerate(data_loader):
 
         data_time.update(time.time() - start)
 
@@ -53,6 +53,7 @@ def forward_pass(data_loader,
         caps = caps.to(device)
         caplens = caplens.squeeze(1).to(device)
         phrase_scores = phrase_scores.to(device)
+        phrase_lengths = phrase_lengths.to(device)
         args.batch_size = image_features.shape[0]
 
         loss = 0
@@ -92,7 +93,7 @@ def forward_pass(data_loader,
         word_rnn_out = []
 
         # 1. output of the encoder
-        encoder_out = encoder(image_features, phrase_scores)            
+        encoder_out = encoder(image_features, phrase_scores, phrase_lengths)            
         #print('encoder out', encoder_out, encoder_out.shape)
 
         # 2. repeat encoder output 6 times
@@ -138,7 +139,7 @@ def forward_pass(data_loader,
         if mode == 'train':
             sentence_optimizer.zero_grad()
             word_optimizer.zero_grad()
-            if args.feature_linear:
+            if encoder_optimizer != None:
                 encoder_optimizer.zero_grad()
             loss.backward()
             if args.clipping:
@@ -146,7 +147,7 @@ def forward_pass(data_loader,
                 torch.nn.utils.clip_grad_norm_(word_decoder.parameters(), args.word_grad_clip)
             sentence_optimizer.step()
             word_optimizer.step()
-            if args.feature_linear:
+            if encoder_optimizer != None:
                 encoder_optimizer.step()
                 
         this_epoch_word += loss.item()

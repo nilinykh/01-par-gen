@@ -19,18 +19,37 @@ sys.path.append('/home/xilini/par-gen/01-par-gen')
 
 
 class Attention(nn.Module):
-    def __init__(self, encoder_dim, decoder_dim, attention_dim):
+    def __init__(self, encoder_dim, decoder_dim, attention_dim, multimodal):
         super(Attention, self).__init__()
-        self.encoder_att = nn.Linear(encoder_dim, attention_dim)
-        self.decoder_att = nn.Linear(decoder_dim, attention_dim)
+        #self.encoder_att = nn.Linear(encoder_dim, attention_dim)
+        #self.decoder_att = nn.Linear(decoder_dim, attention_dim)
+        if multimodal:
+            # vis + lang + prev hidden
+            self.cat_att = nn.Linear(decoder_dim*3, attention_dim)
+        else:
+            # vis + prev hidden / lang + prev hidden
+            self.cat_att = nn.Linear(decoder_dim*2, attention_dim)
         self.full_att = nn.Linear(attention_dim, 1)
         self.tanh = nn.Tanh()
         self.softmax = nn.Softmax(dim=1)
+        self.multimodal = multimodal
 
     def forward(self, encoder_out, decoder_hidden):
-        att1 = self.encoder_att(encoder_out)
-        att2 = self.decoder_att(decoder_hidden)
-        att = self.full_att(self.tanh(att1 + att2.unsqueeze(1))).squeeze(2)
+        
+        decoder_hidden = decoder_hidden.unsqueeze(1)
+        #print('decoder before', decoder_hidden)
+        decoder_hidden = decoder_hidden.expand(-1, 50, -1)
+        #print('decoder after', decoder_hidden.shape)
+        #print('encoder_out', encoder_out.shape)
+        #print('CAT', torch.cat((encoder_out, decoder_hidden), dim=2).shape)
+
+        att = self.full_att(
+                self.tanh(
+                    self.cat_att(
+                        torch.cat((encoder_out, decoder_hidden), dim=2)
+                    )
+                )).squeeze(2)
+
         alpha = self.softmax(att)
         attention_weighted_encoding = (encoder_out * alpha.unsqueeze(2)).sum(dim=1)
         return attention_weighted_encoding, alpha
@@ -45,23 +64,64 @@ class RegPool(nn.Module):
         self.project_dim = args.pooling_dim
         self.phrase_dim = args.hidden_size
         self.multimodal = args.multimodal
-        self.image_pass = nn.Sequential(OrderedDict([('fc1', nn.Linear(self.feats_dim, self.project_dim)),
-                                                     ('relu', nn.ReLU())]))
-        self.image_pass.apply(self.__init_weights)
-        self.non_lin = nn.ReLU()
-
+        self.background = args.background
+        
+        if self.multimodal or (not self.multimodal and not self.background):
+            self.image_pass = nn.Sequential(OrderedDict([('fc1', nn.Linear(self.feats_dim, self.project_dim)),
+                                                         ('relu', nn.ReLU())]))
+            self.image_pass.apply(self.__init_weights)
+        
     def __init_weights(self, m):
-        if type(m) == nn.Linear:
+        if type(m) == nn.Linear: 
             nn.init.xavier_uniform_(m.weight)
             nn.init.constant_(m.bias, 0.0)  
         
-    def forward(self, features, phrases):
-        lang_vector = torch.mean(phrases, 2) # batch_size x 50 x 512
-        vis_vector = self.image_pass(features)
+    def forward(self, features, phrases, phrase_lengths):
+        
+        if features.shape[0] != self.batch_size:
+            self.batch_size = features.shape[0]
+        
+        #lang_vector = torch.mean(phrases, 2) # batch_size x 50 x 512
+                
         if self.multimodal:
-            multimodal_vector = self.non_lin(torch.mul(vis_vector, lang_vector))
+                                
+            #lang_vector = self.lang_pass(phrases.permute(0, 1, 3, 2))
+            #lang_vector = lang_vector.squeeze(3)
+            
+            phrases_normalised = torch.zeros(self.batch_size, self.num_boxes, self.project_dim).to(device)
+            for img_num, image in enumerate(phrases):
+                # 50 x 15 x 512
+                for reg_num, region in enumerate(image):
+                    # 15 x 512
+                    this_phrase_length = phrase_lengths[img_num, reg_num]
+                    summed_phrase = torch.sum(region, 0)
+                    # 512
+                    mean_phrase = summed_phrase.div(this_phrase_length)
+                    phrases_normalised[img_num, reg_num, :] = mean_phrase
+            
+            vis_vector = self.image_pass(features)
+            #multimodal_vector = self.non_lin(torch.mul(vis_vector, lang_vector))
+            multimodal_vector = torch.cat((vis_vector, phrases_normalised), dim=2)
+                        
         else:
-            multimodal_vector = vis_vector
+            
+            if self.background:
+                phrases_normalised = torch.zeros(self.batch_size, self.num_boxes, self.project_dim).to(device)
+                for img_num, image in enumerate(phrases):
+                    # 50 x 15 x 512
+                    for reg_num, region in enumerate(image):
+                        # 15 x 512
+                        this_phrase_length = phrase_lengths[img_num, reg_num]
+                        summed_phrase = torch.sum(region, 0)
+                        # 512
+                        mean_phrase = summed_phrase.div(this_phrase_length)
+                        phrases_normalised[img_num, reg_num, :] = mean_phrase
+                multimodal_vector = phrases_normalised
+                
+            else:
+                vis_vector = self.image_pass(features)
+                multimodal_vector = vis_vector
+                
         return multimodal_vector
     
 
@@ -77,17 +137,26 @@ class SentenceRNN(nn.Module):
         self.use_attention = args.use_attention
         self.max_sentences = args.max_sentences
         self.num_regions = args.num_boxes
+        self.multimodal = args.multimodal
         
         if self.use_attention:
-            self.sentence_rnn = nn.LSTMCell(input_size=self.phrase_dim*2, hidden_size=self.hidden_size)
             self.non_lin = nn.ReLU()
-            self.attention = Attention(self.phrase_dim, self.phrase_dim, self.phrase_dim + self.phrase_dim)
-            self.f_beta = nn.Linear(self.phrase_dim, self.hidden_size)
+            self.attention = Attention(self.phrase_dim, self.phrase_dim, self.phrase_dim + self.phrase_dim, self.multimodal)
+            if self.multimodal:
+                # two modalities
+                self.sentence_rnn = nn.LSTMCell(input_size=self.phrase_dim*2, hidden_size=self.hidden_size)
+                self.f_beta = nn.Linear(self.phrase_dim, self.hidden_size*2)
+            else:
+                self.sentence_rnn = nn.LSTMCell(input_size=self.phrase_dim, hidden_size=self.hidden_size)
+                self.f_beta = nn.Linear(self.phrase_dim, self.hidden_size)
             self.sigmoid = nn.Sigmoid()
             
         elif not self.use_attention:
-            self.sentence_rnn = nn.LSTM(input_size=self.phrase_dim, hidden_size=self.hidden_size, batch_first=True)
-        
+            if self.multimodal:
+                self.sentence_rnn = nn.LSTM(input_size=self.phrase_dim*2, hidden_size=self.hidden_size, batch_first=True)
+            else:
+                self.sentence_rnn = nn.LSTM(input_size=self.phrase_dim, hidden_size=self.hidden_size, batch_first=True)
+
         self.__init_weights()
 
     def __init_weights(self):
@@ -120,11 +189,13 @@ class SentenceRNN(nn.Module):
                 attention_topic, alpha = self.attention(input_vector[:batch_size_step, step, :, :], hidden_previous[:batch_size_step])
                 gate = self.sigmoid(self.f_beta(hidden_previous[:batch_size_step]))
                 context = gate * attention_topic
-                topic_input = torch.cat((topic_previous[:batch_size_step], context), dim=1)
+                
+                #topic_input = torch.cat((topic_previous[:batch_size_step], context), dim=1)
+                topic_input = context
                 hidden_previous, cell_previous = self.sentence_rnn(topic_input[:batch_size_step], (hidden_previous[:batch_size_step], cell_previous[:batch_size_step]))
-                new_topic = hidden_previous
-                topic_previous[:batch_size_step] = new_topic
-                hiddens_all[:, step, :][:batch_size_step] = new_topic
+                
+                topic_previous[:batch_size_step] = hidden_previous
+                hiddens_all[:, step, :][:batch_size_step] = hidden_previous
                 alphas[:, step, :][:batch_size_step] = alpha
         else:
             # max-pooling instead of attention

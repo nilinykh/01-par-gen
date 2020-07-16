@@ -32,6 +32,7 @@ from evalfunc.rouge.rouge import Rouge
 from evalfunc.cider.cider import Cider
 from evalfunc.meteor.meteor import Meteor
 from evalfunc.spice.spice import Spice
+from evalfunc.wmd.wmd import WMD
 
 import operator
 from queue import PriorityQueue
@@ -81,15 +82,7 @@ def main(args):
 
         
     encoder = RegPool(args)
-    if args.feature_linear:
-        if args.multimodal or (not args.multimodal and not args.background):
-            encoder_optimizer = torch.optim.Adam(params=filter(lambda p: p.requires_grad,
-                                                               encoder.parameters()),
-                                                 lr=args.encoder_lr)
-        else:
-            encoder_optimizer = None
-    elif not args.feature_linear:
-        encoder_optimizer = None
+    encoder_optimizer = None
         
     val_loader = data.DataLoader(
         ParagraphDataset(args.data_folder, args.data_name, 'TEST'),
@@ -122,7 +115,7 @@ def main(args):
     #for epoch in range(args.start_epoch, args.num_epochs):
 
     # One epoch's validation
-    b1, b2, b3, b4, c, m, s = generate(val_loader=val_loader,
+    b1, b2, b3, b4, c, m, s, wmd = generate(val_loader=val_loader,
                                     encoder=encoder,
                                     sentence_decoder=sentence_decoder,
                                     word_decoder=word_decoder,
@@ -138,7 +131,9 @@ def main(args):
     print('BLEU 4', b4)
     print('CIDER', c)
     print('METEOR', m)
-    print('SPICE', s)
+    print('WMD', wmd)
+    #print('SPICE', s)
+    
     
     # POINT
     with open('./scores/res-test.json', 'w') as j:
@@ -178,13 +173,15 @@ def generate(val_loader,
     CIDEr = 0
     METEOR = 0
     SPICE = 0
-    
+    wmd = 0
+        
     scorers = [
 
         (Bleu(4), ["Bleu_1", "Bleu_2", "Bleu_3", "Bleu_4"]),
         (Cider('corpus'), "CIDEr"),
         #vg-test-words
-        (Meteor(), "METEOR")
+        (Meteor(), "METEOR"),
+        #(WMD(), 'WMD')
     ]
     
     #for the purpose of making sure generated texts make sense
@@ -221,7 +218,8 @@ def generate(val_loader,
             generated = []
             actual = []
             
-            multimodal_vector = encoder(image_features, phrase_scores, phrase_lengths)            
+            language_out, vision_out = encoder(image_features, phrase_scores, phrase_lengths)   
+            
             topics = torch.zeros(args.batch_size, args.max_sentences, 512).to(device)
             
             if not args.use_attention:
@@ -231,11 +229,12 @@ def generate(val_loader,
                 topics, (_, _) = sentence_decoder.sentence_rnn(feats)
                     
             if args.use_attention:
-                                
+              
                 attention_plot = np.zeros((6, 50))
                 att_plot_sentence_labels = []
                 
-                input_vector = multimodal_vector.to(device)
+                language = language_out.to(device)
+                vision = vision_out.to(device)
                 
                 hidden_previous = h_sent.squeeze(0).to(device)
                 cell_previous = c_sent.squeeze(0).to(device) # batch_size x hidden_size
@@ -247,17 +246,18 @@ def generate(val_loader,
                     
                     if caplens.squeeze()[step].item() != 0:
 
-                        attention_topic, alpha = sentence_decoder.attention(input_vector, hidden_previous)
+                        attention_topic, alpha_text, alpha_vision = sentence_decoder.multimodal_attention(language, vision,
+                                                                                                          hidden_previous)
                         gate = sentence_decoder.sigmoid(sentence_decoder.f_beta(hidden_previous))
                         context = gate * attention_topic
-                        topic_input = torch.cat((topic_previous, context), dim=1)
-                        hidden_previous, cell_previous = sentence_decoder.sentence_rnn(topic_input, (hidden_previous, cell_previous))
-                        new_topic = hidden_previous
-                        topic_previous = new_topic
-                        topics[:, step, :] = new_topic
-                        alphas[:, step, :] = alpha
-                        attention_plot[step, :] = alphas[:, step].cpu().numpy()
-                        att_plot_sentence_labels.append('S{step}')
+                        
+                        hidden_previous, cell_previous = sentence_decoder.sentence_rnn(context, (hidden_previous, cell_previous))
+                        
+                        topics[:, step, :] = hidden_previous
+                        
+                        #alphas[:, step, :] = alpha
+                        #attention_plot[step, :] = alphas[:, step].cpu().numpy()
+                        #att_plot_sentence_labels.append('S{step}')
 
 
             for t in range(args.max_sentences):
@@ -331,8 +331,12 @@ def generate(val_loader,
                         # also, input might not be enough
                         # also, the most probable sentence is supposed to alwas describe scene as a whole
                         # other sentences will most likely describe scene details, and that's what we want to be in the t+1 sentences
+                        #print('poss sentence', t)
+                        for item in x[0]:
+                            print([idx_to_word[int(w)] for w in item[1:]])
                         for item in x[0][-1]:
                             this_gen_sentence.append(item)
+                        print()
                             
                     generated.append(this_gen_sentence)
                     actual.append(caps.squeeze(0)[t])
@@ -408,6 +412,7 @@ def generate(val_loader,
     Bleu_4 += score_dict['Bleu_4']
     CIDEr += score_dict['CIDEr']
     METEOR += score_dict['METEOR']
+    #wmd += score_dict['WMD']
     #SPICE += score_dict['SPICE']
 
     #print(references_batch)
@@ -422,7 +427,7 @@ def generate(val_loader,
     with open('./scores/test.json', 'w') as f:
         json.dump(paragraphs_generated, f)
         
-    return Bleu_1, Bleu_2, Bleu_3, Bleu_4, CIDEr, METEOR, SPICE
+    return Bleu_1, Bleu_2, Bleu_3, Bleu_4, CIDEr, METEOR, SPICE, wmd
 
 
 

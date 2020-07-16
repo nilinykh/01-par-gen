@@ -19,143 +19,169 @@ sys.path.append('/home/xilini/par-gen/01-par-gen')
 
 
 class Attention(nn.Module):
-    def __init__(self, encoder_dim, decoder_dim, attention_dim, multimodal):
+    def __init__(self,
+                 hidden_dim,
+                 language_dim,
+                 vision_dim,
+                 attention_dim,
+                 use_vision,
+                 use_language,
+                 use_multimodal):
         super(Attention, self).__init__()
-        #self.encoder_att = nn.Linear(encoder_dim, attention_dim)
-        #self.decoder_att = nn.Linear(decoder_dim, attention_dim)
-        if multimodal:
-            # vis + lang + prev hidden
-            self.cat_att = nn.Linear(decoder_dim*3, attention_dim)
-        else:
-            # vis + prev hidden / lang + prev hidden
-            self.cat_att = nn.Linear(decoder_dim*2, attention_dim)
-        self.full_att = nn.Linear(attention_dim, 1)
+        
+        self.use_vision = use_vision
+        self.use_language = use_language
+        self.use_multimodal = use_multimodal
+        
+        self.hidden_mapping = nn.Linear(hidden_dim, attention_dim)
+        
         self.tanh = nn.Tanh()
         self.softmax = nn.Softmax(dim=1)
-        self.multimodal = multimodal
-
-    def forward(self, encoder_out, decoder_hidden):
         
-        decoder_hidden = decoder_hidden.unsqueeze(1)
-        #print('decoder before', decoder_hidden)
-        decoder_hidden = decoder_hidden.expand(-1, 50, -1)
-        #print('decoder after', decoder_hidden.shape)
-        #print('encoder_out', encoder_out.shape)
-        #print('CAT', torch.cat((encoder_out, decoder_hidden), dim=2).shape)
+        # vision only
+        if self.use_vision and not self.use_multimodal:
+            self.vision_full_att = nn.Linear(attention_dim, 1)
+        # language only
+        elif self.use_language and not self.use_multimodal:
+            self.language_full_att = nn.Linear(attention_dim, 1)
+        # multimodal
+        elif self.use_multimodal:
+            self.vision_mapping = nn.Linear(vision_dim, attention_dim)
+            self.language_mapping = nn.Linear(language_dim, attention_dim)
+            self.vision_full_att = nn.Linear(attention_dim, 1)
+            self.language_full_att = nn.Linear(attention_dim, 1)
+            self.fusion = nn.Linear(512 + 4096, 512)
+        
+    def forward(self, language, vision, hidden):
+        
+        hidden = hidden.unsqueeze(1)
+        hidden_map = self.hidden_mapping(hidden)
 
-        att = self.full_att(
-                self.tanh(
-                    self.cat_att(
-                        torch.cat((encoder_out, decoder_hidden), dim=2)
-                    )
-                )).squeeze(2)
-
-        alpha = self.softmax(att)
-        attention_weighted_encoding = (encoder_out * alpha.unsqueeze(2)).sum(dim=1)
-        return attention_weighted_encoding, alpha
+        if self.use_vision and not self.use_multimodal:
+            visual_map = vision
+            vis_att = self.vision_full_att(self.tanh(hidden_map + visual_map))
+            alpha_vision = self.softmax(vis_att)
+            alpha_text = None
+            vision_weighted_encoding = (vision * alpha_vision).sum(dim=1)
+            return vision_weighted_encoding, alpha_text, alpha_vision
+        
+        if self.use_language and not self.use_multimodal:
+            text_map = language
+            text_att = self.language_full_att(self.tanh(hidden_map + text_map))
+            alpha_text = self.softmax(text_att)
+            alpha_vision = None
+            text_weighted_encoding = (language * alpha_text).sum(dim=1)
+            return text_weighted_encoding, alpha_text, alpha_vision
+            
+        if self.use_multimodal:
+            text_map = language
+            visual_map = vision
+            text_att = self.language_full_att(self.tanh(hidden_map + text_map))
+            vis_att = self.vision_full_att(self.tanh(hidden_map + visual_map))
+            alpha_text = self.softmax(text_att)
+            alpha_vision = self.softmax(vis_att)
+            text_weighted_encoding = (language * alpha_text).sum(dim=1)
+            vision_weighted_encoding = (vision * alpha_vision).sum(dim=1)
+            multimodal_concat = torch.cat((text_weighted_encoding, vision_weighted_encoding), dim=1)
+            fused_vector = self.tanh(self.fusion(multimodal_concat))
+            return fused_vector, alpha_text, alpha_vision
 
 
 class RegPool(nn.Module):
+    
     def __init__(self, args):
         super(RegPool, self).__init__()
         self.batch_size = args.batch_size
+        self.feat_dim = args.densecap_feat_dim
         self.num_boxes = args.num_boxes
-        self.feats_dim = args.densecap_feat_dim
-        self.project_dim = args.pooling_dim
-        self.phrase_dim = args.hidden_size
-        self.multimodal = args.multimodal
-        self.background = args.background
+        self.hidden_size = args.hidden_size
+        self.use_attention = args.use_attention
+        self.use_language = args.use_language
+        self.use_vision = args.use_vision
+        self.use_multimodal = args.use_multimodal
         
-        if self.multimodal or (not self.multimodal and not self.background):
-            self.image_pass = nn.Sequential(OrderedDict([('fc1', nn.Linear(self.feats_dim, self.project_dim)),
-                                                         ('relu', nn.ReLU())]))
-            self.image_pass.apply(self.__init_weights)
-        
+        if (self.use_vision and not self.use_language and not self.use_multimodal) or \
+           (self.use_vision and not self.use_language and self.use_attention):
+            self.vision_mapping = nn.Linear(self.feat_dim, self.hidden_size)
+            self.vision_mapping.apply(self.__init_weights)
+            
+        elif (self.use_language and not self.use_vision and not self.use_multimodal) or \
+             (self.use_language and not self.use_vision and self.use_attention):
+            self.language_mapping = nn.Linear(self.hidden_size, self.hidden_size)
+            self.language_mapping.apply(self.__init_weights)
+            
+        else:
+            self.vision_mapping = nn.Linear(self.feat_dim, self.hidden_size)
+            self.language_mapping = nn.Linear(self.hidden_size, self.hidden_size)
+            self.vision_mapping.apply(self.__init_weights)
+            self.language_mapping.apply(self.__init_weights)
+            
     def __init_weights(self, m):
         if type(m) == nn.Linear: 
             nn.init.xavier_uniform_(m.weight)
             nn.init.constant_(m.bias, 0.0)  
-        
-    def forward(self, features, phrases, phrase_lengths):
-        
-        if features.shape[0] != self.batch_size:
-            self.batch_size = features.shape[0]
-        
-        #lang_vector = torch.mean(phrases, 2) # batch_size x 50 x 512
-                
-        if self.multimodal:
-                                
-            #lang_vector = self.lang_pass(phrases.permute(0, 1, 3, 2))
-            #lang_vector = lang_vector.squeeze(3)
             
-            phrases_normalised = torch.zeros(self.batch_size, self.num_boxes, self.project_dim).to(device)
-            for img_num, image in enumerate(phrases):
-                # 50 x 15 x 512
-                for reg_num, region in enumerate(image):
-                    # 15 x 512
-                    this_phrase_length = phrase_lengths[img_num, reg_num]
-                    summed_phrase = torch.sum(region, 0)
-                    # 512
-                    mean_phrase = summed_phrase.div(this_phrase_length)
-                    phrases_normalised[img_num, reg_num, :] = mean_phrase
-            
-            vis_vector = self.image_pass(features)
-            #multimodal_vector = self.non_lin(torch.mul(vis_vector, lang_vector))
-            multimodal_vector = torch.cat((vis_vector, phrases_normalised), dim=2)
-                        
+    def forward(self, vision, language, phrase_lengths):
+        if vision.shape[0] != self.batch_size:
+            self.batch_size = vision.shape[0]
+        language_normalised = torch.zeros(self.batch_size,
+                                   self.num_boxes,
+                                   self.hidden_size).to(device)
+        for img_num, image in enumerate(language):
+            # 50 x 15 x 512
+            for reg_num, region in enumerate(image):
+                # 15 x 512
+                this_phrase_length = phrase_lengths[img_num, reg_num]
+                summed_phrase = torch.sum(region, 0)
+                # 512
+                mean_phrase = summed_phrase.div(this_phrase_length)
+                language_normalised[img_num, reg_num, :] = mean_phrase
+        
+        if (self.use_vision and not self.use_language and not self.use_multimodal) or \
+           (self.use_vision and not self.use_language and self.use_attention):
+            visual_map = self.vision_mapping(vision)
+            language_map = language_normalised
+        elif (self.use_language and not self.use_vision and not self.use_multimodal) or \
+             (self.use_language and not self.use_vision and self.use_attention):
+            language_map = self.language_mapping(language_normalised)
+            visual_map = vision
         else:
-            
-            if self.background:
-                phrases_normalised = torch.zeros(self.batch_size, self.num_boxes, self.project_dim).to(device)
-                for img_num, image in enumerate(phrases):
-                    # 50 x 15 x 512
-                    for reg_num, region in enumerate(image):
-                        # 15 x 512
-                        this_phrase_length = phrase_lengths[img_num, reg_num]
-                        summed_phrase = torch.sum(region, 0)
-                        # 512
-                        mean_phrase = summed_phrase.div(this_phrase_length)
-                        phrases_normalised[img_num, reg_num, :] = mean_phrase
-                multimodal_vector = phrases_normalised
-                
-            else:
-                vis_vector = self.image_pass(features)
-                multimodal_vector = vis_vector
-                
-        return multimodal_vector
+            visual_map = self.vision_mapping(vision)
+            language_map = self.language_mapping(language_normalised)
+        return language_map, visual_map
     
 
 class SentenceRNN(nn.Module):
     def __init__(self, args):
         super(SentenceRNN, self).__init__()
         self.batch_size = args.batch_size
-        self.hidden_size = args.hidden_size
-        self.pooling_dim = args.pooling_dim
-        self.embed_size = args.embed_dim
-        self.phrase_dim = args.hidden_size
-        self.feat_dim = args.pooling_dim
-        self.use_attention = args.use_attention
         self.max_sentences = args.max_sentences
         self.num_regions = args.num_boxes
-        self.multimodal = args.multimodal
+        self.feat_dim = args.densecap_feat_dim
+        self.hidden_size = args.hidden_size
+        self.use_attention = args.use_attention
+        self.use_vision = args.use_vision
+        self.use_language = args.use_language
+        self.use_multimodal = args.use_multimodal
         
         if self.use_attention:
             self.non_lin = nn.ReLU()
-            self.attention = Attention(self.phrase_dim, self.phrase_dim, self.phrase_dim + self.phrase_dim, self.multimodal)
-            if self.multimodal:
-                # two modalities
-                self.sentence_rnn = nn.LSTMCell(input_size=self.phrase_dim*2, hidden_size=self.hidden_size)
-                self.f_beta = nn.Linear(self.phrase_dim, self.hidden_size*2)
-            else:
-                self.sentence_rnn = nn.LSTMCell(input_size=self.phrase_dim, hidden_size=self.hidden_size)
-                self.f_beta = nn.Linear(self.phrase_dim, self.hidden_size)
+            self.attention = Attention(self.hidden_size,
+                                       self.hidden_size,
+                                       self.feat_dim,
+                                       self.hidden_size,
+                                       self.use_vision,
+                                       self.use_language,
+                                       self.use_multimodal)
+            self.sentence_rnn = nn.LSTMCell(input_size=self.hidden_size, hidden_size=self.hidden_size)
+            self.f_beta = nn.Linear(self.hidden_size, self.hidden_size)
             self.sigmoid = nn.Sigmoid()
             
         elif not self.use_attention:
-            if self.multimodal:
-                self.sentence_rnn = nn.LSTM(input_size=self.phrase_dim*2, hidden_size=self.hidden_size, batch_first=True)
+            if (self.use_vision and self.use_language) or self.use_multimodal:
+                self.sentence_rnn = nn.LSTM(input_size=self.hidden_size*2, hidden_size=self.hidden_size, batch_first=True)
             else:
-                self.sentence_rnn = nn.LSTM(input_size=self.phrase_dim, hidden_size=self.hidden_size, batch_first=True)
+                self.sentence_rnn = nn.LSTM(input_size=self.hidden_size, hidden_size=self.hidden_size, batch_first=True)
 
         self.__init_weights()
 
@@ -169,39 +195,55 @@ class SentenceRNN(nn.Module):
             nn.init.xavier_uniform_(self.f_beta.weight)
             nn.init.constant_(self.f_beta.bias, 0.0)
 
-    def forward(self, input_vector, topic_previous, hidden_previous, cell_previous, paragraph_lengths, sorting_order, caplens):
-        if input_vector.shape[0] != self.batch_size:
-            self.batch_size = input_vector.shape[0]
+    def forward(self, language, vision,
+                topic_previous, hidden_previous, cell_previous,
+                paragraph_lengths, sorting_order, caplens):
+        
+        if vision.shape[0] != self.batch_size:
+            self.batch_size = vision.shape[0]
+                
+        language = language.unsqueeze(1).expand(-1, self.max_sentences, -1, -1)
+        vision = vision.unsqueeze(1).expand(-1, self.max_sentences, -1, -1)
+        
         if self.use_attention:
             # attention on previous topics -> learning context model
             hidden_previous = hidden_previous.squeeze(0).to(device) # batch_size x hidden_size
             cell_previous = cell_previous.squeeze(0).to(device) # batch_size x hidden_size
-            topic_previous = topic_previous.squeeze(0) # concat dimension (batch_size) x hidden_size
-            topic_previous = topic_previous.to(device)
             hiddens_all = torch.zeros(self.batch_size, self.max_sentences, self.hidden_size).to(device)
             alphas = torch.zeros(self.batch_size, self.max_sentences, self.num_regions).to(device)
             
-            for step in range(input_vector.shape[1]):
+            for step in range(language.shape[1]):
                 non_zero_idxs = caplens[:, step] > 0
                 if (non_zero_idxs == 0).sum(dim=0) == self.batch_size:
                     break
                 batch_size_step = sum([l > step for l in paragraph_lengths])
-                attention_topic, alpha = self.attention(input_vector[:batch_size_step, step, :, :], hidden_previous[:batch_size_step])
+                
+                attention_topic, alpha_text, alpha_vision = self.attention(language[:batch_size_step, step, :, :], 
+                                                                   vision[:batch_size_step, step, :, :],
+                                                                   hidden_previous[:batch_size_step])
+                
                 gate = self.sigmoid(self.f_beta(hidden_previous[:batch_size_step]))
                 context = gate * attention_topic
                 
-                #topic_input = torch.cat((topic_previous[:batch_size_step], context), dim=1)
-                topic_input = context
-                hidden_previous, cell_previous = self.sentence_rnn(topic_input[:batch_size_step], (hidden_previous[:batch_size_step], cell_previous[:batch_size_step]))
+                hidden_previous, cell_previous = self.sentence_rnn(context[:batch_size_step],
+                                                                   (hidden_previous[:batch_size_step],
+                                                                    cell_previous[:batch_size_step]))
                 
-                topic_previous[:batch_size_step] = hidden_previous
                 hiddens_all[:, step, :][:batch_size_step] = hidden_previous
-                alphas[:, step, :][:batch_size_step] = alpha
+                #alphas[:, step, :][:batch_size_step] = alpha
         else:
             # max-pooling instead of attention
-            sentence_input_vector = torch.max(input_vector, dim=2).values
+            if self.use_vision and not self.use_language and not self.use_multimodal:
+                sentence_input_vector = torch.max(vision, dim=2).values
+            elif self.use_language and not self.use_vision and not self.use_multimodal:
+                sentence_input_vector = torch.max(language, dim=2).values
+            else:
+                vision_input = torch.max(vision, dim=2).values
+                language_input = torch.max(language, dim=2).values
+                sentence_input_vector = torch.cat((language_input, vision_input), dim=2)
             hiddens_all, (h, c) = self.sentence_rnn(sentence_input_vector)
             alphas = None
+            
         return hiddens_all, alphas
 
 
@@ -217,24 +259,14 @@ class WordRNN(nn.Module):
         super(WordRNN, self).__init__()
         self.batch_size = args.batch_size
         self.hidden_size = args.hidden_size
-        self.embed_dim = args.embed_dim
-        self.num_layers_wordrnn = args.num_layers_wordrnn
-        self.word_dropout = args.word_dropout
         self.vocab_size = args.vocab_size
         
-        self.decode_step = nn.LSTM(input_size=self.embed_dim, hidden_size=self.hidden_size,
-                                   num_layers=self.num_layers_wordrnn, dropout=self.word_dropout,
+        self.decode_step = nn.LSTM(input_size=self.hidden_size, hidden_size=self.hidden_size,
                                    batch_first=True)
         self.linear = nn.Linear(self.hidden_size, self.vocab_size)
-        
-        if args.embeddings_pretrained:
-            print('Using pretrained embeddings...')
-            pre_trained = self.__load_pretrained_embeddings(args.densecap_path + 'densecap_emb.pt')
-            self.embeddings = nn.Embedding.from_pretrained(pre_trained, freeze=args.freeze)
-        else:
-            print('Training embeddings from scratch...')
-            self.embeddings = nn.Embedding(self.vocab_size, self.embed_dim)
-            self.__init_embeddings(fine_tune=True)
+
+        self.embeddings = nn.Embedding(self.vocab_size, self.hidden_size)
+        self.__init_embeddings(fine_tune=True)
             
     def __init_embeddings(self, fine_tune=True):
         initrange = 0.1

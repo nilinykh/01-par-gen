@@ -93,15 +93,15 @@ def forward_pass(data_loader,
         word_rnn_out = []
 
         # 1. output of the encoder
-        encoder_out = encoder(image_features, phrase_scores, phrase_lengths)            
+        language_out, vision_out = encoder(image_features, phrase_scores, phrase_lengths)            
         #print('encoder out', encoder_out, encoder_out.shape)
 
         # 2. repeat encoder output 6 times
-        features_repeated = encoder_out.unsqueeze(1).expand(-1, args.max_sentences, -1, -1)
+        #features_repeated = encoder_out.unsqueeze(1).expand(-1, args.max_sentences, -1, -1)
         #print('feat repeated', features_repeated, features_repeated.shape)
 
         # 3. produce 6 different topics
-        hiddens, alphas = sentence_decoder(features_repeated,
+        hiddens, alphas = sentence_decoder(language_out, vision_out,
                                            init_topic,
                                            h_sent,
                                            c_sent,
@@ -142,9 +142,6 @@ def forward_pass(data_loader,
             if encoder_optimizer != None:
                 encoder_optimizer.zero_grad()
             loss.backward()
-            if args.clipping:
-                torch.nn.utils.clip_grad_norm_(sentence_decoder.parameters(), args.sent_grad_clip)
-                torch.nn.utils.clip_grad_norm_(word_decoder.parameters(), args.word_grad_clip)
             sentence_optimizer.step()
             word_optimizer.step()
             if encoder_optimizer != None:

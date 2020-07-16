@@ -780,6 +780,7 @@ def beam_decode(target_tensor, embs, word_to_idx, word_decoder, decoder_hiddens,
             
             utterance = utterance[::-1]
             utterances.append(utterance)
+            #print(score)
         
         decoded_batch.append(utterances)
         

@@ -281,128 +281,214 @@ Note that different from previous work, we do not implement sentence-level loss 
 Instead, we generate the same number of sentences for each image, as we find in its ground-truth paragraph.
 We leave the task of predicting the number of sentences to generate in a paragraph for future work.
 
-\begin{table*}[h]
-\small
-\centering
-% \begin{tabularx}{\columnwidth}{|l|r|r|}
-\begin{tabular}{|r|r|r|r|r|r|r|r|r|r|}
-\hline
- \multirow{2}{*}{\textbf{Model}} &
-  \multicolumn{2}{|c|}{\textbf{Input Feature}}  & \multirow{2}{*}{\textbf{Attention}} &
- \multirow{2}{*}{\textbf{CIDEr}} & \multirow{2}{*}{\textbf{METEOR}} & \multirow{2}{*}{\textbf{BLEU-1}} &
- \multirow{2}{*}{\textbf{BLEU-2}} & \multirow{2}{*}{\textbf{BLEU-3}} & \multirow{2}{*}{\textbf{BLEU-4}}  \\
- %\hline
- & Visual  &  Language & & & & & &  \\
- \hline
- IMG & \checkmark &  &  & 17.85 & 14.31 & 38.76 & 21.92 & 12.51 & 7.06 \\
-\hline
- IMG+LNG & \checkmark &  \checkmark &  & 18.42 & 14.39 & 39.47 & 22.49 & 12.81 & 7.18 \\
-\hline
- IMG+ATT & \checkmark &  &   \checkmark & \textbf{20.28} & \textbf{14.54} & \textbf{39.79} & \textbf{22.64} & \textbf{12.91} & 7.27 \\
-\hline
-IMG+LNG+ATT &\checkmark & \checkmark &  \checkmark & 18.51 & 14.50 & 39.23 & 22.45 & 12.88 & \textbf{7.30}  \\
-\hline
-  \end{tabular}
-  \caption{Scores for automatic evaluation metrics. Each model is named based on the input it takes. Use of language features and attention is additionally specified.}
-  \label{tab:metrics}
-\end{table*}
-
 \section{Experiments}
 
-We use beam search with beam width $B = 2$ to generate each sentence.
-Also, similar to \newcite{opennmt2017}, we ensure that each generated sentence consists of at least $C$ words. % SD 2020-07-09 14:47:59 +0200: What value of C do we use?
-Our experiments has shown that controlling for minimum length provides us with better overall automatic evaluation metric scores.
+We use beam search with beam width $B = 10$ to generate each sentence.
+Large beam size is known to favour shorter sentences to the longer ones \cite{Yang2018}.
+To avoid this problem, similar to \newcite{opennmt2017}, we ensure that each generated sentence consists of at least $C$ words.
+We empirically find that setting $C=10$ provides us with better automatic metric scores.
+Also, this number is close to the average sentence length in ground-truth paragraphs (11.91).
 
-% model explanation
+\begin{table*}
+\footnotesize
+\begin{tabular}{|*{15}{l|} }
+    \hline
+\textbf{Model} 
+            & \multicolumn{2}{c|}{\textbf{CIDEr}}
+                    & \multicolumn{2}{c|}{\textbf{METEOR}}
+                            & \multicolumn{2}{c|}{\textbf{BLEU-1}} 
+                   		 & \multicolumn{2}{c|}{\textbf{BLEU-2}}
+                      		      & \multicolumn{2}{c|}{\textbf{BLEU-3}} 
+                                                & \multicolumn{2}{c|}{\textbf{BLEU-4}}        \\
+    \hline
+  &   $C\sp{+}$  & $C\sp{-}$  &  $C\sp{+}$  & $C\sp{-}$ & $C\sp{+}$ & $C\sp{-}$  & $C\sp{+}$ & $C\sp{-}$  & $C\sp{+}$ & $C\sp{-}$ & $C\sp{+}$ & $C\sp{-}$  \\
+    \hline
+\newcite{krause2016hierarchical}   &  -  &   13.52  &   -  &   15.95  &   -  &   41.90  &   -  &   24.11  & - & 14.23 & - & 8.69  \\
+    \hline
+IMG  &  20.36  &  13.83  &  13.75  &  11.28  &  37.87  &  25.08  &  21.10  &  13.92  & 12.23 & 8.14 & 7.09 & 4.63  \\
+    \hline
+IMG+ATT   &  \textbf{21.07}  &   14.52  &   13.74  &   11.63  &   37.53  &   26.72  &   20.82  &  15.01  & 12.13 & 8.87 & 7.12 &  5.18  \\
+    \hline
+LNG   &  19.86  &  12.13  &   13.65 &   10.79  &   37.39  &   23.55 &   20.74  &  12.80  & 11.89 & 7.41 & 6.92 &  4.24  \\
+    \hline
+LNG+ATT   &  20.30  &  11.37 &   13.76  &   11.00  &   37.68 &   24.48  &   20.76 &  13.32  & 11.85 & 7.65 & 6.82 &  4.31  \\
+    \hline    
+IMG+LNG   &  20.75 &   13.08  &  \textbf{13.85}  &   11.15 &   37.97  &   24.54  &   21.09  &  13.70  & 12.22 & 8.05 & \textbf{7.18} &  4.69  \\
+    \hline
+IMG+LNG+ATT   &  20.99 &   13.83  &  13.81  &   11.21 &   \textbf{38.18}  &  25.01  &   \textbf{21.31}  &  13.86  & \textbf{12.25} & 8.08 & 7.12 &  4.67 \\
+    \hline
+    \end{tabular}
+        \caption{
+        Scores for automatic evaluations metrics computed for the test set.
+        $C\sp{+}$ indicates control for the minimum number of words in generated sentences, $C\sp{-}$ similarly indicates the opposite.
+        Scores from the original hierarchical model are reported for completeness (beam search with $C\sp{-}$).
+        }
+    \label{tab:metrics}
+\end{table*}
+
+\iffalse
+\begin{table*}[h!]
+   % \footnotesize
+    \centering
+    \begin{tabular}{|l|c|c|c|c|c|c|}
+    \hline
+       \multirow{2}{*}\textbf{Model} & \textbf{CIDEr} & \textbf{METEOR} & \textbf{BLEU-1} & \textbf{BLEU-2} & \textbf{BLEU-3} & \textbf{BLEU-4} \\
+        & here & \textbf{METEOR} & \textbf{BLEU-1} & \textbf{BLEU-2} & \textbf{BLEU-3} & \textbf{BLEU-4} \\
+    \hline
+    \hline
+    \newcite{krause2016hierarchical} &13.52 & 15.95 & 41.90 & 24.11 & 14.23 & 8.69 \\ 
+    \hline
+    \hline
+      IMG & 20.36 & 13.75 & 37.87 & 21.10 & 12.23 & 7.09 \\
+    \hline
+      IMG+ATT & \textbf{21.07} & 13.74 & 37.53 & 20.82 & 12.13 & 7.12 \\
+    \hline
+      LNG & 19.86 & 13.65 & 37.39 & 20.74 & 11.89 & 6.92 \\
+    \hline
+      LNG+ATT & 20.30 & 13.76 & 37.68 & 20.76 & 11.85 & 6.82 \\
+    \hline
+     IMG+LNG & 20.75 & \textbf{13.85} & 37.97 & 21.09 & 12.22 & \textbf{7.18} \\
+    \hline
+     IMG+LNG+ATT & 20.99 & 13.81 & \textbf{38.18} & \textbf{21.31} & \textbf{12.25} & 7.12 \\
+    \hline
+    \end{tabular}
+    \caption{Scores for automatic evaluations metrics computed for the test set.}
+    \label{tab:metrics}
+\end{table*}
+\fi
 
 \section{Evaluation}
+Our primary research question is whether supplying image paragraph models with additional background (linguistic) information improves \textit{diversity} of generated paragraphs.
+At the same time, note that paragraphs must have an acceptable level of \textit{accuracy} (correctness in describing an image).
+However, image description systems might produce an accurate description, which does not necessarily correspond to the ground truth paragraph from the dataset, since there are multiple correct ways of describing an image \nikolai{some reference here}.
+This would affect the final automatic evaluation scores, which compare generated descriptions with the ground truth ones, and, therefore, may not be good measures of either accuracy or diversity.
+We take this into account and report results of human evaluation (section reference) of generated paragraphs in terms of both accuracy and diversity.
+For completeness, we also report results of automatic evaluation (section reference) and demonstrate that automatic metrics fail to capture human level of judgements.
 
-Our primary research question is whether supplying image paragraph models with additional background information affects the sentence diversity of generated paragraphs without hurting their accuracy.
-Therefore, we evaluate our models in terms of two important dimensions: \textit{accuracy} and \textit{diversity}.
-Accurate models are required to produce paragraphs grounded in an image and do not mention any irrelevant/incorrect information.
-Also, these paragraphs must be diverse enough to describe salient image objects and avoid nonsense repetitions within and between sentences.
+\subsection{Definition of Diversity}
+Image paragraph generation is an open-ended generation task, in which, in contrast to single sentence captions, generated paragraphs must be highly informative, thus, include descriptions of a large variety of image objects, attributes, etc.
+Here, we refer to this paragraph feature as \textbf{diversity}.
+In language and vision literature, "diversity" of image descriptions has been mostly defined in terms of lexical diversity, word choice and \textit{n}-gram based metrics \cite{Devlin2015, Vijayakumar2016, Lindh2018, VanMiltenburg2018}.
+These criteria are focused on generating diverse set of \textit{independent, one-sentence captions}, with each describing image as a whole.
+These captions are very likely to mention identical objects due to the nature of the task ("describe image with a single sentence"), and diversity is measured in terms of how different object descriptions are from one caption to another (e.g. 'man' can be described as a 'person', 'human').
+However, a good image paragraph model must also introduce diversity on the sentence level, since describing \textit{different scene objects} throughout the paragraph is what makes it more informative than single sentence captions.
+Here, we define \textit{paragraph diversity} with two requirements: a generative model must (a) produce the set of sentences with reasonable mentions of a variety of image objects (sentence-level diversity), (ii) demonstrate the ability to use many different words to describe objects without unnecessary repetitions (word-level diversity).
 
 % SD 2020-07-09 14:49:20 +0200: Very good point to distinguish the two, however.... The system can also produce an accurate description but which does not correspond to the ground truth in the dataset. The automatic measures that we have under accuracy therefore may not be good measures of accuracy. They are measures of faithufllness to the ground-truth description. Perhaps we should reserve the accuracy and diversity distinction for human evaliation and here report only automatic measures and conclude that they are defifciient in showing eccuracy and diversity and therefore human evaluation.
 
-\subsection{Accuracy}
-Typically, a variety of n-gram based automatic metrics is used to measure the correctness/accuracy of image captions.
-Here, we evaluate our models across six different metrics: CIDEr \cite{vedantam2014cider}, METEOR \cite{meteor14}, and BLEU \cite{bleu}.
-The results are presented in Table~\ref{tab:metrics}.
-Our worst performing model is provided with visual input only, indicating that such input alone is not enough to produce better paragraphs as denoted by automatic evaluation scores.
-We observe a minor boost across BLEU scores when our model is given background information or includes attention on the sentence level.
-However, since both CIDEr and METEOR have shown to correlate better with human judgments than BLEU metric, we emphasize that both of these scores benefit from both language information and attention.
-Our best performing model uses attention on its sentence topics without incorporating semantic knowledge about objects.
-However, note that models that incorporate \textit{LNG} as part of their input show better performance overall than the model, which is given visual information only.
+\subsection{Metrics}
 
-\subsection{Diversity}
-In order for paragraphs to be as close as possible to the human performance when describing images, they have to mention both various and diverse objects from sentence to sentence.
-Diversity in image descriptions has shown to be an important problem in captioning tasks and corresponding benchmark datasets \cite{devlin2015language,lindh_generating_2018}.
-However, a standard evaluation metric to measure diversity in image descriptions has not yet been introduced, indicating an open question in evaluation research.
+\paragraph{Accuracy}
+Typically, a variety of n-gram based automatic metrics is used to measure the correctness/accuracy of image captions.
+Here, we evaluate our models across six different metrics: CIDEr \cite{vedantam2014cider}, METEOR \cite{meteor14}, and BLEU-\{1, 2, 3, 4\} \cite{bleu}.
+\nikolai{add a note about WMD and calculate WMD}
+
+\paragraph{Diversity}
+Majority of the diversity metrics for image descriptions are based on calculating \textit{n}-gram statistics as well as comparing vocabulary size, POS usage etc.
+Here, we report vocabulary size of our models and also the number of unique nouns which are generated as an approximation of how many unique objects are mentioned in the paragraphs. We use spaCy \cite{spacy15} to identify nouns in generated paragraphs.
+We also calculate Self-BLEU \cite{Zhu2018selfbleu} or sometimes referred to as mBleu \cite{Shetty2017}.
+This metric has been specifically proposed to assess the similarity between two sentences, and it can be used to measure how much one sentence resembles another. This is in particular important for the paragraphs, in which sentences should not be very similar with each other.
+Higher self-Bleu indicates less diversity, e.g., more n-gram matches between sentences.
+We calculate Self-BLEU as follows: we split each generated paragraph into sentences and use one sentence as hypothesis and the others are regarded as references.
+Then, BLEU score is calculated for every sentence in every paragraph, and the average BLEU score over the paragraphs is used as the Self-BLEU score of the whole set.
+
+\subsection{Results}
+
+\paragraph{Accuracy}
+As Table~\ref{tab:metrics} demonstrates, all our models without controlling for $C$ show similar performance and slightly underperform the model by \newcite{krause2016hierarchical} in all metrics except CIDEr.
+We believe that there are several reasons for such behaviour.
+First, our model slightly differs from the original hierarchical model: we do not use any pre-trained weights and do not learn to predict end of the paragraph.
+Also, we utilise attention in LSTM-based text generator, which, as has been shown by \newcite{liang2017recurrent} and \newcite{wang2019convolutional}, significantly boosts performance in terms of CIDEr score.
+
+The obvious trend is that models which are forced to generate at least $C$ words in a sentence perform much better, improving all accuracy-related scores.
+However, it is unclear whether this will have a positive affect on diversity measures as well: automatic evaluation metrics might be biased towards favouring longer sentences even if they are repetitive.
+\nikolai{ref!}
+
+We also conclude that adding modalities (IMG+LNG) somewhat improves scores by a small margin compared to using one of the two (either IMG or LNG).
+Also, attention seems to boost performance of either unimodal or multimodal systems.
+Interestingly, LNG-based model performs slightly worse across almost all metrics.
+We believe that the quality of linguistic representations affects automatic scores, indicating that more complex linguistic representations are needed.
+Currently, language input is constructed from representations used to describe only specific regions in isolation.
+In the paragraph, however, these regions must be linked to each other to form a coherent whole.
+We leave experiments with such linguistics representations for the future work.
+
+
+\begin{table*}
+\footnotesize
+\begin{tabular}{|*{15}{l|} }
+    \hline
+\textbf{Model} 
+            & \multicolumn{2}{c|}{\textbf{Voc Size}}
+                    & \multicolumn{2}{c|}{\textbf{\# of NT}}
+                            & \multicolumn{2}{c|}{\textbf{SB-1}} 
+                   		 & \multicolumn{2}{c|}{\textbf{SB-2}}
+                      		      & \multicolumn{2}{c|}{\textbf{SB-3}} 
+                                                & \multicolumn{2}{c|}{\textbf{SB-4}}        \\
+    \hline
+  &   $C\sp{+}$  & $C\sp{-}$  &  $C\sp{+}$  & $C\sp{-}$ & $C\sp{+}$ & $C\sp{-}$  & $C\sp{+}$ & $C\sp{-}$  & $C\sp{+}$ & $C\sp{-}$ & $C\sp{+}$ & $C\sp{-}$  \\
+    \hline
+IMG  &  378  &  430 &  284  &  313  & 80.33 &  70.62  & 71.75  &  58.99  & 64.84 & 50.85 & 58.71 & 44.11  \\
+    \hline
+IMG+ATT   & 296 &  435  &  295 &  315 &  79.72  &  71.07  &   71.05  &  59.69  & 64.05 & 51.53 & 57.92 & 44.63 \\
+    \hline
+LNG   &  399  &  431  &  294 &  310 &  77.58  &  68.69 &   68.26 &  57.24  & 60.74 & 49.41 & 54.45 & 42.79 \\
+    \hline
+LNG+ATT   &  269 &  430 &   295 &  308  &  77.85 &   69.78  &  68.44  &  58.35  & 61.23 & 50.42 & 55.31 & 43.85  \\
+    \hline    
+IMG+LNG   &  283 &   420 & 295  &  299 &  79.22  &   71.10  &   70.56  &  59.85 & 63.65 & 51.79 & 57.72 & 45.05  \\
+    \hline
+IMG+LNG+ATT   &  413 & \textbf{452} &  300  &  \textbf{326} & 77.81 &  \textbf{68.25}  &  68.19  &  \textbf{55.97}  & 61.06 & \textbf{47.61} & 55.23 & \textbf{40.98} \\
+\hline
+    GT & - & \textbf{5835} & - & \textbf{3865} & - & \textbf{48.66} & - & \textbf{27.95} & - & \textbf{15.82} & - & \textbf{8.70} \\
+    \hline
+    \end{tabular}
+        \caption{Measures of diversity for different paragraph models. NT and GT stand for noun types and ground-truth paragraphs from the test set respectively. SB stands for self-BLEU and corresponding \textit{n}-gram (1, 2, 3, 4).}
+    \label{tab:divs}
+\end{table*}
+
+\iffalse
+\begin{table*}[h]
+   % \footnotesize
+    \centering
+    \begin{tabular}{|l|c|c|c|c|c|c|}
+    \hline
+       \textbf{Model} & \textbf{Voc Size} & \textbf{\# of NT} & \textbf{SB-1} & \textbf{SB-2} & \textbf{SB-3} & \textbf{SB-4} \\
+    \hline
+      IMG & 378 & 284 & 80.33 & 71.75 & 64.84 & 58.71 \\
+    \hline
+      IMG+ATT & 296 & 295 & 79.72 & 71.05 & 64.05 & 57.92 \\
+    \hline
+      LNG & 399 & 294 & \textbf{77.58} & 68.26 & \textbf{60.74} & \textbf{54.45} \\
+    \hline
+      LNG+ATT & 269 & 295 & 77.85 & 68.44 & 61.23 & 55.31 \\
+    \hline
+     IMG+LNG & 283 & 295 & 79.22 & 70.56 & 63.65 & 57.72 \\
+    \hline
+     IMG+LNG+ATT & \textbf{413} & \textbf{300} & 77.81 & \textbf{68.19} & 61.06 & 55.23 \\
+    \hline
+      GT & \textbf{5835} & \textbf{3865} & \textbf{48.66} & \textbf{27.95} & \textbf{15.82} & \textbf{8.70} \\
+    \hline
+    \end{tabular}
+    \caption{Measures of diversity for different paragraph models. NT and GT stand for noun types and ground-truth paragraphs from the test set respectively. SB stands for self-BLEU and corresponding \textit{n}-gram (1, 2, 3, 4).}
+    \label{tab:stats}
+\end{table*}
+\fi
+
+\paragraph{Diversity}
+Note that our goal is to show that purely visually dependent models are less diverse than models which incorporate additional sources of information such as semantic information about objects or use attention.
+As Table ~\ref{tab:divs} demonstrates, the model which uses both modalities and attention generates most diverse paragraphs compared to outputs of the other models.
+It generates more unique nouns, has bigger vocabulary size and better self-BLEU scores.
+However, it still performs much worse than the human-generated paragraphs.
+Based on the self-BLEU scores for models which are forced to generate at least $C$ words, we conclude that these models tend to generate the same \textit{n}-grams more often.
+Therefore, these models suffer from repetitiveness on word level, and do not conform with our criteria for paragraph diversity.
 
 % SD 2020-07-09 16:11:33 +0200: The diversity should be **lagom** not too little diverse and not overly divserse given human-generated descriptions.
 
-\begin{table*}[]
-    \footnotesize
-    \centering
-    \begin{tabular}{|l|c|c|c|c|}
-    \hline
-       \textbf{Model}  &  \textbf{Voc Size} & \textbf{\# of unique nouns} & \textbf{\% of rep. nouns per par.} & \textbf{unique word overlap with GT} \\
-    \hline
-      IMG   & 400 & 295 & 49 & 6.8\% \\
-    \hline
-      IMG+LNG   & \textbf{425} & \textbf{320} & \textbf{47} & \textbf{7.2\%} \\
-    \hline
-      IMG+ATT   & 413 & 313 & 48 & 7.0\% \\
-    \hline
-      IMG+LNG+ATT   & 403 & 298 & 51 & 6.9\% \\
-    \hline
-    \hline
-      GT & \textbf{5835} & \textbf{3865} & \textbf{21} & \textbf{100\%} \\
-    \hline
-    \end{tabular}
-    \caption{General statistics for generated image paragraphs.}
-    \label{tab:stats}
-\end{table*}
+\subsection{Diversity in decoding}
+diversity in terms of choosing best candidate from the pool of candidates. Experiment with choosing different candidates (not always the most probable) and report how diversity changes
 
-Here, we start by providing some general statistics about generated paragraphs.
-As Table~\ref{tab:stats} demonstrates, the model that incorporates language information has the largest vocabulary size compared to all other models.
-It also generates more unique nouns in paragraphs, which can be used as a rough (and quite idealistic) indicator of the number of image objects which are mentioned.
-Though our model with language as its input produces many repetitive nouns per paragraph compared to the ground-truth, it is still slightly better than other configurations.
-Finally, it has the largest overlap with human-produced paragraphs in terms of word types.
-
-In order to evaluate the diversity of paragraphs automatically, we use Self-BLEU \cite{Zhu2018selfbleu}.
-This metric has been specifically proposed to assess the similarity between two sentences, and it can be used to measure how much one sentence resembles another.
-Higher self-Bleu indicates less diversity, e.g., more n-gram matching between sentences.
-We calculate Self-BLEU as follows: we split each generated paragraph into sentences and use one sentence as hypothesis and the others are regarded as reference.
-Then, BLEU score is calculated for every sentence in every paragraph, and the average BLEU score over the paragraphs is used as the Self-BLEU score of the whole set.
-
-\begin{table}[h]
-    \footnotesize
-    \centering
-    \begin{tabular}{|l|c|c|c|c|}
-    \hline
-       \textbf{Model}  &  \textbf{SB-1} & \textbf{SB-2} & \textbf{SB-3} & \textbf{SB-4} \\
-    \hline
-      IMG   & 78.18 & 66.69 & 57.45 & 49.90 \\
-    \hline
-      IMG+LNG   & 77.93 & 66.26 & 56.81 & 48.87 \\
-    \hline
-      IMG+ATT   & 77.75 & 66.37 & 57.27 & 49.84 \\
-    \hline
-      IMG+LNG+ATT   & \textbf{77.24} & \textbf{65.49} & \textbf{56.33} & \textbf{48.91} \\
-    \hline
-    \hline
-      \textbf{GT}   & \textbf{49.63} & \textbf{27.70} & \textbf{15.55} & \textbf{8.52} \\
-     \hline
-    \end{tabular}
-    \caption{Self-Bleu scores for all models. GT indicates scores for ground-truth paragraphs from the test set.}
-    \label{tab:self_bleu}
-\end{table}
-
-As table~\ref{tab:self_bleu} shows, ground-truth paragraphs are unsurprisingly the most diverse ones in terms of repetitions of n-grams between sentences.
-All our models fall behind and by a large margin.
-However, a clear systematic trend is present: models with \textit{LNG} as part of their input, demonstrate lower self-Bleu scores, compared to the scores by the models that are conditioned solely on visual information and incorporate attention on the sentence level.
-This finding indicates that contextual language information might help learn to generate more unique descriptions from sentence to sentence in an image paragraph.
+\subsection{Human Evaluation}
+Human evaluation on 
 
 % SD 2020-07-09 16:18:09 +0200: Self-BLEU and other measures in Table 2 are good but they evaluate vocabulary only. However, as our paper is about a discourse we also need to evaluate whether the paragraphs have a better discourse structure. How shall we do that? This would be the main purpose of the human-evaluation experiment.
 

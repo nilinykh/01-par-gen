@@ -23,6 +23,7 @@
 
 % for comments
 \usepackage{color}
+\usepackage{graphicx}
 \usepackage{multirow}
 \definecolor{darkgreen}{rgb}{0,0.5,0}
 \definecolor{purple}{rgb}{1,0,1}
@@ -36,6 +37,7 @@
 \usepackage{amsmath}
 \usepackage{amssymb}
 \usepackage{hhline}
+\usepackage{tabularx}
 
 \newcommand{\R}{\mathbb{R}}
 
@@ -137,6 +139,18 @@ Different from these approaches, \newcite{melas2019} employ self-critical traini
 Lastly, \newcite{wang2019convolutional} use convolutional auto-encoder for topic modelling based on region-level image features. They demonstrate that extracted topics are more representative and contain information relevant for sentence generation.
 In this paper we similarly model better topic representations. However, we use additional language representations as part of the input to our topic generator, which is an LSTM.
 
+\begin{figure*}[h!]
+  \includegraphics[width=\linewidth]{figures/model}
+  \caption{Proposed model architecture.
+  		Orange block on the left is the learned space where attention is performed on two modalities (vision framed with purple, language framed with green).
+		The attended features are concatenated and passed to the linear layer for fusion.
+		The output of the fusion layer is used by sentence-level LSTM (coloured in blue, indicated with $\varsigma$) to produce sentence topics.
+		Also, last hidden state of sentence LSTM is used by attention module at each timestamp.
+		Word-level LSTM (coloured in green, indicated with $\omega$) is given the sentence topic and word embeddings to generate a target sentence.
+		Due to limited space we omit linear layer and softmax layer which are used to predict the next word.}
+  \label{fig:model}
+\end{figure*}
+
 \paragraph{Language attention in language and vision models}
 \nikolai{wordy section, needs to be shorter, keep all information here for now}
 
@@ -152,7 +166,6 @@ Closest to our work is the work by \cite{liang2017recurrent}, who apply language
 While we also believe that feeding information about semantic concepts found in an image is beneficial for the model, we propose to employ transfer learning. We use hidden states of the RNN trained for the task of dense captioning \cite{densecap} as our background information representation.
 Outside of image paragraph captioning, \newcite{vqaLU16} have proposed a joint image and question attention model for the task of visual question answering.
 \nikolai{Any work on language attention in visual dialog? I think one sentence with some citations would be nice to have.}
-
 
 \section{Approach}
 \paragraph{Overview}
@@ -291,7 +304,8 @@ Also, this number is close to the average sentence length in ground-truth paragr
 
 \begin{table*}
 \footnotesize
-\begin{tabular}{|*{15}{l|} }
+\begin{tabular}{|p{2.45cm}|*{15}{ll|} }
+%\begin{tabular}{|*{15}{l|} }
     \hline
 \textbf{Model} 
             & \multicolumn{2}{c|}{\textbf{CIDEr}}
@@ -324,6 +338,40 @@ IMG+LNG+ATT   &  20.99 &   13.83  &  13.81  &   11.21 &   \textbf{38.18}  &  25.
         Scores from the original hierarchical model are reported for completeness (beam search with $C\sp{-}$).
         }
     \label{tab:metrics}
+\end{table*}
+
+\begin{table*}
+\footnotesize
+\begin{tabular}{|p{2.8cm}|*{15}{ll|} }
+%\begin{tabular}{|*{15}{l|} }
+    \hline
+\textbf{Model} 
+            & \multicolumn{2}{c|}{\textbf{Voc Size}}
+                    & \multicolumn{2}{c|}{\textbf{\# of NT}}
+                            & \multicolumn{2}{c|}{\textbf{SB-1}} 
+                   		 & \multicolumn{2}{c|}{\textbf{SB-2}}
+                      		      & \multicolumn{2}{c|}{\textbf{SB-3}} 
+                                                & \multicolumn{2}{c|}{\textbf{SB-4}}        \\
+    \hline
+  &   $C\sp{+}$  & $C\sp{-}$  &  $C\sp{+}$  & $C\sp{-}$ & $C\sp{+}$ & $C\sp{-}$  & $C\sp{+}$ & $C\sp{-}$  & $C\sp{+}$ & $C\sp{-}$ & $C\sp{+}$ & $C\sp{-}$  \\
+    \hline
+IMG  &  378  &  430 &  284  &  313  & 80.33 &  70.62  & 71.75  &  58.99  & 64.84 & 50.85 & 58.71 & 44.11  \\
+    \hline
+IMG+ATT   & 296 &  435  &  295 &  315 &  79.72  &  71.07  &   71.05  &  59.69  & 64.05 & 51.53 & 57.92 & 44.63 \\
+    \hline
+LNG   &  399  &  431  &  294 &  310 &  77.58  &  68.69 &   68.26 &  57.24  & 60.74 & 49.41 & 54.45 & 42.79 \\
+    \hline
+LNG+ATT   &  269 &  430 &   295 &  308  &  77.85 &   69.78  &  68.44  &  58.35  & 61.23 & 50.42 & 55.31 & 43.85  \\
+    \hline    
+IMG+LNG   &  283 &   420 & 295  &  299 &  79.22  &   71.10  &   70.56  &  59.85 & 63.65 & 51.79 & 57.72 & 45.05  \\
+    \hline
+IMG+LNG+ATT   &  413 & \textbf{452} &  300  &  \textbf{326} & 77.81 &  \textbf{68.25}  &  68.19  &  \textbf{55.97}  & 61.06 & \textbf{47.61} & 55.23 & \textbf{40.98} \\
+\hline
+    GT & - & \textbf{5835} & - & \textbf{3865} & - & \textbf{48.66} & - & \textbf{27.95} & - & \textbf{15.82} & - & \textbf{8.70} \\
+    \hline
+    \end{tabular}
+        \caption{Measures of diversity for different paragraph models. NT and GT stand for noun types and ground-truth paragraphs from the test set respectively. SB stands for self-BLEU and corresponding \textit{n}-gram (1, 2, 3, 4).}
+    \label{tab:divs}
 \end{table*}
 
 \iffalse
@@ -411,40 +459,6 @@ We believe that the quality of linguistic representations affects automatic scor
 Currently, language input is constructed from representations used to describe only specific regions in isolation.
 In the paragraph, however, these regions must be linked to each other to form a coherent whole.
 We leave experiments with such linguistics representations for the future work.
-
-
-\begin{table*}
-\footnotesize
-\begin{tabular}{|*{15}{l|} }
-    \hline
-\textbf{Model} 
-            & \multicolumn{2}{c|}{\textbf{Voc Size}}
-                    & \multicolumn{2}{c|}{\textbf{\# of NT}}
-                            & \multicolumn{2}{c|}{\textbf{SB-1}} 
-                   		 & \multicolumn{2}{c|}{\textbf{SB-2}}
-                      		      & \multicolumn{2}{c|}{\textbf{SB-3}} 
-                                                & \multicolumn{2}{c|}{\textbf{SB-4}}        \\
-    \hline
-  &   $C\sp{+}$  & $C\sp{-}$  &  $C\sp{+}$  & $C\sp{-}$ & $C\sp{+}$ & $C\sp{-}$  & $C\sp{+}$ & $C\sp{-}$  & $C\sp{+}$ & $C\sp{-}$ & $C\sp{+}$ & $C\sp{-}$  \\
-    \hline
-IMG  &  378  &  430 &  284  &  313  & 80.33 &  70.62  & 71.75  &  58.99  & 64.84 & 50.85 & 58.71 & 44.11  \\
-    \hline
-IMG+ATT   & 296 &  435  &  295 &  315 &  79.72  &  71.07  &   71.05  &  59.69  & 64.05 & 51.53 & 57.92 & 44.63 \\
-    \hline
-LNG   &  399  &  431  &  294 &  310 &  77.58  &  68.69 &   68.26 &  57.24  & 60.74 & 49.41 & 54.45 & 42.79 \\
-    \hline
-LNG+ATT   &  269 &  430 &   295 &  308  &  77.85 &   69.78  &  68.44  &  58.35  & 61.23 & 50.42 & 55.31 & 43.85  \\
-    \hline    
-IMG+LNG   &  283 &   420 & 295  &  299 &  79.22  &   71.10  &   70.56  &  59.85 & 63.65 & 51.79 & 57.72 & 45.05  \\
-    \hline
-IMG+LNG+ATT   &  413 & \textbf{452} &  300  &  \textbf{326} & 77.81 &  \textbf{68.25}  &  68.19  &  \textbf{55.97}  & 61.06 & \textbf{47.61} & 55.23 & \textbf{40.98} \\
-\hline
-    GT & - & \textbf{5835} & - & \textbf{3865} & - & \textbf{48.66} & - & \textbf{27.95} & - & \textbf{15.82} & - & \textbf{8.70} \\
-    \hline
-    \end{tabular}
-        \caption{Measures of diversity for different paragraph models. NT and GT stand for noun types and ground-truth paragraphs from the test set respectively. SB stands for self-BLEU and corresponding \textit{n}-gram (1, 2, 3, 4).}
-    \label{tab:divs}
-\end{table*}
 
 \iffalse
 \begin{table*}[h]

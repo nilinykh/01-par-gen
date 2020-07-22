@@ -141,12 +141,12 @@ In this paper we similarly model better topic representations. However, we use a
 
 \begin{figure*}[h!]
   \includegraphics[width=\linewidth]{figures/model}
-  \caption{Proposed model architecture.
-  		Orange block on the left is the learned space where attention is performed on two modalities (vision framed with purple, language framed with green).
+  \caption{Multimodal paragraph generator architecture.
+  		Orange block on the left side is the learned space where two modalities are attended (vision framed with purple, language framed with green).
 		The attended features are concatenated and passed to the linear layer for fusion.
-		The output of the fusion layer is used by sentence-level LSTM (coloured in blue, indicated with $\varsigma$) to produce sentence topics.
+		The output of the fusion layer \textit{F} is used by sentence-level LSTM (coloured in blue, indicated with $\varsigma$) to produce sentence topics.
 		Also, last hidden state of sentence LSTM is used by attention module at each timestamp.
-		Word-level LSTM (coloured in green, indicated with $\omega$) is given the sentence topic and word embeddings to generate a target sentence.
+		Word-level LSTM (coloured in green, indicated with $\omega$) is given the sentence topic and word embeddings.
 		Due to limited space we omit linear layer and softmax layer which are used to predict the next word.}
   \label{fig:model}
 \end{figure*}
@@ -169,138 +169,220 @@ Outside of image paragraph captioning, \newcite{vqaLU16} have proposed a joint i
 
 \section{Approach}
 \paragraph{Overview}
-As our base model in the experiments, we implement the hierarchical image paragraph generation model by \cite{krause2016hierarchical}.
-We change most parts of this model when implementing various model configurations, which we describe below. % SD 2020-07-08 13:38:46 +0200: "Below" made me think this will be in the following section but you mean "here".
-To identify image regions and extract their corresponding features,
-We also utilize the pre-trained model for dense captioning \cite{densecap}.
-For our language representations, we use hidden states from the last layer of the DenseCap RNN, which is supposed to generate region descriptions in the original architecture.
-We fuse both modalities into a single vector represented by an affinity matrix, similar to \newcite{Xu2015} and \newcite{vqaLU16}. 
-This matrix captures similarities between visual and language representations for all combinations of regions. % SD 2020-07-08 13:36:07 +0200: We need to say a bit more how the fusion is done.
-Then, the similarity vector is used by a two-level hierarchical paragraph generator.
-First, the sentence-level LSTM transforms its input into the sentence topics, capturing information flow between sentences.
-Second, each of the topics is employed by word-level LSTM to generate a sentence.
-Finally, all generated sentences per image are concatenated to form a final paragraph. An overview of our model is shown in Fig.
-We also deploy various strategies for decoding and analyse differences in corresponding generated paragraphs.
-\nikolai{model structure scheme is in progress, not sure there will be space for decoding strategies though}
+For our experiments we implement and adapt the hierarchical image paragraph model by \cite{krause2016hierarchical}.\footnote{The original code of the model has not been publicly released by the authors.}
+To prepare input features, we utilise pre-trained model for dense captioning \cite{densecap} in two ways.
+First, we use it to extract convolutional features of identified image regions.
+We also use its hidden states from the RNN layer as language features.
+In the original model these states are used to generate region descriptions, therefore, these vectors represent semantic information about objects.
+We construct \textit{a multimodal space}, in which we learn mappings from both text and vision features and attend to produced vectors.
+Lastly, two attended modalities are fused to form a multimodal vector, which is used as an input to the paragraph generator.
+%We fuse both modalities into a single vector represented by an affinity matrix, similar to \newcite{Xu2015} and \newcite{vqaLU16}. 
+%This matrix captures similarities between visual and language representations for all combinations of regions.
+% SD 2020-07-08 13:36:07 +0200: We need to say a bit more how the fusion is done.
+%Then, the similarity vector is used by a two-level hierarchical paragraph generator.
+Our paragraph generator consists of two components: discourse-level and sentence-level LSTMs \cite{lstm97}.
+First, the discourse-level LSTM learns each sentence topic from the multimodal representation, capturing information flow between sentences.
+Second, each of the topics is used by sentence-level LSTM to generate an actual sentence.
+Finally, all generated sentences per image are concatenated to form a final paragraph.
+An overview of our model and more detailed description are shown in Fig.~\ref{fig:model}.
+Note that different from \newcite{krause2016hierarchical}, we do not learn to predict end of the paragraph.
+Instead, we generate the same number of sentences for each image, as we find in its ground-truth paragraph.
+We leave the task of predicting the number of sentences to generate in a paragraph for future work.
+
+%We also deploy various strategies for decoding and analyse differences in corresponding generated paragraphs.
+%\nikolai{model structure scheme is in progress, not sure there will be space for decoding strategies though}
 % SD 2020-07-08 13:42:12 +0200: This would be important as it would be easier fo the reader to see what the differences between us and Krause are. Also, later on when we describe the individual components we can refer back to it.
 
-Note that we were not able to acquire a source code for the original hierarchical model.
-Therefore, our model's performance in terms of automatic evaluation might not necessarily be comparable to the one described in \newcite{krause2016hierarchical}.
-Though we report automatic evaluation scores, in this paper, we instead focus on showing that background knowledge incorporated in the paragraph generation model leads to more detailed and diverse image descriptions.
+%Note that we were not able to acquire a source code for the original hierarchical model.
+%Therefore, our model's performance in terms of automatic evaluation might not necessarily be comparable to the one described in \newcite{krause2016hierarchical}.
+%Though we report automatic evaluation scores, in this paper, we instead focus on showing that background knowledge incorporated in the paragraph generation model leads to more detailed and diverse image descriptions.
 % SD 2020-07-08 13:39:42 +0200: This should come earlier at the beginning of the section. As a base we take the model from Krause. We do not have the code so we make our own implementation. Secondly, we also make some modifications because we think they are more suitable. These are: (i)... (ii).... (n) and then their description. We can comment on the differences in results later when we discuss results.
 
 \subsection{Input Features}
 
-\paragraph{Visual Features} Here, we describe our image representation in terms of its regions.
-We first dissect our image into multiple salient regions and extract their corresponding convolutional features, using the region detector introduced for the task of dense captioning \cite{densecap}\footnote{Available at: https://github.com/jcjohnson/densecap}.
-% SD 2020-07-08 13:44:24 +0200: Here we provide only a brief overview of this 
-procedure: first,
-First, a resized image is passed through the VGG-16 network \cite{Simonyan2014} to output a feature map of the image.
-A region proposal network is conditioned on the feature map to identify the set of salient image regions, which are then mapped back onto the feature map to provide us with corresponding map regions.
-Each of these map regions is then fed to the two-layer perceptron to obtain a set of the final region features ${\{v_1, ..., v_M\}}$, with each feature dimension being ${1 \times D}$.
-Finally, each image is represented by the matrix of the region features $V \in \R\sp{M \times D}$, which are passed through the simple feed-forward layer $W_v \in \R\sp{D \times H}$ followed by ReLU non-linearity.
-These visual feature vectors provide us with fine-grained image representation on the object level.
+\paragraph{Visual Features}
+We use DenseCap region detector \cite{densecap}\footnote{Available at: https://github.com/jcjohnson/densecap} to identify salient image regions and extract their convolutional features.
+We provide only a brief overview of this procedure: first, a resized image is passed through the VGG-16 network \cite{Simonyan2014} to output a feature map of the image.
+A region proposal network is conditioned on the feature map to identify the set of salient image regions, which are then mapped back onto the feature map to produce corresponding map regions.
+Each of these map regions is then fed to the two-layer perceptron, which outputs a set of the final region features ${\{v_1, ..., v_M\}}$, where $v_m \in \R\sp{1 \times D}$ with $M=50$ and $D=4096$.
+This matrix $V \in \R\sp{M \times D}$ provides us with fine-grained image representation on the object level.
+We use this representation as features of visual modality.
+%which are passed through the simple feed-forward layer $W_v \in \R\sp{D \times H}$ followed by ReLU non-linearity.
+%These visual feature vectors provide us with fine-grained image representation on the object level.
 % SD 2020-07-08 13:45:35 +0200: We don't take the final predictions but an output of some final layer - which ones?
 
-\paragraph{Language Features} As a part of the dense captioning task, a single layer LSTM \cite{lstm97} is conditioned on region features to produce descriptions of these regions in natural language.
-We propose to utilize its outputs as language features, which provide us with additional information about detected objects.
-Specifically, we condition pretrained LSTM on region features to obtain a set of outputs ${Y = \{y_m, ..., y_M\}}$, where $y_m \in \R\sp{1 \times T \times H}$.
-We use mean pooling over the \textit{T} dimension, which determines a number of words in each description and receives a single representation per region. % SD 2020-07-08 13:50:49 +0200: Is the T dimension the final softmax/sigmoid that we then map to words?
-Our final matrix of language features per image $L \in \R\sp{M \times H}$ captures semantic information about objects from detected regions. % SD 2020-07-08 13:52:07 +0200: Could come at the beginning to state the motivation why we are using this.
-\nikolai{do not forget to mention RNN-GAN work on paragraphs, which also uses densecap regions, but they learn embeddings of words in phrases directly}
+\paragraph{Language Features}
+In the dense captioning task, a single layer LSTM is conditioned on region features to produce descriptions of these regions in natural language.
+We propose to utilise its outputs as language features, using them as additional semantic information about detected objects.
+Specifically, we condition pre-trained LSTM on region features to output a set ${Y = \{y_m, ..., y_M\}}$ with $y_m \in \R\sp{1 \times T \times H}$, where $T=15$ and $H=512$.
+We normalise each vector over the second dimension \textit{T}, which determines the maximum number of words in each description.
+We achieve this by summing all elements across this dimension and dividing the result by the actual length of the corresponding region description, which we generate from $Y$.
+The final matrix $L \in \R\sp{M \times H}$, contains language representations of $M$ detected regions.
 
-\paragraph{Multimodal Features} We wish to leverage language features in our paragraph generation model that is conditioned on visual information.
-Similar to \cite{vqaLU16}, we teach our model to co-attend to both of these modalities simultaneously.
-Specifically, we use our region feature map $V$ and language features $L$ to compute the following matrix $C$:
+%We use mean pooling over the \textit{T} dimension, which determines a number of words in each description and receives a single representation per region.
+% SD 2020-07-08 13:50:49 +0200: Is the T dimension the final softmax/sigmoid that we then map to words?
+%Our final matrix of language features per image $L \in \R\sp{M \times H}$ captures semantic information about objects from detected regions. % SD 2020-07-08 13:52:07 +0200: Could come at the beginning to state the motivation why we are using this.
+%\nikolai{do not forget to mention RNN-GAN work on paragraphs, which also uses densecap regions, but they learn embeddings of words in phrases directly}
+
+\paragraph{Multimodal Features}
+To fuse different modalities (textual and visual), we use methods from multimodal machine translation, which is similar to the task of image captioning in its nature.
+In particular, we build on work by \newcite{Caglayan2016,Caglayan2019}, who demonstrate that using modality-dependent linear layers in multimodal attention mechanism helps achieve better results as evaluated by automatic metrics for the task of multimodal machine translation.
+First, we learn two different mappings, using $V_{map}$ for vision and $L_{map}$ for language.
+These linear projections learn to embed modality-specific information into the attention space.
+Then, two attention mechanisms are trained on each modality to learn important features from each modality.
+Lastly, weighted attended features are concatenated and passed to another linear layer, which learns to integrate and fuse information into the multimodal vector.
+
+Specifically, as formulas in Eq.~\ref{eqn:fusionT} and Eq.~\ref{eqn:fusionV} demonstrate, we first attend to mapped modality features at each timestamp $t$, where $t \in \{1, ..., S\}$ and $S$ is the maximum number of sentences to generate.
+We set $S=6$.
+Last hidden state from discourse LSTM is used at each timestamp to additionally inform network about previous discourse context.
+Concatenation, logistic sigmoid function and element-wise multiplication are indicated with $\oplus$, $\sigma$ and $\odot$ respectively.
+We also use $\delta$ to refer to the discourse LSTM and $\varsigma$ for denoting sentence LSTM.
 
 \begin{equation}
-    C = ReLU(L^TW_vV),
+   \alpha_t\sp{L} = \text{\small $softmax$}( W_a\sp{L} \text{\small $tanh$} (W_h h\sp{\delta}_{t-1} + W_{m}\sp{L} L_t) )
+\label{eqn:fusionT}
 \end{equation}
 
-where $W_v$ is used to learn a mapping from vision space to language space. The final multimodal vector $C \in \R\sp{M \times H}$ is used as a multimodal input to our paragraph generator.
+\begin{equation}
+    \alpha_t\sp{V} = \text{\small $softmax$}( W_a\sp{V} \text{\small $tanh$} (W_h h\sp{\delta}_{t-1} + W_{m}\sp{V} V_t) )
+\label{eqn:fusionV}
+\end{equation}
+
+Finally, as Eq.~\ref{eqn:fusion} indicates, we obtain a single multimodal vector $f \in \R\sp{1 \times H}$, which encapsulates and merges salient information from attended visual and textual modalities.
+
+\begin{equation}
+	f_t = \text{\small $tanh$} (W_f [  \alpha_t\sp{L} \oplus \alpha_t\sp{V} ] )
+\label{eqn:fusion}
+\end{equation}
+
+%We wish to leverage language features in our paragraph generation model that is conditioned on visual information.
+%Similar to \cite{vqaLU16}, we teach our model to co-attend to both of these modalities simultaneously.
+%Specifically, we use our region feature map $V$ and language features $L$ to compute the following matrix $C$:
+%\begin{equation}
+%   C = ReLU(L^TW_vV),
+%\end{equation}
+%where $W_v$ is used to learn a mapping from vision space to language space. The final multimodal vector $C \in \R\sp{M \times H}$ is used as a multimodal input to our paragraph generator.
 % SD 2020-07-08 13:54:16 +0200: Explain the motivation behind this: we want to create visual and language topics. The dense layer is intended to learn these topics that are supported by visual and language information to a different degree and are relevant for the final training objective.
 
-
-\subsection{Sentence LSTM}
+\subsection{Discourse LSTM}
 % SD 2020-07-08 13:56:54 +0200: to be compatible with the story we are presenting let us call this Dsicourse LSTM that predicts the topics on the basis of which sentences are generated and "Word LSTM" Sentence LSTM that relaises individual sentences by predicting the relevant sequences of words.
-Our sentence-level LSTM is responsible for modeling topics of each of the individual sentences in the paragraph.
-At each timestamp, it is conditioned either on visual or multimodal features, and its output is a set of hidden states $\{h_1, ..., h_S\}$ of length $S$, where each state is used as an input to the word-level LSTM. % SD 2020-07-09 14:02:47 +0200: What is the number of states?
+Our discourse-level LSTM is responsible for modelling topics of each of the individual sentences in the paragraph.
+At each timestamp, it is conditioned on the multimodal feature vector $f_t$, and its output is a set of hidden states $\{h_1, ..., h_S\}$, where each state is used as an input to the sentence-level LSTM.
+% SD 2020-07-09 14:02:47 +0200: What is the number of states?
 In its nature, sentence LSTM has to simultaneously complete at least two tasks: produce a topic with relevant information for each sentence, while preserving some type of \textit{ordering} between topics.
 Such topic ordering is essential for keeping a smooth transition between sentences (discourse items) in the paragraph (mini-discourse).
+We expect attention on two modalities to assist discourse LSTM in its multiple objectives, since attention alleviates the task of weighing specific parts of the input as more important for a particular sentence, thus allowing discourse LSTM to learn more precise sentence representations and sentence order.
 
-To assist sentence LSTM in its multiple objectives, we propose to use attention on the sentence topic level.
-Attention alleviates the task of weighing specific parts of the input as more important for a particular sentence, thus allowing sentence LSTM to learn more precise sentence representations and sentence order.
-In particular, we use soft version of global attention as introduced in \cite{bahdanau2014neural} and applied in image captioning \cite{xu2015attend,luong2015effective}.
-
-\nikolai{I separate between sentence inputs and word inputs by using sigma for sentence input, and omega for word input, original input is simply x}
-Let $\oplus$, $\sigma$ and $\odot$ denote concatenation, logistic sigmoid function and element-wise multiplication respectively.
-At each time step our attention module receives a feature vector $x$ and previous hidden state $h^\varsigma_{s-1}$ of the sentence LSTM to produce attended input features $\hat{x}^\varsigma_s$.
-With both $W_m$ and $W_a$ denoting trainable parameters, attention first computes the attention weights $\alpha_{i,s}$ for each element $x_i$ in the input feature $x$ using additive (concatenative) alignment function as follows:
+Similar to \newcite{xu2015attend}, we also learn a gating scalar $\beta$ and apply it to $f_t$.
+Thus, the input to discourse LSTM is computed as follows:
 
 \begin{equation}
-    a(x, h^\varsigma_{s-1})_{i,s} = W_a^\top \tanh (W_m[x_i \oplus h^\varsigma_{s-1}])
+	f_t\sp\delta = \sigma(W_b h\sp{\delta}_{t-1}) \odot f_t,
 \end{equation}
 
-\begin{equation}
-    \alpha_s = \frac{exp(a_{i,s})}{\sum_{j}^{M}exp(a_j))}
-\end{equation}
+where $W_b$ is a learnable model parameter.
+We do not implement doubly stochastic regularisation, since this would force the model to pay equal attention to modality features, eliminating the purpose of learning to attend to the most salient parts of its input.
 
-Then, the sum of the elements in the combined vector of attention weights and input features is calculated, and passed to the sentence LSTM as its input:
+%To assist sentence LSTM in its multiple objectives, we propose to use attention on the sentence topic level.
+%Attention alleviates the task of weighing specific parts of the input as more important for a particular sentence, thus allowing sentence LSTM to learn more precise sentence representations and sentence order.
+%In particular, we use soft version of global attention as introduced in \cite{bahdanau2014neural} and applied in image captioning \cite{xu2015attend,luong2015effective}.
+%Let $\oplus$, $\sigma$ and $\odot$ denote concatenation, logistic sigmoid function and element-wise multiplication respectively.
+%At each timestampour attention module receives a feature vector $x$ and previous hidden state $h^\varsigma_{s-1}$ of the sentence LSTM to produce attended input features $\hat{x}^\varsigma_s$.
+%With both $W_m$ and $W_a$ denoting trainable parameters, attention first computes the attention weights $\alpha_{i,s}$ for each element $x_i$ in the input feature $x$ using additive (concatenative) alignment function as follows:
+%\begin{equation}
+%    a(x, h^\varsigma_{s-1})_{i,s} = W_a^\top \tanh (W_m[x_i \oplus h^\varsigma_{s-1}])
+%\end{equation}
+%\begin{equation}
+%    \alpha_s = \frac{exp(a_{i,s})}{\sum_{j}^{M}exp(a_j))}
+%\end{equation}
+%Then, the sum of the elements in the combined vector of attention weights and input features is calculated, and passed to the sentence LSTM as its input:
+%\begin{equation}
+%    \hat{x}^\varsigma_s = \sum_{i=1}^{M} \alpha_{i,s} \odot x_i
+%\end{equation}
 
-\begin{equation}
-    \hat{x}^\varsigma_s = \sum_{i=1}^{M} \alpha_{i,s} \odot x_i
-\end{equation}
-
-To demonstrate the difference between simple methods to represent collection of image regions and attention, we also use max-pooling in our experiments to obtain inputs for the sentence LSTM:
-
-\begin{equation}
-    \hat{x}^\varsigma_s =  max_{i=1}^M(x)
-\end{equation}
-
+%To demonstrate the difference between simple methods to represent collection of image regions and attention, we also use max-pooling in our experiments to obtain inputs for the sentence LSTM:
+%\begin{equation}
+ %   \hat{x}^\varsigma_s =  max_{i=1}^M(x)
+%\end{equation}
 % SD 2020-07-09 14:09:53 +0200: State at the beginning that we are going to implement two variants for selection of grounded features: attention and max pooling. Which of these systems is used to report the results?
 
-\subsection{Word LSTM}
+\subsection{Sentence LSTM}
 % SD 2020-07-09 14:11:46 +0200: See my comment above for the previous section. --> Sentence LSTM
-Our word LSTM is a single-layer LSTM similar to \newcite{krause2016hierarchical}.
-We create \textit{S} copies of word LSTM (one for each sentence), and use concatenation of the corresponding hidden state of sentence LSTM with the learned embeddings of the words in the target sentence $y_s$ as its input: % SD 2020-07-09 14:15:45 +0200: Copies: the same word-LSTM is trained for every sentence, the same weights are updated.
+Our sentence-level LSTM is a single-layer LSTM tasked to generate all sentences in the paragraph.
+We run sentence LSTM $S$ times, and use concatenation of the corresponding hidden state of discourse LSTM with the learned embeddings of the words in the target sentence $y_s$ as its input:
+% SD 2020-07-09 14:15:45 +0200: Copies: the same word-LSTM is trained for every sentence, the same weights are updated.
 
 \begin{equation}
-   x^\omega_s = [h^\varsigma_s \oplus Ey_s ]
+   x^\varsigma_s = [h^\delta_s \oplus Ey_s ]
 \end{equation}
 
 % SD 2020-07-09 14:13:58 +0200: The hidden state of the sentence LSTM is concatendated with **every** word embedding vector of the word LSTM?
 
-Our word embedding matrix $E \in \R\sp{K \times H}$ is learned from scratch, $K$ is the vocabulary size. % SD 2020-07-09 14:41:53 +0200: in Krause, the word-ebeddings from DenseCap are taken?
-Each copy of word LSTM is unrolled for $M$ timestamps and at each step its hidden step is used to predict a probability distribution over the words in the vocabulary.
+Our word embedding matrix $E \in \R\sp{K \times H}$ is learned from scratch, $K$ is the vocabulary size.
+This is different from \newcite{krause2016hierarchical}, who use word embeddings and LSTM weights from the pre-trained DenseCap model. % SD 2020-07-09 14:41:53 +0200: in Krause, the word-ebeddings from DenseCap are taken?
+We have also experimented with transferring DenseCap weights and embeddings into our model, but observed no significant improvement.
+
+At each timestamp $t$, our sentence LSTM is unrolled $M$ times, and at each step its hidden state is used to predict a probability distribution over the words in the vocabulary.
+The final set of sentences is concatenated together to form a paragraph.
+During decoding, we use beam search \cite{beam17} with beam width $B = 10$ to generate each sentence word by word.
+We empirically found this beam width to produce better automatic evaluation scores.
 The final set of sentences is concatenated together to form a paragraph.
 
 % SD 2020-07-09 14:42:42 +0200: Different implementations of beam search.
+% what is meant here by different implementations of beam search?
 
 \subsection{Learning Objective}
-Our hierarchical networks are trained end-to-end with each corresponding image-paragraph pair $(x, y)$ from training data.
-Our training loss is a simple cross-entropy loss on the word level:
+We train our model end-to-end with image-paragraph pairs $(x, y)$ from the training data.
+Our training loss is a simple cross-entropy loss on the sentence level:
 
 \begin{equation}
-    loss_{\omega}(x, y) = - \sum_{i=1}^{S}\sum_{j=1}^{M_i} log(p_{j,s})
+    loss\sp{\varsigma}(x, y) = - \sum_{i=1}^{S}\sum_{j=1}^{M_i} log(p_{j,s})
 \end{equation}
 
 where $p_{j,s}$ is the softmax probability of the $j^{th}$ word in the $i^{th}$ sentence given all previously generated words for the current sentence $y_{1:j-1,i}$.
-For our first sentence, hidden states for both LSTMs are initialized with zeros.
-For every next sentence, both LSTMs use last hidden states generated for the previous sentence from the corresponding layers. % SD 2020-07-09 14:44:56 +0200: The hidden state from the word rather than sentence LSTM?
+For our first sentence, hidden states for both LSTMs are initialised with zeros.
+For every next sentence, both LSTMs use last hidden states generated for the previous sentence from the corresponding layers.
+% SD 2020-07-09 14:44:56 +0200: The hidden state from the word rather than sentence LSTM?
+% actually, discourse LSTM is using its own hidden states just like sentence LSTM using its own hidden states as well...using hidden state from sentence LSTM in discourse LSTM was good for end of paragraph prediction and had no affect on the quality of generated text. So since we are not learning to predict end of the paragraph, to make things simpler, it makes sense to use LSTM own hidden states.
 During training, we use teacher forcing and feed ground-truth words as target words at each timestamp.
-We use Adam \cite{adam14} as our optimizer and choose the best model based on the validation loss (early stopping).
+We use Adam \cite{adam14} as our optimiser and choose the best model based on the validation loss (early stopping).
 
-Note that different from previous work, we do not implement sentence-level loss for the end of paragraph prediction. % SD 2020-07-09 14:46:42 +0200: We do not implent end of paragraph prediction. We should mention this at the beginning of the section where we compare our model with Krause.
-Instead, we generate the same number of sentences for each image, as we find in its ground-truth paragraph.
-We leave the task of predicting the number of sentences to generate in a paragraph for future work.
+%Note that different from previous work, we do not implement sentence-level loss for the end of paragraph prediction. % SD 2020-07-09 14:46:42 +0200: We do not implent end of paragraph prediction. We should mention this at the beginning of the section where we compare our model with Krause.
+%Instead, we generate the same number of sentences for each image, as we find in its ground-truth paragraph.
+%We leave the task of predicting the number of sentences to generate in a paragraph for future work.
 
 \section{Experiments}
 
-We use beam search with beam width $B = 10$ to generate each sentence.
+% models, settings and experiments,
+
+%To demonstrate the difference between simple methods to represent collection of image regions and attention, we also use max-pooling in our experiments to obtain inputs for the sentence LSTM:
+%\begin{equation}
+ %   \hat{x}^\varsigma_s =  max_{i=1}^M(x)
+%\end{equation}
+% SD 2020-07-09 14:09:53 +0200: State at the beginning that we are going to implement two variants for selection of grounded features: attention and max pooling. Which of these systems is used to report the results?
+
+Here we describe six configurations of our model, which we train, validate and test on the released paragraph dataset splits (14,575, 2,487, 2,489 for training, validation and testing respectively).
+\textbf{IMG} model is conditioned only on visual features, while \textbf{LNG} model uses semantic information to generate paragraphs.
+These models do not utilise attention on its input, therefore, we max-pool input features across $M$ regions, represented by mapping from either language features $x=W_{m}\sp{L} L_t$ or visual features $x=W_{m}\sp{V} V_t$:
+
+\begin{equation}
+    x^\varsigma_s =  max_{i=1}^M(x)
+    \label{eqn:maxpool}
+\end{equation}
+
+Similarly, \textbf{IMG+LNG} model uses max-pooling on both modalities and concatenates them into a single vector:
+
+\begin{equation}
+    x^\varsigma_s = [max_{i=1}^M(W_{m}\sp{L} L_t) \oplus max_{i=1}^M(W_{m}\sp{V} V_t)]
+    \label{eqn:maxpool}
+\end{equation}
+
+All models with \textbf{+ATT} use attention on either unimodal or multimodal features.
+Also, we experiment with controlling for minimal length in generated sentence during beam search.
 Large beam size is known to favour shorter sentences to the longer ones \cite{Yang2018}.
-To avoid this problem, similar to \newcite{opennmt2017}, we ensure that each generated sentence consists of at least $C$ words.
+To avoid this problem, similar to \newcite{opennmt2017}, we ensure that each generated sentences consists of at least $C$ words.
 We empirically find that setting $C=10$ provides us with better automatic metric scores.
-Also, this number is close to the average sentence length in ground-truth paragraphs (11.91).
+Note that this number is close to the average sentence length in ground-truth paragraphs (11.91).
 
 \begin{table*}
 \footnotesize
@@ -406,11 +488,13 @@ IMG+LNG+ATT   &  413 & \textbf{452} &  300  &  \textbf{326} & 77.81 &  \textbf{6
 \fi
 
 \section{Evaluation}
+
+\paragraph{General Discussion}
 Our primary research question is whether supplying image paragraph models with additional background (linguistic) information improves \textit{diversity} of generated paragraphs.
-At the same time, note that paragraphs must have an acceptable level of \textit{accuracy} (correctness in describing an image).
-However, image description systems might produce an accurate description, which does not necessarily correspond to the ground truth paragraph from the dataset, since there are multiple correct ways of describing an image \nikolai{some reference here}.
-This would affect the final automatic evaluation scores, which compare generated descriptions with the ground truth ones, and, therefore, may not be good measures of either accuracy or diversity.
-We take this into account and report results of human evaluation (section reference) of generated paragraphs in terms of both accuracy and diversity.
+We also note that paragraphs must be \textit{accurate} in describing an image.
+However, image description systems might produce an accurate description, which does not necessarily correspond to the ground truth paragraph from the dataset, since there are multiple correct ways of describing an image.
+This would, in turn, affect the scores of automatic metrics, which compare generated descriptions with the ground truth ones, and, therefore, may not be good measures of either accuracy or diversity.
+We take this into account and report results of human evaluation (section reference) in terms of both accuracy and diversity.
 For completeness, we also report results of automatic evaluation (section reference) and demonstrate that automatic metrics fail to capture human level of judgements.
 
 \subsection{Definition of Diversity}

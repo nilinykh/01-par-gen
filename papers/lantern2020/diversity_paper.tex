@@ -57,7 +57,7 @@
 
 \newcommand\BibTeX{B\textsc{ib}\TeX}
 
-\title{Contextual knowledge is important: utilizing top-down information in generating structured and ordered image paragraphs}
+\title{Multimodal Image Paragraph Generation: Utilising Linguistic Information in Generating Diverse Image Descriptions}
 
 \author{First Author \\
   Affiliation / Address line 1 \\
@@ -81,15 +81,34 @@ abstract
 
 \section{Introduction}
 
-% Learning discourse from bottom-up and top-down features (?)
+Lately, there has been a lot of improvement in the task of image captioning \cite{bernardi2016automatic} with the use of neural networks  \cite{kiros14,vinyals2014tell}, attention mechanisms \cite{xu2015attend} and more fine-grained image features \cite{anderson2017bottomup}.
+More recently, a novel open-ended task of image paragraph generation has been proposed by \newcite{krause2016hierarchical}.
+This task requires generation of multi-sentence image descriptions, which are highly informative, thus, include descriptions of a large variety of image objects, attributes, etc., which makes them different from standard single sentence captions.
+In particular, a good paragraph generation model has to produce descriptive, detailed and coherent text passages, depicting salient parts in an image.
+
+In this paper we focus on learning to automatically generate more \textit{diverse} image paragraphs.
+In language and vision literature, "diversity" of image descriptions has been mostly defined in terms of lexical diversity, word choice and \textit{n}-gram based metrics \cite{Devlin2015, Vijayakumar2016, Lindh2018, VanMiltenburg2018}.
+These criteria are focused on generating diverse set of \textit{independent, one-sentence captions}, with each describing image as a whole.
+These captions are very likely to mention identical objects due to the nature of the task ("describe image with a single sentence"), and diversity is measured in terms of how different object descriptions are from one caption to another (e.g. 'man' can be described as a 'person', 'human').
+However, a good image paragraph model must also introduce diversity on the sentence level, since describing \textit{different scene objects} throughout the paragraph is what makes it more informative than single sentence captions.
+Here, we define \textit{paragraph diversity} with two requirements: a generative model must (a) produce the set of sentences with reasonable mentions of a variety of image objects (sentence-level diversity), (ii) demonstrate the ability to use many different words to describe objects without unnecessary repetitions (word-level diversity).
+
+Our primary research question is as follows: does supplying image paragraph models with both visual and background (linguistic) information improve \textbf{diversity} of generated paragraphs?
+We expect these types of input to be complementary in generating varied paragraphs.
+We experiment with several types of inputs to the paragraph generator: visual, language or both.
+We also investigate the effects of using either attention or max-pooling on image regions as a way of representing image as a whole.
+We demonstrate that multimodal input paired with attention on these modalities benefits model's ability to generate more diverse paragraphs.
+We evaluate diversity of our paragraphs with both automatic metrics and human judgements.
+
+Additionally, we note that paragraphs must be \textit{accurate} in describing an image.
+For completeness, we also report results of automatic evaluation, showing that automatic metrics, which are targeted towards measuring \textit{accuracy} of paragraphs rather than \textit{diversity}, do not necessarily pick the most diverse paragraph as the most accurate.
 
 
+\iffalse
 Humans are typically able to effortlessly describe real-world images when required: we easily identify objects, attributes and relations between them.
-%While describing a scene, we also quickly organise our utterances in the most fitting way possible, editing them while producing when necessary.
 Diversity, richness and complexity of such human-produced image descriptions have been observed in several benchmark image description datasets, including MSCOCO \cite{lin2014microsoft,chen2015microsoft}, Flickr8k \cite{hodosh2013}, Flickr30k \cite{young-etal-2014-image}, Visual Genome \cite{krishnavisualgenome}.
 These datasets were collected to address the task of automatic image description \cite{bernardi2016automatic}, a long-standing and active field of research, placed in intersection between computer vision and natural language processing (generation, in particular).
 This problem of mapping visual data to text can be viewed as the specific example of one of the core goals of NLG: `translating' source data into a natural language representation.
-
 In natural language generation community, the task of text generation has been typically divided into multiple sub-tasks, including \textit{content determination (selection)}, the task of deciding which parts of the source information should be included in the output description, and \textit{text structuring}, the task of ordering selected information \cite{Gatt2017}.
 However, with the rise of neural networks in many NLP areas, the generation tasks are now seen as a continuous, non-modular process of automatically learning relations between input and expected output. Specifically, neural models of image captioning \cite{kiros14,vinyals2014tell} are trying to implicitly learn what is important about an image (content selection) and how this information should be structured in the generated caption (text structuring).
 Such mechanisms as attention \cite{xu2015attend,anderson2017bottomup} further improve ability of the models to locate important parts in an image and utilize them for caption generation. Some recent advances in image captioning include application of transformer architecture \cite{vaswani2017attention,herdade2019image}.
@@ -100,7 +119,8 @@ While it is clear that neural networks demonstrate good performance in generatin
 \textit{image paragraph generation} has been initially introduced in \newcite{krause2016hierarchical}, proposing the challenge of generating a text, consisting of several sentences that would form a coherent whole.
 Most of the following work \cite{liang2017recurrent,chatterjee2018diverse,wang2019convolutional} has focused on \textit{generating} good, diverse and human-like paragraphs as measured by various automatic evaluation metrics like BLEU \cite{bleu} or CIDEr \cite{vedantam2014cider}.
 
-In this paper we look at the different aspect of image paragraph generation and address the problem of \textbf{information order} in the multi-sentence image captioning setting. % SD 2020-07-09 16:52:39 +0200: Here we could give an example of a picture and text and describe  differences between sentences and therefore explain what we mean by the discourse.
+In this paper we look at the different aspect of image paragraph generation and address the problem of \textbf{information order} in the multi-sentence image captioning setting.
+% SD 2020-07-09 16:52:39 +0200: Here we could give an example of a picture and text and describe  differences between sentences and therefore explain what we mean by the discourse.
 We argue that utilizing top-down knowledge (information about context available to the captioner) is beneficial for the task of image paragraph generation.
 We show that the model conditioned on both low-level visual features and high-level top-down information is able to learn human-like distributions of attended objects, attributes and relations generated in the paragraph.
 We introduce several image paragraph models based on the hierarchical paragraph generator \newcite{krause2016hierarchical} and also
@@ -109,13 +129,12 @@ We employ transfer learning and use model pre-trained for the dense image captio
 We evaluate how close our models are compared to the human performance in terms of attending to objects in visual scenes in a particular order.
 
 % SD 2020-07-09 16:54:27 +0200: Quite a few points here. We can streamline them at the end when we shape the final argument for the paper.
+\fi
 
 % multimodality
 % \cite{barzilay-lee-2004-catching} 
 
 \section{Related Work}
-
-\nikolai{This whole section needs to be shrinked. Or not?}
 
 \paragraph{Human visual attention}
 Humans are quite efficient in detecting objects and separating them from the rest of the visual scene \cite{Ullman87}. We are also fluent in using visual attention, which allows us to single out particular objects in the visual scene, significantly reducing our perceptual load when needed \cite{Lavie04}, therefore, preventing us from being overwhelmed by typically complex real-world visual scenes.
@@ -363,14 +382,15 @@ We use Adam \cite{adam14} as our optimiser and choose the best model based on th
 
 Here we describe six configurations of our model, which we train, validate and test on the released paragraph dataset splits (14,575, 2,487, 2,489 for training, validation and testing respectively).
 \textbf{IMG} model is conditioned only on visual features, while \textbf{LNG} model uses semantic information to generate paragraphs.
-These models do not utilise attention on its input, therefore, we max-pool input features across $M$ regions, represented by mapping from either language features $x=W_{m}\sp{L} L_t$ or visual features $x=W_{m}\sp{V} V_t$:
+These models do not learn to attend to its input features.
+Instead, we max-pool input features across $M$ regions, represented by mapping from either language features $x=W_{m}\sp{L} L_t$ or visual features $x=W_{m}\sp{V} V_t$:
 
 \begin{equation}
     x^\varsigma_s =  max_{i=1}^M(x)
     \label{eqn:maxpool}
 \end{equation}
 
-Similarly, \textbf{IMG+LNG} model uses max-pooling on both modalities and concatenates them into a single vector:
+Similarly, in \textbf{IMG+LNG} model we apply max-pooling on both modalities and concatenate them into a single vector:
 
 \begin{equation}
     x^\varsigma_s = [max_{i=1}^M(W_{m}\sp{L} L_t) \oplus max_{i=1}^M(W_{m}\sp{V} V_t)]
@@ -489,6 +509,7 @@ IMG+LNG+ATT   &  413 & \textbf{452} &  300  &  \textbf{326} & 77.81 &  \textbf{6
 
 \section{Evaluation}
 
+\iffalse
 \paragraph{General Discussion}
 Our primary research question is whether supplying image paragraph models with additional background (linguistic) information improves \textit{diversity} of generated paragraphs.
 We also note that paragraphs must be \textit{accurate} in describing an image.
@@ -505,6 +526,7 @@ These criteria are focused on generating diverse set of \textit{independent, one
 These captions are very likely to mention identical objects due to the nature of the task ("describe image with a single sentence"), and diversity is measured in terms of how different object descriptions are from one caption to another (e.g. 'man' can be described as a 'person', 'human').
 However, a good image paragraph model must also introduce diversity on the sentence level, since describing \textit{different scene objects} throughout the paragraph is what makes it more informative than single sentence captions.
 Here, we define \textit{paragraph diversity} with two requirements: a generative model must (a) produce the set of sentences with reasonable mentions of a variety of image objects (sentence-level diversity), (ii) demonstrate the ability to use many different words to describe objects without unnecessary repetitions (word-level diversity).
+\fi
 
 % SD 2020-07-09 14:49:20 +0200: Very good point to distinguish the two, however.... The system can also produce an accurate description but which does not correspond to the ground truth in the dataset. The automatic measures that we have under accuracy therefore may not be good measures of accuracy. They are measures of faithufllness to the ground-truth description. Perhaps we should reserve the accuracy and diversity distinction for human evaliation and here report only automatic measures and conclude that they are defifciient in showing eccuracy and diversity and therefore human evaluation.
 
@@ -527,17 +549,20 @@ Then, BLEU score is calculated for every sentence in every paragraph, and the av
 \subsection{Results}
 
 \paragraph{Accuracy}
-As Table~\ref{tab:metrics} demonstrates, all our models without controlling for $C$ show similar performance and slightly underperform the model by \newcite{krause2016hierarchical} in all metrics except CIDEr.
+As Table~\ref{tab:metrics} demonstrates, all our models which do not control for $C$ show similar performance and slightly underperform the model by \newcite{krause2016hierarchical} in all metrics except CIDEr.
 We believe that there are several reasons for such behaviour.
 First, our model slightly differs from the original hierarchical model: we do not use any pre-trained weights and do not learn to predict end of the paragraph.
 Also, we utilise attention in LSTM-based text generator, which, as has been shown by \newcite{liang2017recurrent} and \newcite{wang2019convolutional}, significantly boosts performance in terms of CIDEr score.
 
-The obvious trend is that models which are forced to generate at least $C$ words in a sentence perform much better, improving all accuracy-related scores.
+The visible trend is that models which are forced to generate at least $C$ words in a sentence perform much better, improving all accuracy-related scores.
 However, it is unclear whether this will have a positive affect on diversity measures as well: automatic evaluation metrics might be biased towards favouring longer sentences even if they are repetitive.
 \nikolai{ref!}
 
 We also conclude that adding modalities (IMG+LNG) somewhat improves scores by a small margin compared to using one of the two (either IMG or LNG).
 Also, attention seems to boost performance of either unimodal or multimodal systems.
+We note that image description systems might produce an accurate description, which does not necessarily correspond to the ground truth paragraph from the dataset, since there are multiple correct ways of describing an image.
+This would, in turn, affect the scores of automatic metrics, which compare generated descriptions with the ground truth ones, and, therefore, may not be good measures of accuracy.
+
 Interestingly, LNG-based model performs slightly worse across almost all metrics.
 We believe that the quality of linguistic representations affects automatic scores, indicating that more complex linguistic representations are needed.
 Currently, language input is constructed from representations used to describe only specific regions in isolation.

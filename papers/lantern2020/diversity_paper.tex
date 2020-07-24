@@ -313,14 +313,19 @@ In its nature, sentence LSTM has to simultaneously complete at least two tasks: 
 Such topic ordering is essential for keeping a smooth transition between sentences (discourse items) in the paragraph (mini-discourse).
 We expect attention on two modalities to assist discourse LSTM in its multiple objectives, since attention alleviates the task of weighing specific parts of the input as more important for a particular sentence, thus allowing discourse LSTM to learn more precise sentence representations and sentence order.
 
-Similar to \newcite{xu2015attend}, we also learn a gating scalar $\beta$ and apply it to $f_t$.
-Thus, the input to discourse LSTM is computed as follows:
+Similar to \newcite{xu2015attend}, we also learn a gating scalar $\beta$ and apply it to $f_t$:
 
 \begin{equation}
-	f_t\sp\delta = \sigma(W_b h\sp{\delta}_{t-1}) \odot f_t,
+	\beta = \sigma(W_b h\sp{\delta}_{t-1}),
 \end{equation}
 
 where $W_b$ is a learnable model parameter.
+Thus, the input to discourse LSTM is computed as follows:
+
+\begin{equation}
+	f_t\sp\delta = \beta \odot f_t
+\end{equation}
+
 We do not implement doubly stochastic regularisation, since this would force the model to pay equal attention to modality features, eliminating the purpose of learning to attend to the most salient parts of its input.
 
 %To assist sentence LSTM in its multiple objectives, we propose to use attention on the sentence topic level.
@@ -363,19 +368,6 @@ This is different from \newcite{krause2016hierarchical}, who use word embeddings
 We have also experimented with transferring DenseCap weights and embeddings into our model, but observed no significant improvement.
 
 At each timestamp $t$, our sentence LSTM is unrolled $N+1$ times (we set $N=50$, which is the number of words to generate), and at each step its hidden state is used to predict a probability distribution over the words in the vocabulary.
-The final set of sentences is concatenated together to form a paragraph.
-During decoding, we use beam search \cite{beam17} to generate each sentence word by word.
-We have tested several beam width (2, 4, 6, 8, 10) and found beam of size $B=2$ to produce the most
-% write about minimal length control (showed better automatic results overall)
-% the same trend (vis+lang+att is the best) is present with no control for minimum length in diversity, but overall diversity is better for those without the control
-% it shows dependency of automatic metrics (their bias, in particular) towards less content, more repetitions, etc (?) what does it show?
-
-% best beam for accuracy = 2, best beam for diversity =?
-% best scores for accuracy = with min length, best scores for diversity - without min length
-% test min length parameter
-
-% also, briefly write about sampling sentence from beam search - we take the one which is most likely now, but other sentences might be even better
-We empirically found this beam width to produce better automatic evaluation scores.
 The final set of sentences is concatenated together to form a paragraph.
 
 % SD 2020-07-09 14:42:42 +0200: Different implementations of beam search.
@@ -429,11 +421,19 @@ Similarly, in \textbf{IMG+LNG} model we apply max-pooling on both modalities and
 \end{equation}
 
 All models with \textbf{+ATT} use attention on either unimodal or multimodal features.
-Also, we experiment with controlling for minimal length in generated sentence during beam search.
-Large beam size is known to favour shorter sentences to the longer ones \cite{Yang2018}.
-To avoid this problem, similar to \newcite{opennmt2017}, we ensure that each generated sentences consists of at least $C$ words.
-We empirically find that setting $C=10$ provides us with better automatic metric scores.
-Note that this number is close to the average sentence length in ground-truth paragraphs (11.91).
+
+During decoding, we use beam search \cite{beam17} and experiment with forcing the model to generate a minimum number of words $MinLen$ in each sentence.
+Along with the n-gram penalty, which we leave for the future work, we believe that setting $MinLen$ would provide us with more varied and diverse sentences.
+Similar to \newcite{opennmt2017}, we ensure that each generated sentences consists of at least $MinLen$ words by setting \verb|p(<end>) = -1e20| if it has been chosen by the beam before the sentence minimal length $MinLen$ is achieved.
+We tested a range of beam width (2, 4, 6, 8, 10) and several values for $MinLen$ (7 - 11).
+Based on the CIDEr score, we chose to set $C=2$ and $MinLen=9$.
+Note that $MinLen$ is close to the average sentence length in ground-truth paragraphs (11.91).
+
+% write about minimal length control (showed better automatic results overall)
+% the same trend (vis+lang+att is the best) is present with no control for minimum length in diversity, but overall diversity is better for those without the control
+% it shows dependency of automatic metrics (their bias, in particular) towards less content, more repetitions, etc (?) what does it show?
+% best beam for accuracy = 2, best beam for diversity =9
+% best scores for accuracy = with min length, best scores for diversity - without min length
 
 \begin{table*}
 \footnotesize
@@ -452,17 +452,17 @@ Note that this number is close to the average sentence length in ground-truth pa
     \hline
 \newcite{krause2016hierarchical}   &  -  &   13.52  &   -  &   15.95  &   -  &   41.90  &   -  &   24.11  & - & 14.23 & - & 8.69  \\
     \hline
-IMG  &  20.36  &  13.83  &  13.75  &  11.28  &  37.87  &  25.08  &  21.10  &  13.92  & 12.23 & 8.14 & 7.09 & 4.63  \\
+IMG  &  20.99  & 17.72  &  13.86  &  12.20  &  37.68  &  29.63  &  21.31  &  16.82 & 12.32 & 9.76 & 7.12 & 5.53  \\
     \hline
-IMG+ATT   &  \textbf{21.07}  &   14.52  &   13.74  &   11.63  &   37.53  &   26.72  &   20.82  &  15.01  & 12.13 & 8.87 & 7.12 &  5.18  \\
+IMG+ATT   &  21.83  &  18.72  &   13.94 &   12.53  &   37.80  &   31.06  &   21.34  &  17.62  & 12.47 & 10.31 & 7.30 &  5.93  \\
     \hline
-LNG   &  19.86  &  12.13  &   13.65 &   10.79  &   37.39  &   23.55 &   20.74  &  12.80  & 11.89 & 7.41 & 6.92 &  4.24  \\
+LNG   &  20.75  &  15.36  &  13.90  &  11.89  &   38.10  &   28.44 &   21.46  &  15.92  & 12.27 & 9.13 & 6.99 &  5.13  \\
     \hline
-LNG+ATT   &  20.30  &  11.37 &   13.76  &   11.00  &   37.68 &   24.48  &   20.76 &  13.32  & 11.85 & 7.65 & 6.82 &  4.31  \\
+LNG+ATT   &  20.83  &  16.69 &   13.94  &   12.16  &   37.88 &   29.72  &   21.25 &  16.76  & 12.20 &  9.66  &  6.96 &  5.43  \\
     \hline    
-IMG+LNG   &  20.75 &   13.08  &  \textbf{13.85}  &   11.15 &   37.97  &   24.54  &   21.09  &  13.70  & 12.22 & 8.05 & \textbf{7.18} &  4.69  \\
+IMG+LNG   &  \textbf{21.92} &   16.23  &  13.94  &  12.02  &   37.99  &   28.67  &   21.57  &  16.24  & \textbf{12.49}  &  9.43 & \textbf{7.20} &  5.36  \\
     \hline
-IMG+LNG+ATT   &  20.99 &   13.83  &  13.81  &   11.21 &   \textbf{38.18}  &  25.01  &   \textbf{21.31}  &  13.86  & \textbf{12.25} & 8.08 & 7.12 &  4.67 \\
+IMG+LNG+ATT   &  21.63 &   17.26  &  \textbf{14.00}  &   12.21 &   \textbf{38.23}  &  29.65  &   \textbf{21.67}  &  16.92  & 12.45 & 9.84 & 7.15 &  5.66 \\
     \hline
     \end{tabular}
         \caption{
@@ -488,17 +488,17 @@ IMG+LNG+ATT   &  20.99 &   13.83  &  13.81  &   11.21 &   \textbf{38.18}  &  25.
     \hline
   &   $C\sp{+}$  & $C\sp{-}$  &  $C\sp{+}$  & $C\sp{-}$ & $C\sp{+}$ & $C\sp{-}$  & $C\sp{+}$ & $C\sp{-}$  & $C\sp{+}$ & $C\sp{-}$ & $C\sp{+}$ & $C\sp{-}$  \\
     \hline
-IMG  &  378  &  430 &  284  &  313  & 80.33 &  70.62  & 71.75  &  58.99  & 64.84 & 50.85 & 58.71 & 44.11  \\
+IMG  &  398  &  420 &  299  &  313  & 78.61 &  73.52  & 68.26  &  61.68  & 59.88 & 52.89 & 52.85 & 45.98  \\
     \hline
-IMG+ATT   & 296 &  435  &  295 &  315 &  79.72  &  71.07  &   71.05  &  59.69  & 64.05 & 51.53 & 57.92 & 44.63 \\
+IMG+ATT   & 402 &  415  &  300 &  311 &  78.15  &  74.78  &  67.52  &  63.18  & 59.11 & 54.39 & 52.17 & 47.20 \\
     \hline
-LNG   &  399  &  431  &  294 &  310 &  77.58  &  68.69 &   68.26 &  57.24  & 60.74 & 49.41 & 54.45 & 42.79 \\
+LNG   &  412  &  422  &  310 &  309 &  76.56 &  72.51 &  65.21 &  60.46  & 56.32 & 51.53 & 49.30 & 44.44 \\
     \hline
-LNG+ATT   &  269 &  430 &   295 &  308  &  77.85 &   69.78  &  68.44  &  58.35  & 61.23 & 50.42 & 55.31 & 43.85  \\
+LNG+ATT   &  391 &  401 &   295 &  291  &  77.29 &  73.62  &  66.49  &  62.01  &  58.07  & 53.33 &  51.31  & 46.49  \\
     \hline    
-IMG+LNG   &  283 &   420 & 295  &  299 &  79.22  &   71.10  &   70.56  &  59.85 & 63.65 & 51.79 & 57.72 & 45.05  \\
+IMG+LNG   &  398 &   410 &  298  &  306 &  77.50  &  73.50  &  66.81  &  61.69 &  58.46  & 52.99 & 51.65 & 46.05  \\
     \hline
-IMG+LNG+ATT   &  413 & \textbf{452} &  300  &  \textbf{326} & 77.81 &  \textbf{68.25}  &  68.19  &  \textbf{55.97}  & 61.06 & \textbf{47.61} & 55.23 & \textbf{40.98} \\
+IMG+LNG+ATT   &  423 & \textbf{433} &  319  &  \textbf{321} & 76.11 &  \textbf{72.11}  &  64.44  &  \textbf{59.35}  & 55.76 & \textbf{50.19} & 48.98 & \textbf{43.03} \\
 \hline
     GT & - & \textbf{5835} & - & \textbf{3865} & - & \textbf{48.66} & - & \textbf{27.95} & - & \textbf{15.82} & - & \textbf{8.70} \\
     \hline
@@ -608,17 +608,17 @@ We leave experiments with such linguistics representations for the future work.
     \hline
        \textbf{Model} & \textbf{Voc Size} & \textbf{\# of NT} & \textbf{SB-1} & \textbf{SB-2} & \textbf{SB-3} & \textbf{SB-4} \\
     \hline
-      IMG & 378 & 284 & 80.33 & 71.75 & 64.84 & 58.71 \\
+      IMG & 398 & 284 & 80.33 & 71.75 & 64.84 & 58.71 \\
     \hline
-      IMG+ATT & 296 & 295 & 79.72 & 71.05 & 64.05 & 57.92 \\
+      IMG+ATT & 402 & 295 & 79.72 & 71.05 & 64.05 & 57.92 \\
     \hline
-      LNG & 399 & 294 & \textbf{77.58} & 68.26 & \textbf{60.74} & \textbf{54.45} \\
+      LNG & 412 & 294 & \textbf{77.58} & 68.26 & \textbf{60.74} & \textbf{54.45} \\
     \hline
-      LNG+ATT & 269 & 295 & 77.85 & 68.44 & 61.23 & 55.31 \\
+      LNG+ATT & 391 & 295 & 77.85 & 68.44 & 61.23 & 55.31 \\
     \hline
-     IMG+LNG & 283 & 295 & 79.22 & 70.56 & 63.65 & 57.72 \\
+     IMG+LNG & 398 & 295 & 79.22 & 70.56 & 63.65 & 57.72 \\
     \hline
-     IMG+LNG+ATT & \textbf{413} & \textbf{300} & 77.81 & \textbf{68.19} & 61.06 & 55.23 \\
+     IMG+LNG+ATT & \textbf{423} & \textbf{300} & 77.81 & \textbf{68.19} & 61.06 & 55.23 \\
     \hline
       GT & \textbf{5835} & \textbf{3865} & \textbf{48.66} & \textbf{27.95} & \textbf{15.82} & \textbf{8.70} \\
     \hline
@@ -636,13 +636,18 @@ However, it still performs much worse than the human-generated paragraphs.
 Based on the self-BLEU scores for models which are forced to generate at least $C$ words, we conclude that these models tend to generate the same \textit{n}-grams more often.
 Therefore, these models suffer from repetitiveness on word level, and do not conform with our criteria for paragraph diversity.
 
+\nikolai{a note about the effect of minimal length on accuracy and diversity}
+
 % SD 2020-07-09 16:11:33 +0200: The diversity should be **lagom** not too little diverse and not overly divserse given human-generated descriptions.
 
-\subsection{Diversity in decoding}
-diversity in terms of choosing best candidate from the pool of candidates. Experiment with choosing different candidates (not always the most probable) and report how diversity changes
-
 \subsection{Human Evaluation}
-Human evaluation on 
+human evaluation here
+
+\section{Conclusion}
+Future work: diversity in terms of choosing best candidate from the pool of candidates.
+Experiments with choosing different candidates (not always the most probable from the beam search) and report how diversity changes.
+Experiment with other language representations (more complex ones).
+End of paragraph prediction.
 
 % SD 2020-07-09 16:18:09 +0200: Self-BLEU and other measures in Table 2 are good but they evaluate vocabulary only. However, as our paper is about a discourse we also need to evaluate whether the paragraphs have a better discourse structure. How shall we do that? This would be the main purpose of the human-evaluation experiment.
 
@@ -652,19 +657,6 @@ Human evaluation on
 % compare all model generations for quality/diversity with temperature, make a graph with curves
 % the importance of temperature for evaluating models based on quality and diversity
 % using temperature as overall evaluation of models in their quality and diversity
-
-
-% T = 15
-% D = 4096
-% M = 50
-% S = 6
-% K = vocabulary length
-
-%As the next step, \newcite{krause2016hierarchical} use max pooling on region features to obtain a single vector $v_p \in \R\sp{P}$, which would capture the most important information about image as a whole.
-%While this approach would make individual image regions highly salient, it is unclear whether this would capture importance of many other important objects described in the multi-sentence image description.
-%As an alternative, mean pooling can be used to describe image as a set of regions. However, this would scatter the model's focus on many different regions, which could affect its ability to attend to the most important regions when generating a sentence.
-
-\section{Conclusion}
 
 \bibliography{diversity}
 \bibliographystyle{acl_natbib}

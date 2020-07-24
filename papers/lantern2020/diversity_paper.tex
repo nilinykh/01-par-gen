@@ -81,7 +81,8 @@ abstract
 
 \section{Introduction}
 
-Lately, there has been a lot of improvement in the task of image captioning \cite{bernardi2016automatic} with the use of neural networks  \cite{kiros14,vinyals2014tell}, attention mechanisms \cite{xu2015attend} and more fine-grained image features \cite{anderson2017bottomup}.
+The quality of automatically generated image captions \cite{bernardi2016automatic} has been constantly improving as evaluated by a variety of metrics.
+These improvements include use of neural networks  \cite{kiros14,vinyals2014tell}, attention mechanisms \cite{xu2015attend} and more fine-grained image features \cite{anderson2017bottomup}.
 More recently, a novel open-ended task of image paragraph generation has been proposed by \newcite{krause2016hierarchical}.
 This task requires generation of multi-sentence image descriptions, which are highly informative, thus, include descriptions of a large variety of image objects, attributes, etc., which makes them different from standard single sentence captions.
 In particular, a good paragraph generation model has to produce descriptive, detailed and coherent text passages, depicting salient parts in an image.
@@ -89,12 +90,13 @@ In particular, a good paragraph generation model has to produce descriptive, det
 In this paper we focus on learning to automatically generate more \textit{diverse} image paragraphs.
 In language and vision literature, "diversity" of image descriptions has been mostly defined in terms of lexical diversity, word choice and \textit{n}-gram based metrics \cite{Devlin2015, Vijayakumar2016, Lindh2018, VanMiltenburg2018}.
 These criteria are focused on generating diverse set of \textit{independent, one-sentence captions}, with each describing image as a whole.
-These captions are very likely to mention identical objects due to the nature of the task ("describe image with a single sentence"), and diversity is measured in terms of how different object descriptions are from one caption to another (e.g. 'man' can be described as a 'person', 'human').
+Each of these captions are very likely to mention identical objects due to the nature of the task ("describe image with a single sentence"), and diversity is measured in terms of how different object descriptions are from one caption to another (e.g. a man can be described as a 'person' or 'human' in two different captions).
 However, a good image paragraph model must also introduce diversity on the sentence level, since describing \textit{different scene objects} throughout the paragraph is what makes it more informative than single sentence captions.
-Here, we define \textit{paragraph diversity} with two requirements: a generative model must (a) produce the set of sentences with reasonable mentions of a variety of image objects (sentence-level diversity), (ii) demonstrate the ability to use many different words to describe objects without unnecessary repetitions (word-level diversity).
+Here, we define \textit{paragraph diversity} through two important components: a generative model must (a) produce the set of sentences with reasonable mentions of a variety of image objects (sentence-level diversity), (ii) demonstrate the ability to use many different words to describe objects without unnecessary repetitions (word-level diversity).
 
+To improve on the first point, for each generated sentence we learn to attend to salient objects in the scene.,
 Our primary research question is as follows: does supplying image paragraph models with both visual and background (linguistic) information improve \textbf{diversity} of generated paragraphs?
-We expect these types of input to be complementary in generating varied paragraphs.
+We expect these types of input to be complementary in generating paragraphs which are varied.
 We experiment with several types of inputs to the paragraph generator: visual, language or both.
 We also investigate the effects of using either attention or max-pooling on image regions as a way of representing image as a whole.
 We demonstrate that multimodal input paired with attention on these modalities benefits model's ability to generate more diverse paragraphs.
@@ -136,8 +138,10 @@ We evaluate how close our models are compared to the human performance in terms 
 
 \section{Related Work}
 
+\iffalse
 \paragraph{Human visual attention}
-Humans are quite efficient in detecting objects and separating them from the rest of the visual scene \cite{Ullman87}. We are also fluent in using visual attention, which allows us to single out particular objects in the visual scene, significantly reducing our perceptual load when needed \cite{Lavie04}, therefore, preventing us from being overwhelmed by typically complex real-world visual scenes.
+Humans are quite efficient in detecting objects and separating them from the rest of the visual scene \cite{Ullman87}.
+We are also fluent in using visual attention, which allows us to single out particular objects in the visual scene, significantly reducing our perceptual load when needed \cite{Lavie04}, therefore, preventing us from being overwhelmed by typically complex real-world visual scenes.
 Our ability to attend to particular parts of the environment is based on both bottom-up information (low-level visual stimuli) and top-down information (high-level goal-related stimuli, discourse knowledge) \cite{Zarcone2016}. % SD 2020-07-09 16:56:47 +0200: Isn't this paper more about suprisal. There are a lot of refereces about different models of top-down and bottom up attention in psychology that go a long time back: you can find these references in the paper with John.
 Stimuli that attracts our attention is said to be \textit{salient} (relevant). Salience of objects affects our \textit{surprisal} towards particular visual input: discourse-salient entities cause less surprisal (e.g. `bed' in bedroom) unlike the visually salient objects (e.g. `large pink elephant' in bedroom).
 
@@ -145,18 +149,33 @@ Attention has also been employed in formal theories of interaction. One of the a
 They introduce a Bayesian-based framework in which attention controls the extent to which context induced judgements ($\sim$ task-based top-down information) are utilized by an agent. This allows for topic modelling at each timestamp in interaction.  Thus, it follows along the lines of our proposal about attention using both contextual and low-level visual information in selecting relevant information for each individual sentence in the image paragraph.
 
 % SD 2020-07-09 16:59:36 +0200: As this paper is turning out more like the effects of background knowledge on the discourse structure the discussion of attention is out of the context here. Move the whole section to the attention paper and replace it with a discussion of a discourse structure?
+\fi
 
+\paragraph{Discourse Structure}
+Producing structured and ordered sets of sentences (e.g. \textit{coherent paragraphs}) has been a topic of research in NLG community for a long time with both formal theories of coherence \cite{grosz95,Barzilay2008} and traditional rule-based model implementations \cite{Reiter00buildingnatural}.
+To achieve sufficient level of text coherence, a couple of important NLG-related tasks should be in focus of the research: \textit{content determination (selection)}, the task of deciding which parts of the source information should be included in the output description, and \textit{text structuring}, the task of ordering selected information \cite{Gatt2017}.
+We believe that the nature of these tasks is nicely reflected in the hierarchical nature of our models: first, the model attends to the image objects and defines both their salience and order of mention, and only then it starts to linguistically realise them.
+More recently, \newcite{ilinykh19} collected the dataset of image description sequences (mini-discourses).
+These mini-discourses are especially useful for learning models which are able to plan and realise such ordered and structured data.
 
 \paragraph{Neural image paragraph captioning}
-The task of generating more complex descriptions of images such as paragraphs has been introduced in \newcite{krause2016hierarchical} along with the dataset of image-paragraph pairs.
-The paper adopts a hierarchical structure for the model of paragraph generation: sentence RNN is conditioned on visual features and unrolled for each sentence in the paragraph, giving a sentence topic as its output.
+The task of generating image paragraphs has been introduced in \newcite{krause2016hierarchical} along with the dataset of image-paragraph pairs.
+The authors construct their model in a hierarchical manner: sentence RNN is conditioned on visual features to output sentence topics.
 Then, each of these topics is used by another RNN to generate actual sentences.
-We start by implementing this hierarchical image paragraph model, since it inherits the modular nature of human image paragraph production (given an image, plan structure of your paragraph and identify its sentence topics, then incrementally generate sentences). % SD 2020-07-09 17:04:30 +0200: It also conforms to the theories of NLG: content select and micro-planning.
-\newcite{liang2017recurrent} use similar hierarchical network in addition with adversarial discriminator, that forces model to generate realistic paragraphs with smooth transitions between sentences.
+Our models are based on this hierarchical model.
+However, we substantially change its structure by removing end of paragraph prediction.
+
+%We start by implementing this hierarchical image paragraph model, since it inherits the modular nature of human image paragraph production (given an image, plan structure of your paragraph and identify its sentence topics, then incrementally generate sentences). % SD 2020-07-09 17:04:30 +0200: It also conforms to the theories of NLG: content select and micro-planning.
+
+\newcite{liang2017recurrent} also use hierarchical network, but in addition with adversarial discriminator, that forces model to generate realistic paragraphs with smooth transitions between sentences.
 \newcite{chatterjee2018diverse} also address cross-sentence topic consistency by modelling global coherence vector, conditioned on all sentence topics.
-Different from these approaches, \newcite{melas2019} employ self-critical training technique \cite{selfcritical2016} to directly optimize a target evaluation metric for image paragraph generation.
-Lastly, \newcite{wang2019convolutional} use convolutional auto-encoder for topic modelling based on region-level image features. They demonstrate that extracted topics are more representative and contain information relevant for sentence generation.
-In this paper we similarly model better topic representations. However, we use additional language representations as part of the input to our topic generator, which is an LSTM.
+Different from these approaches, \newcite{melas2019} employ self-critical training technique \cite{selfcritical2016} to directly optimise a target evaluation metric for image paragraph generation.
+Lastly, \newcite{wang2019convolutional} use convolutional auto-encoder for topic modelling based on region-level image features.
+They demonstrate that extracted topics are more representative and contain information relevant for sentence generation.
+In this paper we similarly model better topic representations.
+However, we use additional semantic representations of image objects as part of the input to our topic generator.
+A non-neural approach to generate texts describing images has been proposed by \newcite{Lin2015}.
+However, this approach is infeasible due to its dependence on multiple components: visual scene parsing, generative grammar for learning from training descriptions, and an algorithm, which analyses scene graphs and extracts semantic trees to learn about dependencies across sentences.
 
 \begin{figure*}[h!]
   \includegraphics[width=\linewidth]{figures/model}
@@ -170,21 +189,23 @@ In this paper we similarly model better topic representations. However, we use a
   \label{fig:model}
 \end{figure*}
 
-\paragraph{Language attention in language and vision models}
-\nikolai{wordy section, needs to be shorter, keep all information here for now}
-
+\paragraph{Language representation for image captioning}
 Only a limited number of models for image captioning has been supplied with both visual and background information for caption generation.
 \newcite{You2016} detect visual concepts found in the scene (objects, attributes, etc.) and extract top-down visual features.
 Both of these modalities are then fed to the RNN-based caption generator.
-Attention is applied on detected concepts to inform generator about how relevant a particular concept is at each timestamp. Different to their model, we do not use any attribute detectors to identify objects in the scene, instead relying on the output of the model pre-trained for the task of dense captioning.
-\newcite{Lu2016} emphasize that image is not always useful in generating some function words (`of', `the', etc.).
+Attention is applied on detected concepts to inform generator about how relevant a particular concept is at each timestamp.
+Different to their model, we do not use any attribute detectors to identify objects in the scene, instead relying on the output of the model pre-trained for the task of dense captioning.
+\newcite{Lu2016} emphasise that image is not always useful in generating some function words (`of', `the', etc.).
 They introduce adaptive attention, which determines when to look at the image and when it is more important to use the language model to generate the next word.
 In their work, the attention vector is the mixture of visual features and visual sentinel, a vector obtained through the additional gate function on decoder memory state.
 Our model is focused on a similar task: we are interested in deciding which type information is more important at a particular timestamp, but we also look at how \textit{merging} two modalities into a single representation performs and how it affects attention of the model.
-Closest to our work is the work by \cite{liang2017recurrent}, who apply language attention on region captions and use it to assist recurrent word generation in producing sentences in a paragraph. They embed region descriptions into the same embedding space that their word RNN is operating on. % SD 2020-07-09 17:08:54 +0200: Very similar idea to ours. But we use region descriptions to define topics to choose from (topic selection) rather than directly guide the generation of words (micro-planning).
-While we also believe that feeding information about semantic concepts found in an image is beneficial for the model, we propose to employ transfer learning. We use hidden states of the RNN trained for the task of dense captioning \cite{densecap} as our background information representation.
-Outside of image paragraph captioning, \newcite{vqaLU16} have proposed a joint image and question attention model for the task of visual question answering.
-\nikolai{Any work on language attention in visual dialog? I think one sentence with some citations would be nice to have.}
+Closest to our work is the work by \newcite{liang2017recurrent}, who apply attention on region description representation and use it to assist recurrent word generation in producing sentences in a paragraph.
+Similar to our approach, they also supply their model with embeddings of local phrases used to describe image objects.
+However, they use textual phrases directly, while we are using hidden representations from the model trained to generate such phrases \cite{densecap}.
+In addition, here we explore a different route of \textit{where} to use language information: we use phrase representations to define sentence topics to choose from (topic selection) rather than directly guide the generation of words (micro-planning).
+% SD 2020-07-09 17:08:54 +0200: Very similar idea to ours. But we use region descriptions to define topics to choose from (topic selection) rather than directly guide the generation of words (micro-planning).
+%While we also believe that feeding information about semantic concepts found in an image is beneficial for the model, we propose to employ transfer learning. We use hidden representations of the RNN trained for the task of dense captioning \cite{densecap} as semantic information in model's input.
+%Outside of image paragraph captioning, \newcite{vqaLU16} have proposed a joint image and question attention model for the task of visual question answering.
 
 \section{Approach}
 \paragraph{Overview}
@@ -341,9 +362,19 @@ Our word embedding matrix $E \in \R\sp{K \times H}$ is learned from scratch, $K$
 This is different from \newcite{krause2016hierarchical}, who use word embeddings and LSTM weights from the pre-trained DenseCap model. % SD 2020-07-09 14:41:53 +0200: in Krause, the word-ebeddings from DenseCap are taken?
 We have also experimented with transferring DenseCap weights and embeddings into our model, but observed no significant improvement.
 
-At each timestamp $t$, our sentence LSTM is unrolled $M$ times, and at each step its hidden state is used to predict a probability distribution over the words in the vocabulary.
+At each timestamp $t$, our sentence LSTM is unrolled $N+1$ times (we set $N=50$, which is the number of words to generate), and at each step its hidden state is used to predict a probability distribution over the words in the vocabulary.
 The final set of sentences is concatenated together to form a paragraph.
-During decoding, we use beam search \cite{beam17} with beam width $B = 10$ to generate each sentence word by word.
+During decoding, we use beam search \cite{beam17} to generate each sentence word by word.
+We have tested several beam width (2, 4, 6, 8, 10) and found beam of size $B=2$ to produce the most
+% write about minimal length control (showed better automatic results overall)
+% the same trend (vis+lang+att is the best) is present with no control for minimum length in diversity, but overall diversity is better for those without the control
+% it shows dependency of automatic metrics (their bias, in particular) towards less content, more repetitions, etc (?) what does it show?
+
+% best beam for accuracy = 2, best beam for diversity =?
+% best scores for accuracy = with min length, best scores for diversity - without min length
+% test min length parameter
+
+% also, briefly write about sampling sentence from beam search - we take the one which is most likely now, but other sentences might be even better
 We empirically found this beam width to produce better automatic evaluation scores.
 The final set of sentences is concatenated together to form a paragraph.
 

@@ -153,8 +153,11 @@ They introduce a Bayesian-based framework in which attention controls the extent
 
 \paragraph{Discourse Structure}
 Producing structured and ordered sets of sentences (e.g. \textit{coherent paragraphs}) has been a topic of research in NLG community for a long time with both formal theories of coherence \cite{grosz95,Barzilay2008} and traditional rule-based model implementations \cite{Reiter00buildingnatural}.
-To achieve sufficient level of text coherence, a couple of important NLG-related tasks should be in focus of the research: \textit{content determination (selection)}, the task of deciding which parts of the source information should be included in the output description, and \textit{text structuring}, the task of ordering selected information \cite{Gatt2017}.
-We believe that the nature of these tasks is nicely reflected in the hierarchical nature of our models: first, the model attends to the image objects and defines both their salience and order of mention, and only then it starts to linguistically realise them.
+To achieve sufficient coherence in generated texts, several important NLG-related tasks are typically considered: \textit{content determination (selection)}, the task of deciding which parts of the source information should be included in the output description, and \textit{text structuring}, the task of ordering selected information \cite{Gatt2017}.
+We believe that the nature of these tasks is reflected in the hierarchical nature of our models: first, the model attends to the image objects and defines both their salience and order of mention, and then it starts to linguistically realise them.
+% need more references about discourse structure
+% cite ilinykh19 as an example of structured paragraphs
+\nikolai{more references about discourse structure are needed}
 More recently, \newcite{ilinykh19} collected the dataset of image description sequences (mini-discourses).
 These mini-discourses are especially useful for learning models which are able to plan and realise such ordered and structured data.
 
@@ -422,12 +425,12 @@ Similarly, in \textbf{IMG+LNG} model we apply max-pooling on both modalities and
 
 All models with \textbf{+ATT} use attention on either unimodal or multimodal features.
 
-During decoding, we use beam search \cite{beam17} and experiment with forcing the model to generate a minimum number of words $MinLen$ in each sentence.
-Along with the n-gram penalty, which we leave for the future work, we believe that setting $MinLen$ would provide us with more varied and diverse sentences.
-Similar to \newcite{opennmt2017}, we ensure that each generated sentences consists of at least $MinLen$ words by setting \verb|p(<end>) = -1e20| if it has been chosen by the beam before the sentence minimal length $MinLen$ is achieved.
-We tested a range of beam width (2, 4, 6, 8, 10) and several values for $MinLen$ (7 - 11).
-Based on the CIDEr score, we chose to set $C=2$ and $MinLen=9$.
-Note that $MinLen$ is close to the average sentence length in ground-truth paragraphs (11.91).
+During decoding, we use beam search \cite{beam17} and experiment with forcing the model to generate a minimum number of words $C$ in each sentence.
+Along with the n-gram penalty, which we leave for the future work, we believe that setting $C$ would provide us with more varied and diverse sentences.
+Similar to \newcite{opennmt2017}, we ensure that each generated sentences consists of at least $C$ words by setting \verb|p(<end>) = -1e20| if it has been chosen by the beam before the sentence minimal length $C$ is achieved.
+We tested a range of values for beam width $B \in \{2, 4, 6, 8, 10\}$ and several values for $C \in \{7, 8, 9, 10, 11 \}$.
+Based on the CIDEr score, we chose to set $C=2$ and $C=9$.
+Note that $C$ is close to the average sentence length in ground-truth paragraphs (11.91).
 
 % write about minimal length control (showed better automatic results overall)
 % the same trend (vis+lang+att is the best) is present with no control for minimum length in diversity, but overall diversity is better for those without the control
@@ -563,42 +566,65 @@ Here, we define \textit{paragraph diversity} with two requirements: a generative
 
 \subsection{Metrics}
 
-\paragraph{Accuracy}
 Typically, a variety of n-gram based automatic metrics is used to measure the correctness/accuracy of image captions.
 Here, we evaluate our models across six different metrics: CIDEr \cite{vedantam2014cider}, METEOR \cite{meteor14}, and BLEU-\{1, 2, 3, 4\} \cite{bleu}.
-\nikolai{add a note about WMD and calculate WMD}
+To measure diversity, we report vocabulary size of our models and number of noun types generated in paragraphs to approximate how many unique objects are mentioned.
+We use spaCy \cite{spacy15} to identify nouns in the paragraphs.
+We also calculate self-BLEU \cite{Zhu2018selfbleu}, which sometimes referred to as mBleu \cite{Shetty2017}.
+This metric inspects how much one sentence resembles another.
+We calculate self-BLEU as follows: we split each generated paragraph into sentences and use one sentence as hypothesis and the other are regarded as references.
+Higher score indicates less diversity, e.g. more \textit{n}-gram matches between compared sentences.
 
-\paragraph{Diversity}
-Majority of the diversity metrics for image descriptions are based on calculating \textit{n}-gram statistics as well as comparing vocabulary size, POS usage etc.
-Here, we report vocabulary size of our models and also the number of unique nouns which are generated as an approximation of how many unique objects are mentioned in the paragraphs. We use spaCy \cite{spacy15} to identify nouns in generated paragraphs.
-We also calculate Self-BLEU \cite{Zhu2018selfbleu} or sometimes referred to as mBleu \cite{Shetty2017}.
-This metric has been specifically proposed to assess the similarity between two sentences, and it can be used to measure how much one sentence resembles another. This is in particular important for the paragraphs, in which sentences should not be very similar with each other.
-Higher self-Bleu indicates less diversity, e.g., more n-gram matches between sentences.
-We calculate Self-BLEU as follows: we split each generated paragraph into sentences and use one sentence as hypothesis and the others are regarded as references.
-Then, BLEU score is calculated for every sentence in every paragraph, and the average BLEU score over the paragraphs is used as the Self-BLEU score of the whole set.
+% word mover distance metric (?)
+
+%\paragraph{Diversity}
+%Majority of the diversity metrics for image descriptions are based on calculating \textit{n}-gram statistics as well as comparing vocabulary size, POS usage etc.
+%Here, we report vocabulary size of our models and also the number of unique nouns which are generated as an approximation of how many unique objects are mentioned in the paragraphs. We use spaCy \cite{spacy15} to identify nouns in generated paragraphs.
+%We also calculate Self-BLEU \cite{Zhu2018selfbleu} or sometimes referred to as mBleu \cite{Shetty2017}.
+%This metric has been specifically proposed to assess the similarity between two sentences, and it can be used to measure how much one sentence resembles another. This is in particular important for the paragraphs, in which sentences should not be very similar with each other.
+%Higher self-Bleu indicates less diversity, e.g., more n-gram matches between sentences.
+%We calculate Self-BLEU as follows: we split each generated paragraph into sentences and use one sentence as hypothesis and the others are regarded as references.
+%Then, BLEU score is calculated for every sentence in every paragraph, and the average BLEU score over the paragraphs is used as the Self-BLEU score of the whole set.
 
 \subsection{Results}
 
-\paragraph{Accuracy}
-As Table~\ref{tab:metrics} demonstrates, all our models which do not control for $C$ show similar performance and slightly underperform the model by \newcite{krause2016hierarchical} in all metrics except CIDEr.
-We believe that there are several reasons for such behaviour.
-First, our model slightly differs from the original hierarchical model: we do not use any pre-trained weights and do not learn to predict end of the paragraph.
-Also, we utilise attention in LSTM-based text generator, which, as has been shown by \newcite{liang2017recurrent} and \newcite{wang2019convolutional}, significantly boosts performance in terms of CIDEr score.
+As evaluated by automatic metrics in Table~\ref{tab:metrics}, our models which control for $C$ show only slightly better performance compared to the model by \newcite{krause2016hierarchical}.
+However, we gain on all scores when the model utilises semantic information (\textbf{IMG+LNG}, \textbf{IMG+LNG+ATT}), indicating that linguistic representations improve quality of generated paragraphs.
+Also, the models which do not control for parameter $C$ perform much worse than the models which are forced to generate a minimum number of words in a sentence.
+We explain it as follows: on average, $C\sp{-}$ models produce shorter sentences (ranging from 7.37 to 7.85 words) than the models with $C\sp{+}$ (from 10.10 to 10.18 words).
+Note that automatic metrics are dependent on ground-truth paragraphs, whose average sentence length is 11.91.
+Therefore, automatic metrics might simply favour the output of $C\sp{+}$ models due to the probability that the extra generated words cover more correct image objects.
 
-The visible trend is that models which are forced to generate at least $C$ words in a sentence perform much better, improving all accuracy-related scores.
-However, it is unclear whether this will have a positive affect on diversity measures as well: automatic evaluation metrics might be biased towards favouring longer sentences even if they are repetitive.
-\nikolai{ref!}
+However, it is unclear whether such behaviour has a positive effect on diversity of paragraphs: $C\sp{+}$ models might simply produce repetitive \textit{n}-grams.
+This might decrease the scores of diversity metrics, which mostly evaluate the \textit{n}-gram overlap between generated and ground-truth paragraphs.
+And indeed, as Table~\ref{tab:divs} demonstrates, $C\sp{-}$ models generally produce more diverse output in terms of vocabulary items than the $C\sp{+}$ models.
+Also, the model which incorporates linguistic information (\textbf{IMG+LNG+ATT}) performs the best in both settings ($C\sp{+}$ and $C\sp{-}$).
 
-We also conclude that adding modalities (IMG+LNG) somewhat improves scores by a small margin compared to using one of the two (either IMG or LNG).
-Also, attention seems to boost performance of either unimodal or multimodal systems.
-We note that image description systems might produce an accurate description, which does not necessarily correspond to the ground truth paragraph from the dataset, since there are multiple correct ways of describing an image.
-This would, in turn, affect the scores of automatic metrics, which compare generated descriptions with the ground truth ones, and, therefore, may not be good measures of accuracy.
+As previous work shows \cite{Caccia2018,Holtzman2019}, there is always a trade-off between \textit{quality} (accuracy) and \textit{diversity} of generated text.
+Here, we conclude that if generating more varied image paragraphs in terms of tokens is the ultimate goal, then using semantic information along with visual input benefits the diversity of generated paragraphs.
+At the same time, forcing the model to generate a particular number of words per sentence reduces the overall vocabulary diversity.
 
-Interestingly, LNG-based model performs slightly worse across almost all metrics.
-We believe that the quality of linguistic representations affects automatic scores, indicating that more complex linguistic representations are needed.
-Currently, language input is constructed from representations used to describe only specific regions in isolation.
-In the paragraph, however, these regions must be linked to each other to form a coherent whole.
-We leave experiments with such linguistics representations for the future work.
+
+%We note that image description systems might produce an accurate description, which does not necessarily correspond to the ground truth paragraph from the dataset, since there are multiple correct ways of describing an image.
+%This would, in turn, affect the scores of automatic metrics, which compare generated descriptions with the ground truth ones, and, therefore, may not be good measures of accuracy.
+
+
+%As Table~\ref{tab:metrics} demonstrates, all our models which do not control for $C$ show similar performance and slightly underperform the model by \newcite{krause2016hierarchical} in all metrics except CIDEr.
+%We believe that there are several reasons for such behaviour.
+%First, our model slightly differs from the original hierarchical model: we do not use any pre-trained weights and do not learn to predict end of the paragraph.
+%Also, we utilise attention in LSTM-based text generator, which, as has been shown by \newcite{liang2017recurrent} and \newcite{wang2019convolutional}, significantly boosts performance in terms of CIDEr score.
+
+%The visible trend is that models which are forced to generate at least $C$ words in a sentence perform much better, improving all accuracy-related scores.
+%However, it is unclear whether this will have a positive affect on diversity measures as well: automatic evaluation metrics might be biased towards favouring longer sentences even if they are repetitive.
+
+%We also conclude that adding modalities (IMG+LNG) somewhat improves scores by a small margin compared to using one of the two (either IMG or LNG).
+%Also, attention seems to boost performance of either unimodal or multimodal systems.
+
+%Interestingly, LNG-based model performs slightly worse across almost all metrics.
+%We believe that the quality of linguistic representations affects automatic scores, indicating that more complex linguistic representations are needed.
+%Currently, language input is constructed from representations used to describe only specific regions in isolation.
+%In the paragraph, however, these regions must be linked to each other to form a coherent whole.
+%We leave experiments with such linguistics representations for the future work.
 
 \iffalse
 \begin{table*}[h]
@@ -627,16 +653,6 @@ We leave experiments with such linguistics representations for the future work.
     \label{tab:stats}
 \end{table*}
 \fi
-
-\paragraph{Diversity}
-Note that our goal is to show that purely visually dependent models are less diverse than models which incorporate additional sources of information such as semantic information about objects or use attention.
-As Table ~\ref{tab:divs} demonstrates, the model which uses both modalities and attention generates most diverse paragraphs compared to outputs of the other models.
-It generates more unique nouns, has bigger vocabulary size and better self-BLEU scores.
-However, it still performs much worse than the human-generated paragraphs.
-Based on the self-BLEU scores for models which are forced to generate at least $C$ words, we conclude that these models tend to generate the same \textit{n}-grams more often.
-Therefore, these models suffer from repetitiveness on word level, and do not conform with our criteria for paragraph diversity.
-
-\nikolai{a note about the effect of minimal length on accuracy and diversity}
 
 % SD 2020-07-09 16:11:33 +0200: The diversity should be **lagom** not too little diverse and not overly divserse given human-generated descriptions.
 

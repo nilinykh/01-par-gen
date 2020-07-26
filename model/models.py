@@ -25,13 +25,11 @@ class Attention(nn.Module):
                  vision_dim,
                  attention_dim,
                  use_vision,
-                 use_language,
-                 use_multimodal):
+                 use_language):
         super(Attention, self).__init__()
         
         self.use_vision = use_vision
         self.use_language = use_language
-        self.use_multimodal = use_multimodal
         
         self.hidden_mapping = nn.Linear(hidden_dim, attention_dim)
         
@@ -39,25 +37,25 @@ class Attention(nn.Module):
         self.softmax = nn.Softmax(dim=1)
         
         # vision only
-        if self.use_vision and not self.use_multimodal:
+        if self.use_vision and not self.use_language:
             self.vision_full_att = nn.Linear(attention_dim, 1)
         # language only
-        elif self.use_language and not self.use_multimodal:
+        elif self.use_language and not self.use_vision:
             self.language_full_att = nn.Linear(attention_dim, 1)
         # multimodal
-        elif self.use_multimodal:
+        elif self.use_vision and self.use_language:
             self.vision_mapping = nn.Linear(vision_dim, attention_dim)
             self.language_mapping = nn.Linear(language_dim, attention_dim)
             self.vision_full_att = nn.Linear(attention_dim, 1)
             self.language_full_att = nn.Linear(attention_dim, 1)
-            self.fusion = nn.Linear(512 + 4096, 512)
+            self.fusion = nn.Linear(1024, 512)
         
     def forward(self, language, vision, hidden):
         
         hidden = hidden.unsqueeze(1)
         hidden_map = self.hidden_mapping(hidden)
 
-        if self.use_vision and not self.use_multimodal:
+        if self.use_vision and not self.use_language:
             visual_map = vision
             vis_att = self.vision_full_att(self.tanh(hidden_map + visual_map))
             alpha_vision = self.softmax(vis_att)
@@ -65,7 +63,7 @@ class Attention(nn.Module):
             vision_weighted_encoding = (vision * alpha_vision).sum(dim=1)
             return vision_weighted_encoding, alpha_text, alpha_vision
         
-        if self.use_language and not self.use_multimodal:
+        elif self.use_language and not self.use_vision:
             text_map = language
             text_att = self.language_full_att(self.tanh(hidden_map + text_map))
             alpha_text = self.softmax(text_att)
@@ -73,7 +71,7 @@ class Attention(nn.Module):
             text_weighted_encoding = (language * alpha_text).sum(dim=1)
             return text_weighted_encoding, alpha_text, alpha_vision
             
-        if self.use_multimodal:
+        elif self.use_language and self.use_vision:
             text_map = language
             visual_map = vision
             text_att = self.language_full_att(self.tanh(hidden_map + text_map))
@@ -98,19 +96,19 @@ class RegPool(nn.Module):
         self.use_attention = args.use_attention
         self.use_language = args.use_language
         self.use_vision = args.use_vision
-        self.use_multimodal = args.use_multimodal
         
-        if (self.use_vision and not self.use_language and not self.use_multimodal) or \
+        if (self.use_vision and not self.use_language) or \
            (self.use_vision and not self.use_language and self.use_attention):
             self.vision_mapping = nn.Linear(self.feat_dim, self.hidden_size)
             self.vision_mapping.apply(self.__init_weights)
             
-        elif (self.use_language and not self.use_vision and not self.use_multimodal) or \
+        elif (self.use_language and not self.use_vision) or \
              (self.use_language and not self.use_vision and self.use_attention):
             self.language_mapping = nn.Linear(self.hidden_size, self.hidden_size)
             self.language_mapping.apply(self.__init_weights)
             
-        else:
+        elif (self.use_language and self.use_vision) or \
+             (self.use_language and self.use_vision and self.use_attention):
             self.vision_mapping = nn.Linear(self.feat_dim, self.hidden_size)
             self.language_mapping = nn.Linear(self.hidden_size, self.hidden_size)
             self.vision_mapping.apply(self.__init_weights)
@@ -137,15 +135,16 @@ class RegPool(nn.Module):
                 mean_phrase = summed_phrase.div(this_phrase_length)
                 language_normalised[img_num, reg_num, :] = mean_phrase
         
-        if (self.use_vision and not self.use_language and not self.use_multimodal) or \
+        if (self.use_vision and not self.use_language) or \
            (self.use_vision and not self.use_language and self.use_attention):
             visual_map = self.vision_mapping(vision)
             language_map = language_normalised
-        elif (self.use_language and not self.use_vision and not self.use_multimodal) or \
+        elif (self.use_language and not self.use_vision) or \
              (self.use_language and not self.use_vision and self.use_attention):
             language_map = self.language_mapping(language_normalised)
             visual_map = vision
-        else:
+        elif (self.use_language and self.use_vision) or \
+             (self.use_language and self.use_vision and self.use_attention):
             visual_map = self.vision_mapping(vision)
             language_map = self.language_mapping(language_normalised)
         return language_map, visual_map
@@ -162,7 +161,6 @@ class SentenceRNN(nn.Module):
         self.use_attention = args.use_attention
         self.use_vision = args.use_vision
         self.use_language = args.use_language
-        self.use_multimodal = args.use_multimodal
         
         if self.use_attention:
             self.non_lin = nn.ReLU()
@@ -171,14 +169,13 @@ class SentenceRNN(nn.Module):
                                        self.feat_dim,
                                        self.hidden_size,
                                        self.use_vision,
-                                       self.use_language,
-                                       self.use_multimodal)
+                                       self.use_language)
             self.sentence_rnn = nn.LSTMCell(input_size=self.hidden_size, hidden_size=self.hidden_size)
             self.f_beta = nn.Linear(self.hidden_size, self.hidden_size)
             self.sigmoid = nn.Sigmoid()
             
         elif not self.use_attention:
-            if (self.use_vision and self.use_language) or self.use_multimodal:
+            if (self.use_vision and self.use_language):
                 self.sentence_rnn = nn.LSTM(input_size=self.hidden_size*2, hidden_size=self.hidden_size, batch_first=True)
             else:
                 self.sentence_rnn = nn.LSTM(input_size=self.hidden_size, hidden_size=self.hidden_size, batch_first=True)
@@ -233,11 +230,11 @@ class SentenceRNN(nn.Module):
                 #alphas[:, step, :][:batch_size_step] = alpha
         else:
             # max-pooling instead of attention
-            if self.use_vision and not self.use_language and not self.use_multimodal:
+            if self.use_vision and not self.use_language:
                 sentence_input_vector = torch.max(vision, dim=2).values
-            elif self.use_language and not self.use_vision and not self.use_multimodal:
+            elif self.use_language and not self.use_vision:
                 sentence_input_vector = torch.max(language, dim=2).values
-            else:
+            elif self.use_language and self.use_vision:
                 vision_input = torch.max(vision, dim=2).values
                 language_input = torch.max(language, dim=2).values
                 sentence_input_vector = torch.cat((language_input, vision_input), dim=2)

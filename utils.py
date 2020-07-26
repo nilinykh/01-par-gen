@@ -666,7 +666,7 @@ def block_ngram_repeats(cur_len, log_probs, curr_sequence):
 
 
 def ensure_min_length(leng, log_probs, eos_token):
-    min_length = 10 + 2
+    min_length = 9 + 2
     if leng <= min_length:
         log_probs[:, eos_token] = -1e20
     return log_probs

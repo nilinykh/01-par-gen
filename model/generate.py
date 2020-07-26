@@ -114,7 +114,7 @@ def main(args):
     
     # POINT
     res_fname = str(args.model_gen).split('/')[0]
-    with open(f'./scores/res-{res_fname}-{args.decoding_strategy}_{args.beam}.json', 'w') as j:
+    with open(f'./scores/res-{res_fname}-{args.decoding_strategy}_{args.beam}_minlength9.json', 'w') as j:
         j.write(f'BLEU 1 \t {b1} \n')
         j.write(f'BLEU 2 \t {b2} \n')
         j.write(f'BLEU 3 \t {b3} \n')
@@ -416,7 +416,7 @@ def generate(val_loader,
     
     # POINT
     res_fname = str(args.model_gen).split('/')[0]
-    with open(f'./scores/{res_fname}-{args.decoding_strategy}_{args.beam}.json', 'w') as f:
+    with open(f'./scores/{res_fname}-{args.decoding_strategy}_{args.beam}_minlength9.json', 'w') as f:
         json.dump(paragraphs_generated, f)
         
     return Bleu_1, Bleu_2, Bleu_3, Bleu_4, CIDEr, METEOR, SPICE, wmd

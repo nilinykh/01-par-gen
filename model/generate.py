@@ -200,23 +200,25 @@ def generate(val_loader,
             generated = []
             actual = []
             
-            language, vision = encoder(image_features, phrase_scores, phrase_lengths)   
-            
+            language, vision = encoder(image_features, phrase_scores, phrase_lengths)
             topics = torch.zeros(args.batch_size, args.max_sentences, 512).to(device)
             
             if not args.use_attention:
                 
+                language = language.unsqueeze(1).expand(-1, args.max_sentences, -1, -1)
+                vision = vision.unsqueeze(1).expand(-1, args.max_sentences, -1, -1)
+                
                 # max-pooling instead of attention
-                if args.use_vision and not args.use_language and not args.use_multimodal:
+                if args.use_vision and not args.use_language:
                     sentence_input_vector = torch.max(vision, dim=1).values.unsqueeze(1)
-                elif args.use_language and not args.use_vision and not args.use_multimodal:
-                    sentence_input_vector = torch.max(language, dim=1).values.unsqueeze(1)
-                else:
-                    vision_input = torch.max(vision, dim=1).values
-                    language_input = torch.max(language, dim=1).values
-                    sentence_input_vector = torch.cat((language_input, vision_input), dim=1).unsqueeze(1)
-                input_feats = sentence_input_vector.expand(-1, args.max_sentences, -1)
-                topics, (_, _) = sentence_decoder.sentence_rnn(input_feats)
+                elif args.use_language and not args.use_vision:
+                    sentence_inp
+                    ut_vector = torch.max(language, dim=1).values.unsqueeze(1)
+                elif args.use_language and args.use_vision:
+                    vision_input = torch.max(vision, dim=2).values
+                    language_input = torch.max(language, dim=2).values
+                    sentence_input_vector = torch.cat((language_input, vision_input), dim=2)
+                topics, (_, _) = sentence_decoder.sentence_rnn(sentence_input_vector)
                     
             if args.use_attention:
               
@@ -233,22 +235,34 @@ def generate(val_loader,
                 alphas = torch.zeros(args.batch_size, args.max_sentences, args.num_boxes).to(device)
                                 
                 for step in range(args.max_sentences):
+                    #print(step)
                     
                     if caplens.squeeze()[step].item() != 0:
-
-                        attention_topic, alpha_text, alpha_vision = sentence_decoder.attention(language, vision,
-                                                                                               hidden_previous)
-                        gate = sentence_decoder.sigmoid(sentence_decoder.f_beta(hidden_previous))
-                        context = gate * attention_topic
                         
+                        hidden_map = hidden_previous.unsqueeze(1)
+                        hidden_map = sentence_decoder.attention.hidden_mapping(hidden_map)
+                        
+                        if args.use_vision and args.use_vision:
+                        
+                            text_att = sentence_decoder.attention.language_full_att(sentence_decoder.attention.tanh(hidden_map + language))
+                            vis_att = sentence_decoder.attention.vision_full_att(sentence_decoder.attention.tanh(hidden_map + vision))
+                            alpha_text = sentence_decoder.attention.softmax(text_att)
+                            alpha_vision = sentence_decoder.attention.softmax(vis_att)
+                            text_weighted_encoding = (language * alpha_text).sum(dim=1)
+                            vision_weighted_encoding = (vision * alpha_vision).sum(dim=1)
+                            multimodal_concat = torch.cat((text_weighted_encoding, vision_weighted_encoding), dim=1)
+
+                        #print('alpha_text', alpha_text, alpha_text.shape)
+                        #print('alpha vision', alpha_vision, alpha_vision.shape)
+                                                
+                        gate = sentence_decoder.sigmoid(sentence_decoder.f_beta(hidden_previous))
+
+                        context = gate * multimodal_concat
+
                         hidden_previous, cell_previous = sentence_decoder.sentence_rnn(context,
                                                                                        (hidden_previous, cell_previous))
                         
                         topics[:, step, :] = hidden_previous
-                        
-                        #alphas[:, step, :] = alpha
-                        #attention_plot[step, :] = alphas[:, step].cpu().numpy()
-                        #att_plot_sentence_labels.append('S{step}')
 
 
             for t in range(args.max_sentences):

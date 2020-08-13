@@ -48,7 +48,6 @@ class Attention(nn.Module):
             self.language_mapping = nn.Linear(language_dim, attention_dim)
             self.vision_full_att = nn.Linear(attention_dim, 1)
             self.language_full_att = nn.Linear(attention_dim, 1)
-            self.fusion = nn.Linear(1024, 512)
         
     def forward(self, language, vision, hidden):
         
@@ -81,8 +80,7 @@ class Attention(nn.Module):
             text_weighted_encoding = (language * alpha_text).sum(dim=1)
             vision_weighted_encoding = (vision * alpha_vision).sum(dim=1)
             multimodal_concat = torch.cat((text_weighted_encoding, vision_weighted_encoding), dim=1)
-            fused_vector = self.tanh(self.fusion(multimodal_concat))
-            return fused_vector, alpha_text, alpha_vision
+            return multimodal_concat, alpha_text, alpha_vision
 
 
 class RegPool(nn.Module):
@@ -170,8 +168,8 @@ class SentenceRNN(nn.Module):
                                        self.hidden_size,
                                        self.use_vision,
                                        self.use_language)
-            self.sentence_rnn = nn.LSTMCell(input_size=self.hidden_size, hidden_size=self.hidden_size)
-            self.f_beta = nn.Linear(self.hidden_size, self.hidden_size)
+            self.sentence_rnn = nn.LSTMCell(input_size=self.hidden_size*2, hidden_size=self.hidden_size)
+            self.f_beta = nn.Linear(self.hidden_size, self.hidden_size*2)
             self.sigmoid = nn.Sigmoid()
             
         elif not self.use_attention:

@@ -1,0 +1,156 @@
+<!-- You must include this JavaScript file -->
+<script src="https://assets.crowd.aws/crowd-html-elements.js"></script>
+
+<!-- For the full list of available Crowd HTML Elements and their input/output documentation,
+      please refer to https://docs.aws.amazon.com/sagemaker/latest/dg/sms-ui-template-reference.html -->
+
+
+
+<style>
+
+#wrapper {
+  max-width: 100vw;
+  max-height: 100vh;
+  overflow: scroll;
+  padding-top: 1em;
+  padding-bottom: 1em;
+  border: 1px solid #32CD32;
+}
+
+</style>
+
+<!-- You must include crowd-form so that your task submits answers to MTurk -->
+<crowd-form answer-format="flatten-objects">
+
+  <crowd-instructions link-text="View instructions" link-type="button">
+    <short-summary>
+      <p>Given an image and text that describes this image, answer the questions about the description.</p>
+    </short-summary>
+
+    <detailed-instructions>
+      <h3>Detailed Instructions</h3>
+        <p>In general, you are required to judge image description based on three questions:</p>
+          <ol>
+              <li><b>general understanding</b>: is it a clear description?</li>
+              <li><b>structure</b>: does its structure make it easy to read?</li>
+              <li><b>depth</b>: does it describe image in detail?</li>
+          </ol>
+        <p> After answering the questions, you can enter any additional feedback you have for us in the corresponding feedback field (right after the survey). If you think that it was hard to answer some of the questions, please use the feedback field to tell us your thoughts.</p>
+        <p> Please try to be as objective as possible.</p>
+        <p> Important: you must choose only ONE answer per section (there are three available answers per section). Be attentive and follow this rule carefully. </p>
+    </detailed-instructions>
+
+    <positive-example>
+      <p>
+          <b> Image: </b> <br>
+          <img src="https://cs.stanford.edu/people/rak248/VG_100K_2/2386780.jpg" alt="Trulli" width="300" height="220">
+      </p>
+      <p>
+          <b> Description: </b> <br>
+          a man with the black bike is standing in front of the house.<br>
+          the man is wearing a brown jacket and a small cap.<br>
+          the house behind the man is white with many windows.<br>
+      </p>     
+        <p> <b> Why is it a good description? </b> </p>
+        <p> The description depicts a lot of salient details about objects (colour, position of objects). It also reads well, properly describing objects without unnecessary repetitions.
+        It nicely covers most of the image objects and can be judged as a full and coherent description; its sentences logically follow each other.</p>
+    </positive-example>
+
+    <negative-example>
+      <p>
+          <b> Image: </b> <br>
+          <img src="https://cs.stanford.edu/people/rak248/VG_100K/2354861.jpg" alt="Trulli" width="300" height="220">
+      </p>
+      <p>
+          <b> Description: </b> <br>
+          a woman is on the skateboard in the air.<br>
+          there are many trees and cars around him.<br>
+          some cars are white.<br>
+          some cars are green.<br>
+      </p>     
+        <p> <b> Why is it a bad description? </b> </p>
+        <p> The description depicts only a number of objects. It can be more detailed (mention clothes, discriminate between cars) and should be more accurate (there are no trees around, it is a boy in the iamge). Also, its structure seems to be a bit unnatural (last two sentences differ by a single word only). Generally, the text is not detailed enough to describe the image properly (though it mentions some of the objects), its coherence is suffering.</p>
+    </negative-example>
+      
+  </crowd-instructions>
+    
+    <br> <br>
+    
+    <p style="color:red"> <b> IMAGE </b> </p> <br>
+    <img src="${Image}" style="width:40%" />
+    
+    <br> <br>
+    
+    <p style="color:red"> <b> DESCRIPTION </b> </p>
+    <div id="wrapper"> <strong> ${Paragraph} </strong> </div>
+    
+    <hr>
+    <p> For each section below, please choose <b> one </b> of the three answers presented.</p>
+    <hr>
+                    
+  <div>
+       <p style="color:blue"> <b> Section 1: Naturalness of description </b> </p>
+    <crowd-checkbox name="NaturalText1"> The text sounds natural, mostly correctly describing the visual scene. </crowd-checkbox>
+      <br>
+    <crowd-checkbox name="NaturalText2"> The text seems somewhat natural, with several unusual/strange/wrong mentions of objects, attributes, etc. </crowd-checkbox>
+      <br>
+    <crowd-checkbox name="NaturalText3"> The text sounds unnatural, consisting of inaccurate descriptions/descriptions out of place. </crowd-checkbox>  
+      <br>
+  </div>
+
+    <hr>
+    
+  <div>
+       <p style="color:blue"> <b> Section 2: Text Coherence </b> </p>
+    <crowd-checkbox name="TextCoherence1"> The text is coherent; it nicely describes the image. </crowd-checkbox>
+      <br>
+    <crowd-checkbox name="TextCoherence2"> The text is somewhat coherent with some parts of it sounding incoherent, ill-logical or semantically inconsistent. </crowd-checkbox>
+      <br>
+    <crowd-checkbox name="TextCoherence3"> The text is incoherent; there are no connections between sentences, which makes it hard to understand the text. </crowd-checkbox>  
+      <br>
+  </div>
+  
+    <hr>
+    
+  <div>
+       <p style="color:blue"> <b> Section 3: Word Choice </b> </p>
+    <crowd-checkbox name="WordChoice1"> The words in the text are chosen accurately and properly. </crowd-checkbox>
+      <br>
+    <crowd-checkbox name="WordChoice2"> Some words are poorly chosen (there are better alternatives). Still, overall, the choice of words is acceptable to say that the text describes this image well. </crowd-checkbox>
+      <br>
+    <crowd-checkbox name="WordChoice3"> Majority of the description words do not fit the image description (wrong words, non-present object/attribute, etc.) or make it sound unnatural. </crowd-checkbox>  
+      <br>
+  </div>    
+  
+    <hr>
+    
+  <div>
+       <p style="color:blue"> <b> Section 4: Syntactic Structure </b> </p>
+    <crowd-checkbox name="WordChoice1"> The sentence structure is natural, making texts easy to read.</crowd-checkbox>
+      <br>
+    <crowd-checkbox name="WordChoice2"> Some sentences’ structure is wrong/strange, but, in general, the text is understandable.</crowd-checkbox>
+      <br>
+    <crowd-checkbox name="WordChoice3"> Sentences consist of unnatural/wrong syntactic constructions; the text is hard to read/understand. </crowd-checkbox>  
+      <br>
+  </div>       
+  
+    <hr>
+    
+  <div>
+       <p style="color:blue"> <b> Section 5: Scene Coverage </b> </p>
+    <crowd-checkbox name="SceneCoverage1"> The text covers most of the scene, describing a variety of objects, attributes, etc.</crowd-checkbox>
+      <br>
+    <crowd-checkbox name="SceneCoverage2"> The text mostly includes descriptions of the scene as a whole but tends to focus on particular objects more.</crowd-checkbox>
+      <br>
+    <crowd-checkbox name="SceneCoverage3"> The text focuses on describing a single object in an image with some mentions of other objects. </crowd-checkbox>  
+      <br>
+  </div>        
+    
+    <hr>
+    
+  <div>
+    <p>Write you feedback in the field below:</p>
+    <crowd-text-area name="feedback" rows="5" placeholder="Your feedback here..."></crowd-text-area>
+  </div>
+    
+</crowd-form>

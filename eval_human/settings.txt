@@ -3,26 +3,26 @@ INSTRUCTIONS:
 ============
 
 Short Summary:
-You are going to be shown an image and text that describes the image. <br>
-Then you will see several statements about this image description. <br> <br>
-Please rate each of them by moving the cursor along the corresponding sliding scale
-(0% stands for ‘does not agree’, 100% stands for ‘fully agree’).
+You are going to be shown an image and several sentences describing the image. <br>
+Below you will see statements that relate to the image descriptions. <br> <br>
+Please rate each of these statements by moving the slider along the scale where
+0% stands for ‘I do not agree’, 100% stands for ‘I fully agree’.
 
 Detailed Instructions:
 <detailed-instructions>
   <h3>Detailed Instructions</h3>
-    <p>In general, you are required to judge image description based on the following:</p>
+    <p>In general, you are required to judge image descriptions based on the following:</p>
       <ol>
-          <li><b>choice of words</b>: does the text accurately describe image objects?</li>
-          <li><b>importance</b>: does the text describe important objects?</li>
-          <li><b>structure</b>: does the text have a good sentence structure?</li>
-          <li><b>coherence</b>: does the text form a good logical story?</li>
+          <li><b>choice of words</b>: does the text correctly describe objects and events in the scene and with the right detail?</li>
+          <li><b>relevance</b>: does the text describe relevant objects and events in the scene?</li>
+          <li><b>sentence structure</b>: do the sentences have a good and grammatical structure?</li>
+          <li><b>coherence</b>: does the text progreess in a natural way forming a narrative?</li>
       </ol>
-    <p> After answering the questions, you can enter any additional feedback you have for us in the corresponding feedback field (right after the survey). If you think that it was hard to answer some of the questions, please use the feedback field to tell us your thoughts.</p>
-    <p> Please try to be as objective as possible.</p>
+    <p>You can enter any feedback you have for us, for example if some questions were not easy to answer, in the corresponding feedback field (right after the survey).</p>
+    <p> Please try to be as objective as possible.</p> <!--- SD: actually, we want them to be subjective -->
 </detailed-instructions>
 
-Good Examples:
+Good descriptions:
 
 <positive-example>
   <p>
@@ -36,13 +36,13 @@ Good Examples:
       the house behind the man is white with many windows.<br>
   </p>
     <p> <b> Why is it a good description? </b> </p>
-    <p>This is a good image description because it describes image objects accurately with correct words.
-    The description is focused mostly on the important details: a man with the black bike, man's clothes, some of the surroundings.
-   The sentences are well-structured because each of them introduces some new piece of information and does it without errors.
-  Overall, the text forms a good story, which flows well.</p>
+    <p>This is a good image description because it describes objects and events in the image with correct words and the right detail.
+    The description is focused on the relevant parts of the scene, what the image is about: a man with the black bike, man's clothes, some of the surroundings.
+   The sentences are grammatical and well-structured. Each of them introduces some new piece of information in a natural order.
+  Overall, the text forms a good narrative or story which flows well.</p>
     </positive-example>
 
-Bad Examples:
+Bad descriptions:
 
 <negative-example>
   <p>
@@ -57,28 +57,25 @@ Bad Examples:
       some trees are green.<br>
   </p>
     <p> <b> Why is it a bad description? </b> </p>
-    <p> This is a bad image description because it is describing objects, which are not in the image ('woman' instead of 'boy',
-      non-present 'trees'). It also focuses on unimportant parts of the image (cars, surrounding) without describing a boy in detail,
-      which seems to be important. The sentences are not that well-structured, because some of them are redundant (multiple descriptions of cars).
-      The story that the description tells is not that good,
-    because it is pretty non-informative, very general and not detailed enough.</p>
+    <p> This is a bad image description because it is referring to objects that are not in the scene ('woman' instead of 'boy',
+      not-present 'trees'). It focuses on unimportant parts of the scene (cars, surroundings) without describing the important parts, e.g. the boy. The sentences have a good strcuture and are grammatical. However, they are not well-connected: some of them are redundant (multiple descriptions of cars) and therefore the story that the descriptions tells is very general and uninformative.</p>
 </negative-example>
 
 Then, there is an image and its paragraph description.
 
 
-How much do you agree with the following statements?
+How well do you agree with the following statements?
 
-The image description contains words that correctly refer to the objects in the image.
+The description contains words that correctly refer to the objects and events in the image.
 0 - 100 (scale)
 
-The image description is referring to the relevant/important parts of the image.
+The description is referring to the relevant/important parts of the image.
 0 - 100 (scale)
 
-The image description consists of well-structured sentences.
+The sentences have a correct structure and are grammatical.
 0 - 100 (scale)
 
-Image description's sentences are well-connected and form a single story.
+The sentences are well-connected and form a single story.
 0 - 100 (scale)
 
 =======

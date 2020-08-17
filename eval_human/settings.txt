@@ -3,16 +3,24 @@ INSTRUCTIONS:
 ============
 
 Short Summary:
-Given an image and text that describes this image, answer the questions about the description.
+You are going to be shown an image and text that describes the image. <br>
+Then you will see several statements about this image description. <br> <br>
+Please rate each of them by moving the cursor along the corresponding sliding scale
+(0% stands for ‘does not agree’, 100% stands for ‘fully agree’).
 
 Detailed Instructions:
-In general, you are required to judge image description based on three questions:
-    general understanding: is it a clear description?
-    structure: does its structure make it easy to read?
-    depth: does it describe the image in detail?
-After answering the questions, you can enter any additional feedback you have for us in the corresponding feedback field (right after the survey). If you think that it was hard to answer some of the questions, please use the feedback field to tell us your thoughts.
-Please try to be as objective as possible.
-Important: you must choose only ONE answer per section (there are three available answers per section). Be attentive and follow this rule carefully.
+<detailed-instructions>
+  <h3>Detailed Instructions</h3>
+    <p>In general, you are required to judge image description based on the following:</p>
+      <ol>
+          <li><b>choice of words</b>: does the text accurately describe image objects?</li>
+          <li><b>importance</b>: does the text describe important objects?</li>
+          <li><b>structure</b>: does the text have a good sentence structure?</li>
+          <li><b>coherence</b>: does the text form a good logical story?</li>
+      </ol>
+    <p> After answering the questions, you can enter any additional feedback you have for us in the corresponding feedback field (right after the survey). If you think that it was hard to answer some of the questions, please use the feedback field to tell us your thoughts.</p>
+    <p> Please try to be as objective as possible.</p>
+</detailed-instructions>
 
 Good Examples:
 
@@ -26,11 +34,13 @@ Good Examples:
       a man with the black bike is standing in front of the house.<br>
       the man is wearing a brown jacket and a small cap.<br>
       the house behind the man is white with many windows.<br>
-  </p>     
+  </p>
     <p> <b> Why is it a good description? </b> </p>
-    <p> The description depicts a lot of salient details about objects (colour, position of objects). It also reads well, properly describing objects without unnecessary repetitions.
-    It nicely covers most of the image objects and can be judged as a full and coherent description; its sentences logically follow each other.</p>
-</positive-example>
+    <p>This is a good image description because it describes image objects accurately with correct words.
+    The description is focused mostly on the important details: a man with the black bike, man's clothes, some of the surroundings.
+   The sentences are well-structured because each of them introduces some new piece of information and does it without errors.
+  Overall, the text forms a good story, which flows well.</p>
+    </positive-example>
 
 Bad Examples:
 
@@ -42,48 +52,44 @@ Bad Examples:
   <p>
       <b> Description: </b> <br>
       a woman is on the skateboard in the air.<br>
-      there are many trees and cars around him.<br>
+      there are many trees and white cars around him.<br>
       some cars are white.<br>
-      some cars are green.<br>
-  </p>     
+      some trees are green.<br>
+  </p>
     <p> <b> Why is it a bad description? </b> </p>
-    <p> The description depicts only a number of objects. It can be more detailed (mention clothes, discriminate between cars) and should be more accurate (there are no trees around, it is a boy in the iamge). Also, its structure seems to be a bit unnatural (last two sentences differ by a single word only). Generally, the text is not detailed enough to describe the image properly (though it mentions some of the objects), its coherence is suffering.</p>
+    <p> This is a bad image description because it is describing objects, which are not in the image ('woman' instead of 'boy',
+      non-present 'trees'). It also focuses on unimportant parts of the image (cars, surrounding) without describing a boy in detail,
+      which seems to be important. The sentences are not that well-structured, because some of them are redundant (multiple descriptions of cars).
+      The story that the description tells is not that good,
+    because it is pretty non-informative, very general and not detailed enough.</p>
 </negative-example>
 
 Then, there is an image and its paragraph description.
 
-Then, there are the following sections with questions:
 
-Section 1: Naturalness of description
-    1. The text sounds natural, mostly correctly describing the visual scene.
-    2. The text seems somewhat natural/logical, with several unusual/strange/wrong mentions of objects, attributes, etc.
-    3. The text sounds unnatural, consisting of inaccurate descriptions/descriptions out of place.
-    
-Section 2: Text Coherence
-    1. The text is coherent; it coherently describes the image.
-    2. The text is somewhat coherent with some parts of it sounding incoherent, ill-logical or semantically inconsistent.
-    3. The text is incoherent; there are no connections between sentences, which makes it hard to understand the text.
+How much do you agree with the following statements?
 
-Section 3: Choice of words
-    1. The words in the text are chosen accurately.
-    2. Some words are poorly chosen (there are better alternatives). Still, overall, the choice of words is acceptable to say that the text describes this image well.
-    3. Majority of the description words do not fit the image description (wrong word, non-present object/attribute, etc.) or make it sound unnatural.
-    
-Section 4: Syntactic Structure
-    1. The sentence structure is natural, making texts easy to read.
-    2. Some sentences’ structure is wrong/strange, but, in general, the text is understandable.
-    3. Sentences consist of unnatural/wrong syntactic constructions; the text is hard to read/understand.
+The image description contains words that correctly refer to the objects in the image.
+0 - 100 (scale)
 
-Section 5: Scene Coverage
-    1. The text covers most of the scene, describing various objects, attributes, etc.
-    2. The text mostly includes descriptions of the scene as a whole but tends to focus on particular objects more.
-    3. The text focuses on describing a single object in an image with some mentions of other objects.
+The image description is referring to the relevant/important parts of the image.
+0 - 100 (scale)
 
+The image description consists of well-structured sentences.
+0 - 100 (scale)
+
+Image description's sentences are well-connected and form a single story.
+0 - 100 (scale)
 
 =======
 PRICING
 =======
+
+Human Evaluation Testing:
+Pick 50 images and test their paragraphs for all six models.
+Price: 50 * 6 * 0.06 = 18$.
+
 There are 2489 image-paragraph pairs for six models.
-1. Pick 20% of images randomly from the test set (500 images).
+1. Pick 10% of images randomly from the test set (250 images).
 2. Price per HIT: 0.05$ (fee: 0.01$).
-3. For six models: 0.06 * 500 * 6 = 180$.
+3. For six models: 0.06 * 250 * 6 = 90$.

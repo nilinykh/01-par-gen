@@ -24,24 +24,24 @@
   <crowd-instructions link-text="View instructions" link-type="button">
     <short-summary>
       <p>
-      You are going to be shown an image and text that describes the image. <br>
-      Then you will see several statements about this image description. <br> <br>
-      Please rate each of them by moving the cursor along the corresponding sliding scale
-      (0% stands for ‘does not agree’, 100% stands for ‘fully agree’).
+        You are going to be shown an image and several sentences describing the image. <br>
+        Below you will see statements that relate to the image descriptions. <br> <br>
+        Please rate each of these statements by moving the slider along the scale where
+        0% stands for ‘I do not agree’, 100% stands for ‘I fully agree’.
       </p>
     </short-summary>
 
     <detailed-instructions>
       <h3>Detailed Instructions</h3>
-        <p>In general, you are required to judge image description based on the following:</p>
+        <p>In general, you are required to judge image descriptions based on the following:</p>
           <ol>
-              <li><b>choice of words</b>: does the text accurately describe image objects?</li>
-              <li><b>importance</b>: does the text describe important objects?</li>
-              <li><b>structure</b>: does the text have a good sentence structure?</li>
-              <li><b>coherence</b>: does the text form a good logical story?</li>
+              <li><b>choice of words</b>: does the text correctly describe objects and events in the scene and with the right detail?</li>
+              <li><b>relevance</b>: does the text describe relevant objects and events in the scene?</li>
+              <li><b>sentence structure</b>: do the sentences have a good and grammatical structure?</li>
+              <li><b>coherence</b>: does the text progreess in a natural way forming a narrative?</li>
           </ol>
-        <p> After answering the questions, you can enter any additional feedback you have for us in the corresponding feedback field (right after the survey). If you think that it was hard to answer some of the questions, please use the feedback field to tell us your thoughts.</p>
-        <p> Please try to be as objective as possible.</p>
+        <p>You can enter any feedback you have for us, for example if some questions were not easy to answer, in the corresponding feedback field (right after the survey).</p>
+        <p> Please try to be as objective as possible.</p> <!--- SD: actually, we want them to be subjective -->
     </detailed-instructions>
 
     <positive-example>
@@ -56,31 +56,30 @@
           the house behind the man is white with many windows.<br>
       </p>
         <p> <b> Why is it a good description? </b> </p>
-        <p>This is a good image description because it describes image objects accurately with correct words.
-        The description is focused mostly on the important details: a man with the black bike, man's clothes, some of the surroundings.
-       The sentences are well-structured because each of them introduces some new piece of information and does it without errors.
-      Overall, the text forms a good story, which flows well.</p>
+        <p>This is a good image description because it describes objects and events in the image with correct words and the right detail.
+        The description is focused on the relevant parts of the scene, what the image is about: a man with the black bike, man's clothes, some of the surroundings.
+       The sentences are grammatical and well-structured. Each of them introduces some new piece of information in a natural order.
+      Overall, the text forms a good narrative or story which flows well.</p>
         </positive-example>
 
-    <negative-example>
-      <p>
-          <b> Image: </b> <br>
-          <img src="https://cs.stanford.edu/people/rak248/VG_100K/2354861.jpg" alt="Trulli" width="300" height="220">
-      </p>
-      <p>
-          <b> Description: </b> <br>
-          a woman is on the skateboard in the air.<br>
-          there are many trees and white cars around him.<br>
-          some cars are white.<br>
-          some trees are green.<br>
-      </p>
-        <p> <b> Why is it a bad description? </b> </p>
-        <p> This is a bad image description because it is describing objects, which are not in the image ('woman' instead of 'boy',
-          non-present 'trees'). It also focuses on unimportant parts of the image (cars, surrounding) without describing a boy in detail,
-          which seems to be important. The sentences are not that well-structured, because some of them are redundant (multiple descriptions of cars).
-          The story that the description tells is not that good,
-        because it is pretty non-informative, very general and not detailed enough.</p>
-    </negative-example>
+        <negative-example>
+          <p>
+              <b> Image: </b> <br>
+              <img src="https://cs.stanford.edu/people/rak248/VG_100K/2354861.jpg" alt="Trulli" width="300" height="220">
+          </p>
+          <p>
+              <b> Description: </b> <br>
+              a woman is on the skateboard in the air.<br>
+              there are many trees and white cars around him.<br>
+              some cars are white.<br>
+              some trees are green.<br>
+          </p>
+            <p> <b> Why is it a bad description? </b> </p>
+            <p> This is a bad image description because it is referring to objects that are not in the scene ('woman' instead of 'boy',
+              not-present 'trees'). It focuses on unimportant parts of the scene (cars, surroundings) without describing the important parts, e.g. the boy.
+              The sentences have a good structure and are grammatical. However, they are not well-connected:
+              some of them are redundant (multiple descriptions of cars) and therefore the story that the descriptions tells is very general and uninformative.</p>
+        </negative-example>
 
   </crowd-instructions>
 
@@ -95,51 +94,51 @@
     <div id="wrapper"> <strong> ${Paragraph} </strong> </div>
 
     <hr>
-    <p style="color:red" align="center"><b>How much do you agree with the following statements?</b></p>
+    <p style="color:red" align="center"><b> How well do you agree with the following statements? </b></p>
     <hr>
 
     <div>
-         <p align="center"><b> The image description contains words that correctly refer to the objects in the image. </b> </p>
+         <p align="center"><b> The description contains words that correctly refer to the objects and events in the image. </b> </p>
     </div>
 
     <div>
-  <p align="center"><crowd-slider  name="wordChoice" min="0" max="100" step="1" pin="true" required></crowd-slider></p>
+  <p align="center"><crowd-slider  name="wordChoice_${Model}" min="0" max="100" step="1" pin="true" required></crowd-slider></p>
   </div>
 
   <hr>
 
   <div>
-       <p align="center"><b> The image description is referring to the relevant/important parts of the image. </b> </p>
+       <p align="center"><b> The description is referring to the relevant/important parts of the image. </b> </p>
   </div>
 
   <div>
-<p align="center"><crowd-slider  name="objSalience" min="0" max="100" step="1" pin="true" required></crowd-slider></p>
+<p align="center"><crowd-slider  name="objSalience_${Model}" min="0" max="100" step="1" pin="true" required></crowd-slider></p>
 </div>
 <hr>
 
 <div>
-     <p align="center"><b> The image description consists of well-structured sentences. </b> </p>
+     <p align="center"><b> The sentences have a correct structure and are grammatical. </b> </p>
 </div>
 
 <div>
-<p align="center"><crowd-slider  name="sentStructure" min="0" max="100" step="1" pin="true" required></crowd-slider></p>
+<p align="center"><crowd-slider  name="sentStructure_${Model}" min="0" max="100" step="1" pin="true" required></crowd-slider></p>
 </div>
 
 <hr>
 
 <div>
-     <p align="center"><b> Image description's sentences are well-connected and form a single story. </b> </p>
+     <p align="center"><b> The sentences are well-connected and form a single story. </b> </p>
 </div>
 
 <div>
-<p align="center"><crowd-slider  name="parCoherence" min="0" max="100" step="1" pin="true" required></crowd-slider></p>
+<p align="center"><crowd-slider  name="parCoherence_${Model}" min="0" max="100" step="1" pin="true" required></crowd-slider></p>
 </div>
 
 <hr>
 
 
   <div>
-    <p>Write you feedback in the field below (not necessary):</p>
+    <p>Write you feedback in the field below if you have any (not necessary):</p>
     <crowd-text-area name="feedback" rows="5" placeholder="Your feedback here..."></crowd-text-area>
   </div>
 

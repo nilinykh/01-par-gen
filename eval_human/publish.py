@@ -7,8 +7,6 @@ import sched
 import aws_config
 from hit_generator import gen_ip_pair
 
-RESULTS = []
-
 HTML = open('./survey.html', 'r').read()
 QUESTION_XML = """
         <HTMLQuestion xmlns="http://mechanicalturk.amazonaws.com/AWSMechanicalTurkDataSchemas/2011-11-11/HTMLQuestion.xsd">
@@ -35,11 +33,17 @@ Q_ATTR = {
 def publish(input_args):
     '''publish HITs based on list of (img_link, paragraph) tuples'''
     image_paragraph_pairs = gen_ip_pair(int(input_args.HITs_number), str(input_args.type))
+    RES = []
     for (img_link, paragraph, str(input_args.type)) in image_paragraph_pairs:
-        create(img_link, paragraph, str(input_args.type))
+        res = create(img_link, paragraph, str(input_args.type))
+        RES.append(res)
+    return RES
 
 def create(img_link, paragraph, model_type):
     '''defining HITs' template for MTurk'''
+    
+    RESULTS = []
+    
     new_hit = aws_config.ConnectToMTurk.mturk.create_hit(
         **Q_ATTR,
         Question=QUESTION.replace('${Image}', img_link).\
@@ -85,6 +89,8 @@ def create(img_link, paragraph, model_type):
     print('A new HIT has been created. You can preview it here:')
     print('https://worker.mturk.com/mturk/preview?groupId=' + new_hit['HIT']['HITGroupId'])
     print('HITID = ' + new_hit['HIT']['HITId'] + ' (Use to Get Results)')
+    
+    return RESULTS
 
 def run_data_collection(schedule_publisher):
     '''publish n HITs every 60 seconds'''
@@ -97,10 +103,10 @@ def run_data_collection(schedule_publisher):
                                   help='type of paragraphs to use',
                                   default='VISUAL')
     args = parser_variables.parse_args()
-    publish(args)
+    res_all = publish(args)
     moment = time.strftime("%Y-%b-%d__%H_%M_%S", time.localtime())
     with open('./published/data_'+moment+'.json', 'w') as outfile:
-        json.dump(RESULTS, outfile)
+        json.dump(res_all, outfile)
     SCHEDULER.enter(20, 1, run_data_collection, (schedule_publisher,))
 
 if __name__ == "__main__":

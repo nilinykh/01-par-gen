@@ -622,15 +622,16 @@ class BeamSearchNode(object):
         return self.logp < other.logp
     
     def eval(self, alpha=1.0):
-        length_penalty = ((5.0 + self.leng) ** self.alpha_penalty) / (6.0 ** self.alpha_penalty)
         reward = 0
-        # length normalisation
+        # Add here a function for shaping a reward
+        return self.logp
         #return self.logp / float(self.leng - 1 + 1e-6) + alpha * reward
-        return self.logp / float(length_penalty)
+
+
+def block_ngram_repeats(cur_len, log_probs, curr_sequence, previous_grams):
     
-def block_ngram_repeats(cur_len, log_probs, curr_sequence):
-    block_ngram_repeat = 2
-    if cur_len > 1:
+    block_ngram_repeat = 3
+    if cur_len > 1:  
         curr_seqs = curr_sequence.queue
         alive_sequences = []
         for score, n in sorted(curr_seqs, key=operator.itemgetter(0)):
@@ -640,28 +641,37 @@ def block_ngram_repeats(cur_len, log_probs, curr_sequence):
             while n.prevNode != None:
                 n = n.prevNode
                 utterance.append(n.wordid.item())
-            alive_sequences.append(utterance[::-1])
-        alive_sequences = alive_sequences[-3:]
+            utterance = utterance[::-1]
+            alive_sequences.append(utterance)
+            
+        alive_sequences = alive_sequences[-2:]
         #print('alive seqs', alive_sequences)
+
         for path_idx in range(len(alive_sequences)):
-            hyp = alive_sequences[path_idx]
+            hyp = alive_sequences[path_idx][2:]
+            #print('hyp', hyp)
             ngrams = set()
             fail = False
             gram = []
-            for i in range(len(hyp) - 1):
+            k = 0
+            for i in range(len(hyp)):
                 # Last n tokens, n = block_ngram_repeat
                 gram = (gram + [hyp[i]])[-block_ngram_repeat:]
-                
-                # skip the blocking if any token in gram is excluded
-                #if set(gram) & self.exclusion_tokens:
-                #    continue
-                
-                if tuple(gram) in ngrams:
-                    #print('fail')
-                    fail = True
-                ngrams.add(tuple(gram))
+                #[-block_ngram_repeat:]
+                if len(gram) >= block_ngram_repeat:
+                    #print(gram)
+                    if tuple(gram) in ngrams or tuple(gram) in previous_grams:
+                        #print('fail')
+                        #print(gram)
+                        fail = True
+                        k += 1
+                    ngrams.add(tuple(gram))
             if fail:
+                #print(log_probs.shape)
+                #print(log_probs[0])
                 log_probs[0][path_idx] = -10e20
+                #log_probs[0][path_idx] = log_probs[0][path_idx] - (k * 5)
+                
     return log_probs
 
 
@@ -672,7 +682,7 @@ def ensure_min_length(leng, log_probs, eos_token):
     return log_probs
 
     
-def beam_decode(target_tensor, embs, word_to_idx, word_decoder, decoder_hiddens, beam_width, topk):
+def beam_decode(target_tensor, embs, word_to_idx, word_decoder, decoder_hiddens, beam_width, topk, prev_ngrams):
 
     IMAGE_TOKEN = word_to_idx['<sentence_topic>']
     EOS_TOKEN = word_to_idx['<end>']
@@ -722,38 +732,26 @@ def beam_decode(target_tensor, embs, word_to_idx, word_decoder, decoder_hiddens,
             decoder_input = embs[decoder_input]
             decoder_output, decoder_hidden = word_decoder.decode_step(decoder_input, decoder_hidden)
             decoder_output = word_decoder.linear(decoder_output.squeeze(1))
-            
-            
-            #decoder_output = decoder_output.div(0.5)
             decoder_output = F.log_softmax(decoder_output, dim=-1)
             
-            #print('len', n.leng)
-            #print('prob before', decoder_output[:, EOS_TOKEN])
-            
             # MIN LENGTH
-            decoder_output = ensure_min_length(n.leng, decoder_output, EOS_TOKEN)
+            #decoder_output = ensure_min_length(n.leng, decoder_output, EOS_TOKEN)
             
             #print('prob after', decoder_output[:, EOS_TOKEN])
             #print()
             
-            # PUT HERE REAL BEAM SEARCH OF TOP
             log_prob, indexes = torch.topk(decoder_output, beam_width)
             
-            #log_prob = block_ngram_repeats(n.leng, log_prob, nodes)
+            # NGRAM BLOCKING
+            #if prev_ngrams != set():
+            #    log_prob = block_ngram_repeats(n.leng, log_prob, nodes, prev_ngrams)
             
             nextnodes = []
             
-            for new_k in range(beam_width):
-                
-                length_penalty = ((5.0 + n.leng) ** n.alpha_penalty) / (6.0 ** n.alpha_penalty)
-                                
+            for new_k in range(beam_width):                                
                 decoded_t = indexes[0][new_k].view(1, -1)
                 log_p = log_prob[0][new_k].item()
-                
-                #new_log = (n.logp + log_p) / (n.leng ** 0.1)
-                new_log = n.logp + log_p
-                #new_log = (n.logp + log_p) / length_penalty
-                
+                new_log = n.logp + log_p                
                 node = BeamSearchNode(decoder_hidden, n, decoded_t, new_log, n.leng + 1)
                 score = -node.eval()
                 nextnodes.append((score, node))
@@ -762,7 +760,7 @@ def beam_decode(target_tensor, embs, word_to_idx, word_decoder, decoder_hiddens,
             for i in range(len(nextnodes)):
                 score, nn = nextnodes[i]
                 nodes.put((score, nn))
-                # increase qsize
+            # increase qsize
             qsize += len(nextnodes) - 1
 
         # choose nbest paths, back trace them
@@ -777,11 +775,8 @@ def beam_decode(target_tensor, embs, word_to_idx, word_decoder, decoder_hiddens,
             while n.prevNode != None:
                 n = n.prevNode
                 utterance.append(n.wordid.item())
-            
             utterance = utterance[::-1]
-            utterances.append(utterance)
-            #print(score)
-        
+            utterances.append(utterance)        
         decoded_batch.append(utterances)
         
     return decoded_batch, decoder_hidden

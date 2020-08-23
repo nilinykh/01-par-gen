@@ -4,58 +4,71 @@ import argparse
 import sched, time
 import os
 import sys
+from itertools import islice
 
 import utils
 
 s = sched.scheduler(time.time, time.sleep)
 
-def publish(mtc, hit_properties, hit_ids_file, i):
-    launched = False
-    while not launched:
-        try:
-            boto_hit = mtc.create_hit(**hit_properties)
-            launched = True
-        except Exception as e:
-            print(e)
-    hit_id = boto_hit['HIT']['HITId']
-    hit_ids_file.write('%s\n' % hit_id)
-    print('Launched HIT ID: %s, %d' % (hit_id, i + 1))
+
+def chunk(it, size):
+    it = iter(it)
+    return iter(lambda: tuple(islice(it, size)), ())
+
+
+def publish(mtc, hit_properties, hit_ids_file, hit_chunk):
+    
+    for i, hit_input in enumerate(hit_chunk):
+
+        template_params = {'input': json.dumps(hit_input)}
+        html_doc = template.render(template_params)
+
+        img_link, paragraph, model_type = hit_input
+
+        html_doc = html_doc.replace('${Image}', img_link).\
+            replace('${Paragraph}', paragraph).\
+            replace('${Model}', model_type)
+
+        html_question = '''
+        <HTMLQuestion xmlns="http://mechanicalturk.amazonaws.com/AWSMechanicalTurkDataSchemas/2011-11-11/HTMLQuestion.xsd">
+          <HTMLContent>
+            <![CDATA[
+              <!DOCTYPE html>
+              %s
+            ]]>
+          </HTMLContent>
+          <FrameHeight>%d</FrameHeight>
+        </HTMLQuestion>
+        ''' % (html_doc, frame_height)
+
+        hit_properties['Question'] = html_question
+    
+        launched = False
+        while not launched:
+            try:
+                boto_hit = mtc.create_hit(**hit_properties)
+                launched = True
+            except Exception as e:
+                print(e)
+        hit_id = boto_hit['HIT']['HITId']
+        hit_ids_file.write('%s\n' % hit_id)
+        print('Launched HIT ID: %s, %d' % (hit_id, i + 1))
+
 
 def create(args):
-    RESULTS = []
+
     with open(args.hit_ids_file, 'w') as hit_ids_file:
-        for i, line in enumerate(args.input_json_file):
-
+        
+        input_hits = []
+        for num, line in enumerate(args.input_json_file):
             hit_input = json.loads(line.strip())
-
-          # In a previous version I removed all single quotes from the json dump.
-          # TODO: double check to see if this is still necessary.
-
-            template_params = { 'input': json.dumps(hit_input) }
-            html_doc = template.render(template_params)
+            input_hits.append(hit_input)
+        
+        input_hits_chunks = chunk(input_hits, 10)
+        
+        for hit_chunk in input_hits_chunks:
             
-            img_link, paragraph, model_type = hit_input
-            
-            html_doc = html_doc.replace('${Image}', img_link).\
-                replace('${Paragraph}', paragraph).\
-                replace('${Model}', model_type)
-
-            html_question = '''
-            <HTMLQuestion xmlns="http://mechanicalturk.amazonaws.com/AWSMechanicalTurkDataSchemas/2011-11-11/HTMLQuestion.xsd">
-              <HTMLContent>
-                <![CDATA[
-                  <!DOCTYPE html>
-                  %s
-                ]]>
-              </HTMLContent>
-              <FrameHeight>%d</FrameHeight>
-            </HTMLQuestion>
-          ''' % (html_doc, frame_height)
-
-            hit_properties['Question'] = html_question
-                
-            # 1 HIT every 10 seconds
-            s.enter(10, 1, publish, (mtc, hit_properties, hit_ids_file, i,))
+            s.enter(60, 1, publish, (mtc, hit_properties, hit_ids_file, hit_chunk,))
             s.run()
 
 
@@ -86,6 +99,6 @@ if __name__ == "__main__":
         sys.exit()
     if os.path.isfile(args.hit_ids_file):
         print('hit_ids_file already exists')
-        sys.exit()
+        #sys.exit()
         
     create(args)

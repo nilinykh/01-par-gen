@@ -85,9 +85,9 @@ class Attention(nn.Module):
             
             multimodal_concat = torch.cat((text_weighted_encoding, vision_weighted_encoding), dim=1)
             
-            #concat_out = torch.cat((multimodal_concat, (text_weighted_encoding + vision_weighted_encoding)), dim=1)
+            concat_out = torch.cat((multimodal_concat, (text_weighted_encoding + vision_weighted_encoding)), dim=1)
             
-            concat_out = self.tanh(self.linear_att(multimodal_concat))
+            #concat_out = self.tanh(self.linear_att(multimodal_concat))
             
             # 64 x 512, 64 x 512
             #concat_att = self.concat_att(self.tanh(multimodal_concat))
@@ -190,8 +190,8 @@ class SentenceRNN(nn.Module):
                 self.f_beta = nn.Linear(self.hidden_size, self.hidden_size)
                 self.sigmoid = nn.Sigmoid()
             elif self.use_vision and self.use_language:
-                self.sentence_rnn = nn.LSTMCell(input_size=self.hidden_size*2, hidden_size=self.hidden_size)
-                self.f_beta = nn.Linear(self.hidden_size, self.hidden_size*2)
+                self.sentence_rnn = nn.LSTMCell(input_size=self.hidden_size*3, hidden_size=self.hidden_size)
+                self.f_beta = nn.Linear(self.hidden_size, self.hidden_size*3)
                 self.sigmoid = nn.Sigmoid()
                 
         elif not self.use_attention:

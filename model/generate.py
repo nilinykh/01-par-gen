@@ -253,9 +253,9 @@ def generate(val_loader,
                             vision_weighted_encoding = (vision * alpha_vision).sum(dim=1)
                             multimodal_concat = torch.cat((text_weighted_encoding, vision_weighted_encoding), dim=1)
                             
-                            #sentence_rnn_input = torch.cat((multimodal_concat, (text_weighted_encoding + vision_weighted_encoding)), dim=1)
+                            sentence_rnn_input = torch.cat((multimodal_concat, (text_weighted_encoding + vision_weighted_encoding)), dim=1)
                             
-                            sentence_rnn_input = sentence_decoder.attention.tanh(sentence_decoder.attention.linear_att(multimodal_concat))
+                            #sentence_rnn_input = sentence_decoder.attention.tanh(sentence_decoder.attention.linear_att(multimodal_concat))
                             
                             #concat_att = sentence_decoder.attention.concat_att(sentence_decoder.attention.tanh(multimodal_concat))
                             #alpha_concat = sentence_decoder.attention.softmax(concat_att)

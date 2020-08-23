@@ -1,0 +1,14 @@
+{
+    "Title": "Rate Image Descriptions [a short survey]",
+    "Description": "Given an image and its description, rate this description based on several questions.",
+    "Keywords": "image, images, sentence, description, paragraph, evaluation",
+    "Reward": 0.20,
+    "LifetimeInSeconds": 86400,
+    "AssignmentDurationInSeconds": 1200,
+    "AutoApprovalDelayInSeconds": 43200,
+    "FrameHeight": 20000,
+    "MaxAssignments": 1,
+    "QualificationId": "3918HVXFGHPANCD4BRXAV1HS97VXTT",
+    "QualificationComparator": "!",
+    "QualificationInteger": "11, 12, 13, 14, 15"
+}

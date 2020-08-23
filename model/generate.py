@@ -114,13 +114,14 @@ def main(args):
     
     # POINT
     res_fname = str(args.model_gen).split('/')[0]
-    with open(f'./scores/res-{res_fname}-{args.decoding_strategy}_{args.beam}_minlength9.json', 'w') as j:
+    with open(f'./scores/res-{res_fname}-{args.decoding_strategy}_{args.beam}_cidertest.json', 'w') as j:
         j.write(f'BLEU 1 \t {b1} \n')
         j.write(f'BLEU 2 \t {b2} \n')
         j.write(f'BLEU 3 \t {b3} \n')
         j.write(f'BLEU 4 \t {b4} \n')
         j.write(f'CIDEr \t {c} \n')
         j.write(f'METEOR \t {m} \n')
+        j.write(f'WMD \t {wmd} \n')
 
     
 def generate(val_loader,
@@ -155,8 +156,8 @@ def generate(val_loader,
     scorers = [
 
         (Bleu(4), ["Bleu_1", "Bleu_2", "Bleu_3", "Bleu_4"]),
-        (Cider('corpus'), "CIDEr"),
-        #vg-test-words
+        (Cider('vg-all-words'), "CIDEr"),
+        #vg-train-words
         (Meteor(), "METEOR"),
         #(WMD(), 'WMD')
     ]
@@ -175,6 +176,7 @@ def generate(val_loader,
             
             if image_num % 100 == 0:
                 print(image_num)
+                #print(image_ids)
             
             image_features = image_features.to(device)
             image_ids = image_ids.to(device)
@@ -210,16 +212,15 @@ def generate(val_loader,
                 
                 # max-pooling instead of attention
                 if args.use_vision and not args.use_language:
-                    sentence_input_vector = torch.max(vision, dim=1).values.unsqueeze(1)
+                    sentence_input_vector = torch.max(vision, dim=2).values
                 elif args.use_language and not args.use_vision:
-                    sentence_inp
-                    ut_vector = torch.max(language, dim=1).values.unsqueeze(1)
+                    sentence_input_vector = torch.max(language, dim=2).values
                 elif args.use_language and args.use_vision:
                     vision_input = torch.max(vision, dim=2).values
                     language_input = torch.max(language, dim=2).values
                     sentence_input_vector = torch.cat((language_input, vision_input), dim=2)
                 topics, (_, _) = sentence_decoder.sentence_rnn(sentence_input_vector)
-                    
+                                    
             if args.use_attention:
               
                 attention_plot = np.zeros((6, 50))
@@ -242,7 +243,7 @@ def generate(val_loader,
                         hidden_map = hidden_previous.unsqueeze(1)
                         hidden_map = sentence_decoder.attention.hidden_mapping(hidden_map)
                         
-                        if args.use_vision and args.use_vision:
+                        if args.use_vision and args.use_language:
                         
                             text_att = sentence_decoder.attention.language_full_att(sentence_decoder.attention.tanh(hidden_map + language))
                             vis_att = sentence_decoder.attention.vision_full_att(sentence_decoder.attention.tanh(hidden_map + vision))
@@ -251,13 +252,37 @@ def generate(val_loader,
                             text_weighted_encoding = (language * alpha_text).sum(dim=1)
                             vision_weighted_encoding = (vision * alpha_vision).sum(dim=1)
                             multimodal_concat = torch.cat((text_weighted_encoding, vision_weighted_encoding), dim=1)
+                            
+                            #sentence_rnn_input = torch.cat((multimodal_concat, (text_weighted_encoding + vision_weighted_encoding)), dim=1)
+                            
+                            sentence_rnn_input = sentence_decoder.attention.tanh(sentence_decoder.attention.linear_att(multimodal_concat))
+                            
+                            #concat_att = sentence_decoder.attention.concat_att(sentence_decoder.attention.tanh(multimodal_concat))
+                            #alpha_concat = sentence_decoder.attention.softmax(concat_att)
+                            #sentence_rnn_input = multimodal_concat * alpha_concat
+                            
+                        if args.use_vision and not args.use_language:
+                            
+                            vis_att = sentence_decoder.attention.vision_full_att(sentence_decoder.attention.tanh(hidden_map + vision))
+                            alpha_vision = sentence_decoder.attention.softmax(vis_att)
+                            alpha_text = None
+                            vision_weighted_encoding = (vision * alpha_vision).sum(dim=1)
+                            sentence_rnn_input = vision_weighted_encoding
+                            
+                        if not args.use_vision and args.use_language:
+                            
+                            text_att = sentence_decoder.attention.language_full_att(sentence_decoder.attention.tanh(hidden_map + language))
+                            alpha_text = sentence_decoder.attention.softmax(text_att)
+                            alpha_vision = None
+                            text_weighted_encoding = (language * alpha_text).sum(dim=1)
+                            sentence_rnn_input = text_weighted_encoding
 
                         #print('alpha_text', alpha_text, alpha_text.shape)
                         #print('alpha vision', alpha_vision, alpha_vision.shape)
                                                 
                         gate = sentence_decoder.sigmoid(sentence_decoder.f_beta(hidden_previous))
 
-                        context = gate * multimodal_concat
+                        context = gate * sentence_rnn_input
 
                         hidden_previous, cell_previous = sentence_decoder.sentence_rnn(context,
                                                                                        (hidden_previous, cell_previous))
@@ -265,6 +290,7 @@ def generate(val_loader,
                         topics[:, step, :] = hidden_previous
 
 
+            previous_grams = set()
             for t in range(args.max_sentences):
                 
                 topic = topics[:, t]
@@ -327,21 +353,32 @@ def generate(val_loader,
                         embs = torch.cat([embs, topic.squeeze(1)], dim=0)
                         word_to_idx['<sentence_topic>'] = 7606
                         target_tensor = torch.zeros(1, 50)
+                                                
                         x, (h_word, c_word) = beam_decode(target_tensor, embs, word_to_idx, word_decoder, 
-                                                          (h_word, c_word), args.beam, 10)
-                        #print('curr len', len(x[0]))
-                        # question: how to sample from topk sentences ???
-                        # the most probable, or t-th most probable ??? t-th most probable seems to introduce more diversity ?
-                        # sampling t-th most probable motivation: makes paragraphs more diverse
-                        # also, input might not be enough
-                        # also, the most probable sentence is supposed to alwas describe scene as a whole
-                        # other sentences will most likely describe scene details, and that's what we want to be in the t+1 sentences
-                        #print('poss sentence', t)
-                        #for item in x[0]:
-                        #    print([idx_to_word[int(w)] for w in item[1:]])
+                                                          (h_word, c_word), args.beam, 5, previous_grams)
+                        
+                        paragraph_words = [x[0][-1][2:-1]]
+                        for s in paragraph_words:
+                            ngrams = zip(*[s[i:] for i in range(2)])
+                            ngrams = [tuple(n) for n in ngrams]
+                            for i in ngrams:
+                                if tuple(i) not in previous_grams:
+                                    previous_grams.add(tuple(i))
+                                                
+                        #last_sentence.append(x[1][-1][2:-1])
+                        
+                        #for item in x[1]:
+                        #    this_sent_text = [idx_to_word[w] for w in item[1:]]
+                        #    print(this_sent_text)
+                        #print()
+                        
                         for item in x[0][-1]:
                             this_gen_sentence.append(item)
-                        #print()
+                        
+                        #sent_prob_space = torch.multinomial(torch.FloatTensor(x[0]), 1)
+                        #for item in x[1][sent_prob_space]:
+                        #    this_gen_sentence.append(item)
+                        
                             
                     generated.append(this_gen_sentence)
                     actual.append(caps.squeeze(0)[t])
@@ -397,8 +434,7 @@ def generate(val_loader,
             #    #print(image_path)
             #    #plot_attention(image_path, res, attention_plot)
             #    visualize_pred(image_path, att_plot_sentence_labels, bboxes, attention_plot)
-            
-
+    
     assert len(references_batch.keys()) == len(hypotheses_batch.keys())
 
     score = []
@@ -430,7 +466,7 @@ def generate(val_loader,
     
     # POINT
     res_fname = str(args.model_gen).split('/')[0]
-    with open(f'./scores/{res_fname}-{args.decoding_strategy}_{args.beam}_minlength9.json', 'w') as f:
+    with open(f'./scores/{res_fname}-{args.decoding_strategy}_{args.beam}_cidertest.json', 'w') as f:
         json.dump(paragraphs_generated, f)
         
     return Bleu_1, Bleu_2, Bleu_3, Bleu_4, CIDEr, METEOR, SPICE, wmd

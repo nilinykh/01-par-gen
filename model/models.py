@@ -48,6 +48,8 @@ class Attention(nn.Module):
             self.language_mapping = nn.Linear(language_dim, attention_dim)
             self.vision_full_att = nn.Linear(attention_dim, 1)
             self.language_full_att = nn.Linear(attention_dim, 1)
+            #self.concat_att = nn.Linear(attention_dim*2, 1)
+            self.linear_att = nn.Linear(attention_dim*2, attention_dim*2)
         
     def forward(self, language, vision, hidden):
         
@@ -77,10 +79,25 @@ class Attention(nn.Module):
             vis_att = self.vision_full_att(self.tanh(hidden_map + visual_map))
             alpha_text = self.softmax(text_att)
             alpha_vision = self.softmax(vis_att)
+            # sum(dim=1) - summing over regions, 64 x 50 x 512 -> 64 x 512
             text_weighted_encoding = (language * alpha_text).sum(dim=1)
             vision_weighted_encoding = (vision * alpha_vision).sum(dim=1)
+            
             multimodal_concat = torch.cat((text_weighted_encoding, vision_weighted_encoding), dim=1)
-            return multimodal_concat, alpha_text, alpha_vision
+            
+            #concat_out = torch.cat((multimodal_concat, (text_weighted_encoding + vision_weighted_encoding)), dim=1)
+            
+            concat_out = self.tanh(self.linear_att(multimodal_concat))
+            
+            # 64 x 512, 64 x 512
+            #concat_att = self.concat_att(self.tanh(multimodal_concat))
+            # 64 x 1
+            #alpha_concat = self.softmax(concat_att)
+            # 64 x 1024 * 64 x 1
+            #concat_out = multimodal_concat * alpha_concat
+            # 64
+            
+            return concat_out, alpha_text, alpha_vision
 
 
 class RegPool(nn.Module):
@@ -168,10 +185,15 @@ class SentenceRNN(nn.Module):
                                        self.hidden_size,
                                        self.use_vision,
                                        self.use_language)
-            self.sentence_rnn = nn.LSTMCell(input_size=self.hidden_size*2, hidden_size=self.hidden_size)
-            self.f_beta = nn.Linear(self.hidden_size, self.hidden_size*2)
-            self.sigmoid = nn.Sigmoid()
-            
+            if (self.use_vision and not self.use_language) or (not self.use_vision and self.use_language):
+                self.sentence_rnn = nn.LSTMCell(input_size=self.hidden_size, hidden_size=self.hidden_size)
+                self.f_beta = nn.Linear(self.hidden_size, self.hidden_size)
+                self.sigmoid = nn.Sigmoid()
+            elif self.use_vision and self.use_language:
+                self.sentence_rnn = nn.LSTMCell(input_size=self.hidden_size*2, hidden_size=self.hidden_size)
+                self.f_beta = nn.Linear(self.hidden_size, self.hidden_size*2)
+                self.sigmoid = nn.Sigmoid()
+                
         elif not self.use_attention:
             if (self.use_vision and self.use_language):
                 self.sentence_rnn = nn.LSTM(input_size=self.hidden_size*2, hidden_size=self.hidden_size, batch_first=True)

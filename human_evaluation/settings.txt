@@ -19,7 +19,6 @@ Detailed Instructions:
           <li><b>coherence</b>: does the text progreess in a natural way forming a narrative?</li>
       </ol>
     <p>You can enter any feedback you have for us, for example if some questions were not easy to answer, in the corresponding feedback field (right after the survey).</p>
-    <p> Please try to be as objective as possible.</p> <!--- SD: actually, we want them to be subjective -->
 </detailed-instructions>
 
 Good descriptions:

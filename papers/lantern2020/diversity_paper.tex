@@ -41,6 +41,24 @@
 \usepackage{tabularx}
 \usepackage{subcaption,siunitx,booktabs}
 
+\usepackage{tikz}
+\usetikzlibrary{calc,shadows,shadows.blur}
+
+\def\IosSevenSlider#1#2{
+    \tikz[baseline=-0.1cm]{
+        \coordinate (start) at (0,0);
+        \coordinate (end) at (#1,0);
+        \coordinate (mark) at ($(start)!#2!(end)$);
+        \useasboundingbox (start|- 0,-.25) rectangle (end|- 0, .25);
+        \draw[line width=0.4mm, line cap=round, blue!50!cyan] 
+             (start) -- (mark) edge[lightgray] (end);
+        \node[fill=white, draw=lightgray, very thin,
+            blur shadow={shadow xshift=0pt, shadow opacity=20, shadow yshift=-0.9mm,
+                         shadow blur steps=6, shadow blur radius=0.3mm},
+            circle, minimum size=0.25cm, inner sep=0pt] at (mark) {};
+    }
+}
+
 
 \newcommand{\R}{\mathbb{R}}
 
@@ -655,7 +673,45 @@ However, models which utilise single modality, benefit from attention in both ac
 % SD 2020-07-09 16:11:33 +0200: The diversity should be **lagom** not too little diverse and not overly divserse given human-generated descriptions.
 
 \subsection{Human Evaluation}
-human evaluation here
+
+To collect human judgements about paragraphs, we employed our experiment on Amazon Mechanical Turk.
+We randomly chose 10\% of the images from our test set resulting in 250 images.
+For each of these images we gathered seven paragraphs (six from the models and one from the test set).
+Each of these paragraphs has been evaluated by the crowdsourcing workers across multiple criteria: word choice, object salience, sentence structure and paragraph coherence.
+We presented workers with the instructions shown in Appendix~\ref{sec:supplemental}.
+To ensure quality and variety of workers' judgements, we presented our tasks only to the Master workers (workers with the high reputation and task acceptance rate) and controlled for the number of tasks a single worker is able to submit.
+We paid 0.15\$ per task to a single worker.
+Finally, we obtained judgements from X unique Master workers for 1750 image paragraphs overall.
+For each judgement criteria we took the average score across all models; the results are shown in Table~\ref{tab:humeval}.
+
+\begin{table}[h]
+   \footnotesize
+  \centering
+  \begin{tabular}{|l|c|c|c|c|c|c|}
+  \hline
+    \textbf{Model} & \textbf{mBLEU} & \textbf{self-CIDEr}  \\
+  \hline
+   IMG & \cellcolor{blue!20}0.50630 & 0.76438 \\
+  \hline
+   LNG & 0.52245 & 0.75591 \\
+  \hline
+   IMG+LNG & 0.52090 & \cellcolor{blue!20}0.76465  \\
+  \hline
+  \hline
+   IMG+ATT & \cellcolor{blue!10}0.51501 & \cellcolor{blue!10}0.76423 \\
+  \hline
+   LNG+ATT & \cellcolor{blue!50}0.50387 & \cellcolor{blue!50}0.76890  \\
+  \hline
+   IMG+LNG+ATT & 0.52247 & 0.75131 \\
+  \hline
+  \hline
+   GT & 0.18847 & 0.96514 \\
+  \hline
+  \end{tabular}
+  \caption{Average scores for 4 param}
+  \label{tab:humeval}
+\end{table}
+
 
 \section{Conclusion}
 Future work: diversity in terms of choosing best candidate from the pool of candidates.
@@ -677,30 +733,59 @@ End of paragraph prediction.
 
 \appendix
 
-\section{Appendices}
-\label{sec:appendix}
-Appendices are material that can be read, and include lemmas, formulas, proofs, and tables that are not critical to the reading and understanding of the paper. 
-Appendices should be \textbf{uploaded as supplementary material} when submitting the paper for review.
-Upon acceptance, the appendices come after the references, as shown here.
-
-\paragraph{\LaTeX-specific details:}
-Use {\small\verb|\appendix|} before any appendix section to switch the section numbering over to letters.
-
-
-\section{Supplemental Material}
+\section{Human Evaluation: AMT Instructions}
 \label{sec:supplemental}
-Submissions may include non-readable supplementary material used in the work and described in the paper.
-Any accompanying software and/or data should include licenses and documentation of research review as appropriate.
-Supplementary material may report preprocessing decisions, model parameters, and other details necessary for the replication of the experiments reported in the paper.
-Seemingly small preprocessing decisions can sometimes make a large difference in performance, so it is crucial to record such decisions to precisely characterise state-of-the-art methods. 
 
-Nonetheless, supplementary material should be supplementary (rather than central) to the paper.
-\textbf{Submissions that misuse the supplementary material may be rejected without review.}
-Supplementary material may include explanations or details of proofs or derivations that do not fit into the paper, lists of
-features or feature templates, sample inputs and outputs for a system, pseudo-code or source code, and data.
-(Source code and data should be separate uploads, rather than part of the paper).
+\textbf{Short Summary}:
+You are going to be shown an image and several sentences describing the image.
+Below you will see statements that relate to the image descriptions.
+Please rate each of these statements by moving the slider along the scale where 0\% stands for ‘I do not agree’, 100\% stands for ‘I fully agree’.
 
-The paper should not rely on the supplementary material: while the paper may refer to and cite the supplementary material and the supplementary material will be available to the reviewers, they will not be asked to review the supplementary material.
+\vspace{.5cm}
+\textbf{Detailed Instructions}:
+In general, you are required to judge image descriptions based on the following:
+\begin{itemize}
+	\item choice of words: does the text correctly describe objects and events in the scene and with the right detail?
+	\item relevance: does the text describe relevant objects and events in the scene?
+	\item sentence structure: do the sentences have a good and grammatical structure?
+	\item coherence: does the test progresses in a natural way forming a narrative?
+\end{itemize}
+You can enter any feedback you have for us, for example if some questions were not easy to answer, in the corresponding feedback field (right after the survey).
+
+\vspace{.5cm}
+\hspace{-.2cm}\fbox{\includegraphics[scale=.4]{figures/2410240}}
+
+\hspace{-.2cm}\fbox{\begin{minipage}{18.35em}
+\textcolor{red}{DESCRIPTION}: there are two cows standing in the field. there are trees behind them.
+\end{minipage}}
+\vspace{.5cm}
+
+\textbf{How well do you agree with the following statements?}
+        
+\begin{enumerate}
+\item The description contains words that correctly refer to the objects and events in the image
+
+\setlength{\fboxsep}{5pt}
+\fbox{\IosSevenSlider{6cm}{0.6}}
+
+\item The description is referring to the relevant/important parts of the image.
+
+\setlength{\fboxsep}{5pt}
+\fbox{\IosSevenSlider{6cm}{0.7}}
+
+\item The sentences have a correct structure and are grammatical.
+
+\setlength{\fboxsep}{5pt}
+\fbox{\IosSevenSlider{6cm}{0.8}}
+
+\item The sentences are well-connected and form a single story.
+
+\setlength{\fboxsep}{5pt}
+\fbox{\IosSevenSlider{6cm}{0.4}}
+
+\end{enumerate}
+        
+Write you feedback in the field below if you have any (not necessary).
 
 \end{document}
 %%% Local Variables:

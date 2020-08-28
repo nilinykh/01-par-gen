@@ -275,20 +275,21 @@ The final matrix $L \in \R\sp{M \times H}$, contains language representations of
 %\nikolai{do not forget to mention RNN-GAN work on paragraphs, which also uses densecap regions, but they learn embeddings of words in phrases directly}
 
 \paragraph{Multimodal Features}
-To jointly utilise different modalities (textual and visual), we use methods from multimodal machine translation, which is similar to the task of image captioning in its nature.
-In particular, we build on work by \newcite{Caglayan2016,Caglayan2019}, who demonstrate that using modality-dependent linear layers in multimodal attention mechanism helps achieve better results as evaluated by automatic metrics for the task of multimodal machine translation.
+To jointly utilise different modalities (textual and visual), we use methods from multimodal machine translation, which is similar to image captioning in its nature.
+In particular, we build on \cite{Caglayan2016,Caglayan2019}, who demonstrate that using modality-dependent linear layers in multimodal attention mechanism helps to achieve better results on multimodal machine transaltion as evaluated by automatic metrics.
 First, we learn two different mappings, using $V_{map}$ for vision and $L_{map}$ for language.
 These linear projections learn to embed modality-specific information into the attention space.
-Then, two attention mechanisms are trained on each modality to learn relevant features from each modality.
-Finally, weighted attended features are concatenated into the multimodal vector $f$.
-We have experimented with fusing two attended modalities into a single vector via additional linear layer, but observed no improvement.
+Then, two attention mechanisms are trained on each modality to learn the relevant features from each modality. 
+Finally, the weighted attended features are concatenated into the multimodal vector $f$.
+We have experimented with fusing two attended modalities into a single vector via additional linear layer, but observed no improvement. % SD 2020-08-28 16:12:37 +0200: This seems to be the latest model that we discussed on Friday: we have one attention mechanism on the concatendated features. Early vs late attention. Which model are we going to use? Both of them? Adjust description.
 %Lastly, weighted attended features are concatenated and passed to another linear layer, which learns to integrate and fuse information into the multimodal vector.
 
-Specifically, as formulas in Eq.~\ref{eqn:fusionT} and Eq.~\ref{eqn:fusionV} demonstrate, we first attend to mapped modality features at each timestamp $t$, where $t \in \{1, ..., S\}$ and $S$ is the maximum number of sentences to generate.
-We set $S=6$.
-Last hidden state from discourse LSTM is used at each timestamp to inform the network about previous discourse context.
-Concatenation, logistic sigmoid function and element-wise multiplication are indicated with $\oplus$, $\sigma$ and $\odot$ respectively.
-We also use $\delta$ to refer to the discourse LSTM and $\varsigma$ for denoting sentence LSTM.
+As shown in Eq.~\ref{eqn:fusionT} and Eq.~\ref{eqn:fusionV}, we first attend to mapped modality features at each timestamp $t$, where $t \in \{1, ..., S\}$ and $S$ is the maximum number of sentences to generate.
+We use $\delta$ to refer to the discourse LSTM and $\varsigma$ for denoting sentence LSTM.
+We set $S=6$. % SD 2020-08-28 16:17:30 +0200: earlier we said that we get S from the ground truth paragraphs.
+The last hidden state from the discourse LSTM is used at each timestamp to inform the network about previous discourse context. % SD 2020-08-28 16:19:19 +0200: network --> the attention mechanism?
+Concatenation, the logistic sigmoid function and element-wise multiplication are indicated with $\oplus$, $\sigma$ and $\odot$ respectively.
+Finally, as in Eq.~\ref{eqn:fusion}, we obtain a single multimodal vector $f \in \R\sp{1 \times H}$, which encapsulates and merges salient information from attended visual and textual modalities.
 
 \begin{equation}
   \alpha_t\sp{L} = \text{\small $softmax$}( W_a\sp{L} \text{\small $tanh$} (W_h h\sp{\delta}_{t-1} + W_{m}\sp{L} L_t) )
@@ -299,8 +300,6 @@ We also use $\delta$ to refer to the discourse LSTM and $\varsigma$ for denoting
   \alpha_t\sp{V} = \text{\small $softmax$}( W_a\sp{V} \text{\small $tanh$} (W_h h\sp{\delta}_{t-1} + W_{m}\sp{V} V_t) )
 \label{eqn:fusionV}
 \end{equation}
-
-Finally, as Eq.~\ref{eqn:fusion} indicates, we obtain a single multimodal vector $f \in \R\sp{1 \times H}$, which encapsulates and merges salient information from attended visual and textual modalities:
 
 \begin{equation}
 	f_t = [ \alpha_t\sp{L} \oplus \alpha_t\sp{V} ]
@@ -316,6 +315,9 @@ Finally, as Eq.~\ref{eqn:fusion} indicates, we obtain a single multimodal vector
 %\end{equation}
 %where $W_v$ is used to learn a mapping from vision space to language space. The final multimodal vector $C \in \R\sp{M \times H}$ is used as a multimodal input to our paragraph generator.
 % SD 2020-07-08 13:54:16 +0200: Explain the motivation behind this: we want to create visual and language topics. The dense layer is intended to learn these topics that are supported by visual and language information to a different degree and are relevant for the final training objective.
+
+% SD 2020-08-28 16:24:38 +0200: Here we described the early attention but on Friday we were discussing a model with late attention, after the modalities have been concatendated.
+
 
 \subsection{Discourse LSTM}
 % SD 2020-07-08 13:56:54 +0200: to be compatible with the story we are presenting let us call this Discourse LSTM that predicts the topics based on the sentences which are generated and "Word LSTM" Sentence LSTM that relaises individual sentences by predicting the relevant sequences of words.

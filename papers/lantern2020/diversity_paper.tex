@@ -103,29 +103,43 @@ abstract
 \section{Introduction}
 
 The quality of automatically generated image captions \cite{bernardi2016automatic} has been continuously improving as evaluated by a variety of metrics.
-These improvements include use of neural networks \cite{kiros14,vinyals2014tell}, attention mechanisms \cite{xu2015attend} and more fine-grained image features \cite{anderson2017bottomup}.
+These improvements include use of neural networks \cite{kiros14,vinyals2014tell}, attention mechanisms \cite{xu2015attend,Lu2016} and more fine-grained image features \cite{anderson2017bottomup}.
 More recently, a novel open-ended task of image paragraph generation has been proposed by \newcite{krause2016hierarchical}.
 This task requires the generation of multi-sentence image descriptions, which are highly informative, thus, include descriptions of a large variety of image objects, and attributes, which makes them different from standard single sentence captions.
 In particular, a good paragraph generation model has to produce descriptive, detailed and coherent text passages, depicting salient parts in an image.
 
-In this paper, we focus on learning to generate more \textit{diverse} image paragraphs.
-In language and vision literature, "diversity" of image descriptions has been mostly defined in terms of lexical diversity, word choice and \textit{n}-gram based metrics \cite{Devlin2015, Vijayakumar2016, Lindh2018, VanMiltenburg2018}.
-These criteria are focused on generating a diverse set of \textit{independent, one-sentence captions}, with each describing image as a whole.
-Each of these captions might mention identical objects due to the nature of the task ("describe an image with a single sentence"). Then, diversity is measured in terms of how different object descriptions are from one caption to another (e.g. a man can be described as a 'person' or 'human' in two different captions).
-However, a good image paragraph model must also introduce diversity on the sentence level, since describing \textit{different scene objects} throughout the paragraph is what makes it more informative than single sentence captions.
-Here, we define \textit{paragraph diversity} with two essential conditions. First, a generative model must produce a set of sentences with reasonable mentions of a variety of image objects (\textbf{sentence-level diversity}). Second, it must demonstrate the ability to use many different words to describe objects without unnecessary repetitions (\textbf{word-level diversity}).
+When humans describe images, especially over longer discourses, they take take into account (at least) two sources of information that interact with each other: (i) perceptual information as expressed by visual features and (ii) cognitive reasoning that determines the communicative intent of the text and the use of language \cite{Kelleher:2020aa}.
+Perceptual information mainly determines \emph{what} to refer to while the resoning mechanisms tell us \emph{how} and \emph{when} to refer to it.
+Both mechanisms interact: that a particular object is described at a particular point of a discourse and with particular words depends not only on its perceptual saleience but also whether that object should be referred to at that point of the story that the text is narrating which is its discourse salience.
+Compare for example: ``two cows are standing in the field'', ``there are trees in the field'' and ``a few of them are close to the trees''.
+The selection and the order of the relevant features are described by a cognitive mechanisms of attention and memory \cite{Lavie:2004aa,Dobnik:2016ac}.
 
-To improve on the first point, for each generated sentence we learn to attend to salient objects in the scene.,
-Our primary research question is as follows: does supply image paragraph models with both visual and background (linguistic) information improve \textbf{diversity} of generated paragraphs?
-We expect these types of input to be complementary in generating varied paragraphs.
+In this paper we investigate the interplay between visional and textual information (reflecting background knowledge about the world and communicative intent) and their ability of generating natural linguistic discourses spanning over several sentences.
+% To improve on the first point, for each generated sentence we learn to attend to salient objects in the scene.,
+Our primary research question is as follows: does % supply image paragraph models with
+using both visual and linguistic information improve \emph{accuracy} and \emph{diversity} of generated paragraphs?
+% We expect these types of input to be complementary in generating varied paragraphs.
 We experiment with several types of inputs to the paragraph generator: visual, language or both.
-We also investigate the effects of using either attention or max-pooling on image regions as a way of representing an image as a whole.
-We demonstrate that multimodal input paired with attention on these modalities benefits model's ability to generate more diverse paragraphs.
-We evaluate the diversity of our paragraphs with both automatic metrics and human judgements.
+We also investigate the effects of different kinds of information fusion between visual and textual information using either attention or max-pooling. % on image regions as a way of representing an image as a whole.
+We demonstrate that multimodal input paired with attention on these modalities benefits model's ability to generate more diverse paragraphs. % SD 2020-08-28 12:54:31 +0200: also more accurate?
+We evaluate the accuracy and diversity of our paragraphs with both automatic metrics and human judgements.
 
-Additionally, we note that paragraphs must be \textit{accurate} in describing an image.
-For completeness, we also report results of the automatic evaluation, showing that automatic metrics, which aim to measure \textit{accuracy} of paragraphs rather than \textit{diversity}, do not necessarily pick the most diverse paragraph as the most accurate and vice versa.
+% Additionally, we note that paragraphs must be \textit{accurate} in describing an image.
+% For completeness, we also report results of the automatic evaluation, showing that automatic metrics, which aim to measure \textit{accuracy} of paragraphs rather than \textit{diversity}, do not necessarily pick the most diverse paragraph as the most accurate and vice versa.
 
+% SD 2020-08-28 13:03:38 +0200: I would argue that automatic measures also do not capture accuracy. This is because most of them are based on keyword matching. We might generate an accurate description but because it does not match the ground truth this is counted as bad choice. I think our AMT experiment reflects both accuracy and diversity.
+
+% In this paper, we focus on learning to generate more \textit{diverse} image paragraphs.
+In language and vision literature, ``diversity'' of image descriptions has been mostly defined in terms of lexical diversity, word choice and \textit{n}-gram based metrics \cite{Devlin2015, Vijayakumar2016, Lindh2018, VanMiltenburg2018}.
+% These criteria are focused on
+In this work the focus is generating a diverse set of \textit{independent, one-sentence captions}, with each describing image as a whole.
+Each of these captions might refer to identical objects due to the nature of the task ("describe an image with a single sentence"). Then, diversity is measured in terms of how different object descriptions are from one caption to another (e.g. a man can be described as a ``person'' or ``human'' in two different captions).
+However, as argued above, a good image paragraph model must also introduce diversity at the sentence level, describing \textit{different scene objects} throughout the paragraph. % is what makes it more informative than single sentence captions.
+Here, we define \textit{paragraph diversity} with two essential conditions. First, a generative model must demonstrate the ability to use % many different
+releavnt words to describe objects without unnecessary repetitions (\emph{word-level diversity}).
+Secondly, it must produce a set of sentences with relevant mentions of a variety of image objects in a relevant order (\emph{sentence-level diversity}). 
+
+% SD 2020-08-28 13:26:03 +0200: We are adding the order to diversity here. One mioght argue that this deserves a separate heading but let us leave it this way.
 
 \iffalse
 Humans are typically able to effortlessly describe real-world images when required: we easily identify objects, attributes and relations between them.

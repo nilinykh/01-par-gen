@@ -17,7 +17,8 @@
 
 \documentclass[11pt,a4paper]{article}
 \usepackage[hyperref]{acl2020}
-\usepackage{times}
+%\usepackage{times}
+\usepackage{mathptmx}
 \usepackage{latexsym}
 \renewcommand{\UrlFont}{\ttfamily\small}
 
@@ -141,6 +142,21 @@ Secondly, it must produce a set of sentences with relevant mentions of a variety
 
 % SD 2020-08-28 13:26:03 +0200: We are adding the order to diversity here. One mioght argue that this deserves a separate heading but let us leave it this way.
 
+Producing structured and ordered sets of sentences (e.g. \textit{coherent paragraphs}) has been a topic of research in NLG community for a long time with both formal theories of coherence \cite{grosz95,Barzilay2008} and traditional rule-based model implementations \cite{Reiter00buildingnatural}.
+The coherence of generated text depends on several NLG subtasks: \textit{content determination (selection)}, the task of deciding which parts of the source information should be included in the output description, and \textit{text structuring (micro-planning)}, the task of ordering selected information \cite{Gatt2017}.
+We believe that the hierarchical structure of our models reflects the nature of these tasks. First, the model attends to the image objects and defines both their salience and order of mention and then it starts to realise them linguistically, first as paragraph visual-textual topics and then as individual sentences within paragraphs.
+% need more references about discourse structure
+% cite ilinykh19 as an example of structured paragraphs
+% \nikolai{more references about discourse structure are needed}
+
+% SD 2020-08-28 14:07:33 +0200: Unfortunately, this does not fit here anymore. Find another place?
+% More recently, \newcite{ilinykh19} collected the dataset of image description sequences (mini-discourses).
+% These mini-discourses are especially useful for learning models which can plan and realise such ordered and structured data.
+
+
+
+
+
 \iffalse
 Humans are typically able to effortlessly describe real-world images when required: we easily identify objects, attributes and relations between them.
 Diversity, richness and complexity of such human-produced image descriptions have been observed in several benchmark image description datasets, including MSCOCO \cite{lin2014microsoft,chen2015microsoft}, Flickr8k \cite{hodosh2013}, Flickr30k \cite{young-etal-2014-image}, Visual Genome \cite{krishnavisualgenome}.
@@ -171,85 +187,13 @@ We evaluate how close our models are compared to the human performance in terms 
 % multimodality
 % \cite{barzilay-lee-2004-catching} 
 
-\section{Related Work}
 
-\iffalse
-\paragraph{Human visual attention}
-Humans are quite efficient in detecting objects and separating them from the rest of the visual scene \cite{Ullman87}.
-We are also fluent in using visual attention, which allows us to single out particular objects in the visual scene, significantly reducing our perceptual load when needed \cite{Lavie04}, therefore, preventing us from being overwhelmed by typically complex real-world visual scenes.
-Our ability to attend to particular parts of the environment is based on both bottom-up information (low-level visual stimuli) and top-down information (high-level goal-related stimuli, discourse knowledge) \cite{Zarcone2016}. % SD 2020-07-09 16:56:47 +0200: Isn't this paper more about suprisal. There are a lot of refereces about different models of top-down and bottom up attention in psychology that go a long time back: you can find these references in the paper with John.
-Stimuli that attracts our attention is said to be \textit{salient} (relevant). Salience of objects affects our \textit{surprisal} towards particular visual input: discourse-salient entities cause less surprisal (e.g. `bed' in bedroom) unlike the visually salient objects (e.g. `large pink elephant' in bedroom).
 
-Attention has also been employed in formal theories of interaction. One of the approaches has been proposed by \newcite{Dobnik2016AMF}, who link attention with judgements as defined in Type Theory of Records \cite{Cooper08typetheory}.
-They introduce a Bayesian-based framework in which attention controls the extent to which context induced judgements ($\sim$ task-based top-down information) are utilised by an agent. This allows for topic modelling at each timestamp in interaction. Thus, it follows along the lines of our proposal about attention using both contextual and low-level visual information in selecting relevant information for each individual sentence in the image paragraph.
 
-% SD 2020-07-09 16:59:36 +0200: As this paper is turning out more like the effects of background knowledge on the discourse structure the discussion of attention is out of the context here. Move the whole section to the attention paper and replace it with a discussion of a discourse structure?
-\fi
-
-\paragraph{Discourse Structure}
-Producing structured and ordered sets of sentences (e.g. \textit{coherent paragraphs}) has been a topic of research in NLG community for a long time with both formal theories of coherence \cite{grosz95,Barzilay2008} and traditional rule-based model implementations \cite{Reiter00buildingnatural}.
-The coherence of generated text depends on several NLG subtasks: \textit{content determination (selection)}, the task of deciding which parts of the source information should be included in the output description, and \textit{text structuring}, the task of ordering selected information \cite{Gatt2017}.
-We believe that the hierarchical structure of our models reflects the nature of these tasks. First, the model attends to the image objects and defines both their salience and order of mention and then it starts to realise them linguistically.
-% need more references about discourse structure
-% cite ilinykh19 as an example of structured paragraphs
-\nikolai{more references about discourse structure are needed}
-More recently, \newcite{ilinykh19} collected the dataset of image description sequences (mini-discourses).
-These mini-discourses are especially useful for learning models which can plan and realise such ordered and structured data.
-
-\paragraph{Neural image paragraph captioning}
-The task of generating image paragraphs has been introduced in \newcite{krause2016hierarchical} along with the dataset of image-paragraph pairs.
-The authors hierarchically construct their model: sentence RNN is conditioned on visual features to output sentence topics.
-Then, each of these topics is used by another RNN to generate actual sentences.
-Our models are based on this hierarchical model.
-However, we substantially change its structure by removing the end of paragraph prediction.
-
-%We start by implementing this hierarchical image paragraph model, since it inherits the modular nature of human image paragraph production (given an image, plan structure of your paragraph and identify its sentence topics, then incrementally generate sentences). % SD 2020-07-09 17:04:30 +0200: It also conforms to the theories of NLG: content select and micro-planning.
-
-\newcite{liang2017recurrent} also use the hierarchical network, but also with adversarial discriminator, that forces model to generate realistic paragraphs with smooth transitions between sentences.
-\newcite{chatterjee2018diverse} also address cross-sentence topic consistency by modelling the global coherence vector, conditioned on all sentence topics.
-Different from these approaches, \newcite{melas2019} employ self-critical training technique \cite{selfcritical2016} to directly optimise a target evaluation metric for image paragraph generation.
-Lastly, \newcite{wang2019convolutional} use convolutional auto-encoder for topic modelling based on region-level image features.
-They demonstrate that extracted topics are more representative and contain information relevant to sentence generation.
-In this paper, we similarly model better topic representations.
-However, we use additional semantic representations of image objects as part of the input to our topic generator.
-\newcite{ Lin2015} has proposed a non-neural approach to generate texts describing images.
-However, this approach is infeasible due to its dependence on multiple components: visual scene parsing, generative grammar for learning from training descriptions, and an algorithm, which analyses scene graphs and extracts semantic trees to learn about dependencies across sentences.
-
-\begin{figure*}[h!]
- \includegraphics[width=\linewidth]{figures/model}
- \caption{Multimodal paragraph generator architecture.
- 		Orange area on the left side is the learned space where two modalities are attended to (vision framed with purple, language framed with green).
-		The attended features are concatenated and used as input to the discourse LSTM (coloured in blue, indicated with $\delta$) to produce sentence topics.
-		%The attended features are concatenated and passed to the linear layer for fusion.
-		%The output of the fusion layer \textit{F} is used by discourse LSTM (coloured in blue, indicated with $\delta$) to produce sentence topics.
-		Also, the last hidden state of discourse LSTM is used by attention module at each timestamp.
-		Sentence LSTM (coloured in green, indicated with $\varsigma$) is given the sentence topic and word embeddings.
-		Due to limited space, we omit linear layer and softmax layer which are used to predict the next word from the output of the sentence LSTM.}
- \label{fig:model}
-\end{figure*}
-
-\paragraph{Language representation for image captioning}
-Several proposed models for image captioning are conditioned on both visual and background information.
-\newcite{You2016} detect visual concepts found in the scene (objects, attributes) and extract top-down visual features.
-Both of these modalities are then fed to the RNN-based caption generator.
-Attention is applied on detected concepts to inform the generator about how relevant a particular concept is at each timestamp.
-Different from their model, we do not use any attribute detectors to identify objects in the scene.
-Instead, our model uses the output of another model pre-trained for the task of dense captioning.
-\newcite{Lu2016} emphasise that image is not always useful in generating some function words (`of', `the').
-They introduce adaptive attention, which determines when to look at the image and when it is more important to use the language model to generate the next word.
-In their work, the attention vector is the mixture of visual features and visual sentinel, a vector obtained through the additional gate function on decoder memory state.
-Our model focuses on a similar task: we are interested in deciding which type information is more relevant at a particular timestamp, but we also look at how \textit{merging} two modalities into a single representation performs and how it affects attention of the model.
-Closest to our work is the work by \newcite{liang2017recurrent}, who apply attention to region description representation and use it to assist recurrent word generation in producing sentences in a paragraph.
-Similar to our approach, they also supply their model with embeddings of local phrases used to describe image objects.
-However, they use textual phrases directly, while we are using hidden representations from the model trained to generate such phrases \cite{densecap}.
-Besides, here we explore a different route of \textit{where} to use language information: we use phrase representations to define sentence topics to choose from (topic selection) rather than directly guide the generation of words (micro-planning).
-% SD 2020-07-09 17:08:54 +0200: Very similar idea to ours. But we use region descriptions to define topics to choose from (topic selection) rather than directly guide the generation of words (micro-planning).
-%While we also believe that feeding information about semantic concepts found in an image is beneficial for the model, we propose to employ transfer learning. We use hidden representations of the RNN trained for the task of dense captioning \cite{densecap} as semantic information in model's input.
-%Outside of image paragraph captioning, \newcite{vqaLU16} have proposed a joint image and question attention model for the task of visual question answering.
 
 \section{Approach}
 \paragraph{Overview}
-For our experiments we implement and adapt the hierarchical image paragraph model by \cite{krause2016hierarchical}.\footnote{The authors have not publicly released the original code of the model.}
+For our experiments we implement and adapt the hierarchical image paragraph model by \citet{krause2016hierarchical}.\footnote{The authors have not publicly released the code of their model and hence are base implementation is based on our the interpretation of their paper.}
 To prepare input features, we utilise the pre-trained model for dense captioning \cite{densecap} in two ways.
 First, we use it to extract convolutional features of identified image regions.
 We also use its hidden states from the RNN layer as language features.
@@ -265,9 +209,13 @@ First, the discourse-level LSTM learns each sentence topic from the multimodal r
 Second, each of the topics is used by sentence-level LSTM to generate an actual sentence.
 Finally, all generated sentences per image are concatenated to form a final paragraph.
 An overview of our model and a more detailed description is shown in Fig.~\ref{fig:model}.
-Note that different from \newcite{krause2016hierarchical}, we do not learn to predict the end of the paragraph.
+% Note that different
+Differently from \cite{krause2016hierarchical}, we do not learn to predict the end of the paragraph.
 Instead, we generate the same number of sentences for each image, as we find in its ground-truth paragraph.
 We leave the task of predicting the number of sentences to generate in a paragraph for future work.
+The focus of our work is not to improve on the results of \cite{krause2016hierarchical} but to investigate the effects of different multi-modal fusion on the accuracy of diversity of paragraph descriptions. % SD 2020-08-28 14:22:15 +0200: Added this sentence to emphasise our relation to Krause.
+
+% SD 2020-08-28 14:18:35 +0200: But this is not the only difference from Krause. Here is a good point to say: Our model is different from Krause in the following ways: (i)... ...(n). 
 
 %We also deploy various strategies for decoding and analyse differences in corresponding generated paragraphs.
 %\nikolai{model structure scheme is in progress, not sure there will be space for decoding strategies though}
@@ -278,14 +226,36 @@ We leave the task of predicting the number of sentences to generate in a paragra
 %Though we report automatic evaluation scores, in this paper, we instead focus on showing that background knowledge incorporated in the paragraph generation model leads to more detailed and diverse image descriptions.
 % SD 2020-07-08 13:39:42 +0200: This should come earlier at the beginning of the section. As a base we take the model from Krause. We do not have the code so we make our own implementation. Secondly, we also make some modifications because we think they are more suitable. These are: (i)... (ii).... (n) and then their description. We can comment on the differences in results later when we discuss results.
 
+
+
+
+
+\begin{figure*}[t]
+ \includegraphics[width=\linewidth]{figures/model}
+ \caption{Multimodal paragraph generator architecture.
+ 		The orange area on the left is the learned space where two modalities are attended to (vision in purple, language in green).
+		The attended features are concatenated and used as input to the discourse LSTM (in blue, marked with $\delta$) to produce sentence topics.
+		%The attended features are concatenated and passed to the linear layer for fusion.
+		%The output of the fusion layer \textit{F} is used by discourse LSTM (coloured in blue, indicated with $\delta$) to produce sentence topics.
+		The last hidden state of the discourse LSTM is used by the attention module at each timestamp.
+		The sentence LSTM (in green, marked with $\varsigma$) is given the sentence topic and word embeddings.
+		Due to limited space, we omit the linear layer and the softmax layer which are used to predict the next word from the output of the sentence LSTM.}
+ \label{fig:model}
+\end{figure*}
+
+
+
+
+
 \subsection{Input Features}
 
 \paragraph{Visual Features}
 We use DenseCap region detector \cite{densecap}\footnote{Available at: https://github.com/jcjohnson/densecap} to identify salient image regions and extract their convolutional features.
-We provide only a brief overview of this procedure: first, a resized image is passed through the VGG-16 network \cite{Simonyan2014} to output a feature map of the image.
-A region proposal network is conditioned on the feature map to identify the set of salient image regions, which are then mapped back onto the feature map to produce corresponding map regions.
-Each of these map regions is then fed to the two-layer perceptron, which outputs a set of the final region features ${\{v_1, ..., v_M\}}$, where $v_m \in \R\sp{1 \times D}$ with $M=50$ and $D=4096$.
-This matrix $V \in \R\sp{M \times D}$ provides us with fine-grained image representation on the object level.
+% We provide only a brief overview of this procedure:
+First, a resized image is passed through the VGG-16 network \cite{Simonyan2014} to output a feature map of the image.
+A region proposal network is conditioned on the feature map to identify the set of salient image regions which are then mapped back onto the feature map to produce corresponding map regions.
+Each of these map regions is then fed to the two-layer perceptron which outputs a set of the final region features ${\{v_1, ..., v_M\}}$, where $v_m \in \R\sp{1 \times D}$ with $M=50$ and $D=4096$.
+This matrix $V \in \R\sp{M \times D}$ provides us with fine-grained image representation at the object level.
 We use this representation as features of visual modality.
 %which are passed through the simple feed-forward layer $W_v \in \R\sp{D \times H}$ followed by ReLU non-linearity.
 %These visual feature vectors provide us with fine-grained image representation on the object level.
@@ -293,9 +263,9 @@ We use this representation as features of visual modality.
 
 \paragraph{Language Features}
 In the dense captioning task, a single layer LSTM is conditioned on region features to produce descriptions of these regions in natural language.
-We propose to utilise its outputs as language features, using them as additional semantic information about detected objects.
-Specifically, we condition pre-trained LSTM on region features to output a set ${Y = \{y_m, ..., y_M\}}$ with $y_m \in \R\sp{1 \times T \times H}$, where $T=15$ and $H=512$.
-We normalise each vector over the second dimension \textit{T}, which determines the maximum number of words in each description.
+We propose to utilise its outputs as language features, using them as additional semantic background information about detected objects.
+Specifically, we condition a pre-trained LSTM on region features to output a set ${Y = \{y_m, ..., y_M\}}$ with $y_m \in \R\sp{1 \times T \times H}$, where $T=15$ and $H=512$.
+We normalise each vector over the second dimension \textit{T}, which determines the maximum number of words in each description. % SD 2020-08-28 14:32:50 +0200: Is normalise the right word here. I initially understood that we fit the length of the representations to 15 words/units but this is not the case. Replace "normalise" --> condense?
 We achieve this by summing all elements across this dimension and dividing the result by the actual length of the corresponding region description, which we generate from $Y$.
 The final matrix $L \in \R\sp{M \times H}$, contains language representations of $M$ detected regions.
 
@@ -725,6 +695,71 @@ For each judgement criteria we took the average score across all models; the res
   \caption{Average scores for 4 param}
   \label{tab:humeval}
 \end{table}
+
+
+
+
+
+\section{Related Work}
+
+\iffalse
+\paragraph{Human visual attention}
+Humans are quite efficient in detecting objects and separating them from the rest of the visual scene \cite{Ullman87}.
+We are also fluent in using visual attention, which allows us to single out particular objects in the visual scene, significantly reducing our perceptual load when needed \cite{Lavie04}, therefore, preventing us from being overwhelmed by typically complex real-world visual scenes.
+Our ability to attend to particular parts of the environment is based on both bottom-up information (low-level visual stimuli) and top-down information (high-level goal-related stimuli, discourse knowledge) \cite{Zarcone2016}. % SD 2020-07-09 16:56:47 +0200: Isn't this paper more about suprisal. There are a lot of refereces about different models of top-down and bottom up attention in psychology that go a long time back: you can find these references in the paper with John.
+Stimuli that attracts our attention is said to be \textit{salient} (relevant). Salience of objects affects our \textit{surprisal} towards particular visual input: discourse-salient entities cause less surprisal (e.g. `bed' in bedroom) unlike the visually salient objects (e.g. `large pink elephant' in bedroom).
+
+Attention has also been employed in formal theories of interaction. One of the approaches has been proposed by \newcite{Dobnik2016AMF}, who link attention with judgements as defined in Type Theory of Records \cite{Cooper08typetheory}.
+They introduce a Bayesian-based framework in which attention controls the extent to which context induced judgements ($\sim$ task-based top-down information) are utilised by an agent. This allows for topic modelling at each timestamp in interaction. Thus, it follows along the lines of our proposal about attention using both contextual and low-level visual information in selecting relevant information for each individual sentence in the image paragraph.
+
+% SD 2020-07-09 16:59:36 +0200: As this paper is turning out more like the effects of background knowledge on the discourse structure the discussion of attention is out of the context here. Move the whole section to the attention paper and replace it with a discussion of a discourse structure?
+\fi
+
+% \paragraph{Discourse Structure}
+% SD 2020-08-28 14:02:16 +0200: Moved to introduction.
+
+
+\paragraph{Neural image paragraph captioning}
+The task of generating image paragraphs has been introduced in \newcite{krause2016hierarchical} along with the dataset of image-paragraph pairs.
+The authors hierarchically construct their model: sentence RNN is conditioned on visual features to output sentence topics.
+Then, each of these topics is used by another RNN to generate actual sentences.
+Our models are based on this hierarchical model.
+However, we substantially change its structure by removing the end of paragraph prediction.
+
+%We start by implementing this hierarchical image paragraph model, since it inherits the modular nature of human image paragraph production (given an image, plan structure of your paragraph and identify its sentence topics, then incrementally generate sentences). % SD 2020-07-09 17:04:30 +0200: It also conforms to the theories of NLG: content select and micro-planning.
+
+\newcite{liang2017recurrent} also use the hierarchical network, but also with adversarial discriminator, that forces model to generate realistic paragraphs with smooth transitions between sentences.
+\newcite{chatterjee2018diverse} also address cross-sentence topic consistency by modelling the global coherence vector, conditioned on all sentence topics.
+Different from these approaches, \newcite{melas2019} employ self-critical training technique \cite{selfcritical2016} to directly optimise a target evaluation metric for image paragraph generation.
+Lastly, \newcite{wang2019convolutional} use convolutional auto-encoder for topic modelling based on region-level image features.
+They demonstrate that extracted topics are more representative and contain information relevant to sentence generation.
+In this paper, we similarly model better topic representations.
+However, we use additional semantic representations of image objects as part of the input to our topic generator.
+\newcite{ Lin2015} has proposed a non-neural approach to generate texts describing images.
+However, this approach is infeasible due to its dependence on multiple components: visual scene parsing, generative grammar for learning from training descriptions, and an algorithm, which analyses scene graphs and extracts semantic trees to learn about dependencies across sentences.
+
+
+\paragraph{Language representation for image captioning}
+Several proposed models for image captioning are conditioned on both visual and background information.
+\newcite{You2016} detect visual concepts found in the scene (objects, attributes) and extract top-down visual features.
+Both of these modalities are then fed to the RNN-based caption generator.
+Attention is applied on detected concepts to inform the generator about how relevant a particular concept is at each timestamp.
+Different from their model, we do not use any attribute detectors to identify objects in the scene.
+Instead, our model uses the output of another model pre-trained for the task of dense captioning.
+\newcite{Lu2016} emphasise that image is not always useful in generating some function words (`of', `the').
+They introduce adaptive attention, which determines when to look at the image and when it is more important to use the language model to generate the next word.
+In their work, the attention vector is the mixture of visual features and visual sentinel, a vector obtained through the additional gate function on decoder memory state.
+Our model focuses on a similar task: we are interested in deciding which type information is more relevant at a particular timestamp, but we also look at how \textit{merging} two modalities into a single representation performs and how it affects attention of the model.
+Closest to our work is the work by \newcite{liang2017recurrent}, who apply attention to region description representation and use it to assist recurrent word generation in producing sentences in a paragraph.
+Similar to our approach, they also supply their model with embeddings of local phrases used to describe image objects.
+However, they use textual phrases directly, while we are using hidden representations from the model trained to generate such phrases \cite{densecap}.
+Besides, here we explore a different route of \textit{where} to use language information: we use phrase representations to define sentence topics to choose from (topic selection) rather than directly guide the generation of words (micro-planning).
+% SD 2020-07-09 17:08:54 +0200: Very similar idea to ours. But we use region descriptions to define topics to choose from (topic selection) rather than directly guide the generation of words (micro-planning).
+%While we also believe that feeding information about semantic concepts found in an image is beneficial for the model, we propose to employ transfer learning. We use hidden representations of the RNN trained for the task of dense captioning \cite{densecap} as semantic information in model's input.
+%Outside of image paragraph captioning, \newcite{vqaLU16} have proposed a joint image and question attention model for the task of visual question answering.
+
+
+
 
 
 \section{Conclusion}

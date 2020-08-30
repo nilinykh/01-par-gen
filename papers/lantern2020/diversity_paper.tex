@@ -122,25 +122,34 @@ using both visual and linguistic information improve \emph{accuracy} and \emph{d
 % We expect these types of input to be complementary in generating varied paragraphs.
 We experiment with several types of inputs to the paragraph generator: visual, language or both.
 We also investigate the effects of different kinds of information fusion between visual and textual information using either attention or max-pooling. % on image regions as a way of representing an image as a whole.
-We demonstrate that multimodal input paired with attention on these modalities benefits model's ability to generate more diverse paragraphs. % SD 2020-08-28 12:54:31 +0200: also more accurate?
+We demonstrate that multimodal input paired with attention on these modalities benefits model's ability to generate more diverse and accurate paragraphs. % SD 2020-08-28 12:54:31 +0200: also more accurate? +
+
 We evaluate the accuracy and diversity of our paragraphs with both automatic metrics and human judgements.
+We also argue that, as some previous work shows \cite{vanderlee2019}, \textit{n}-gram-based metrics might be unreliable for quality evaluation of generated texts.
+The generated paragraph can be accurate as of the image, but because it does not match the ground truth, this would score low based on the automatic evaluation.
+To provide a different view on paragraph evaluation, we asked humans to judge the subset of generated paragraphs across several criteria, more specifically described in Section~\ref{humaneval} and Appendix~\ref{sec:supplemental}.
 
 % Additionally, we note that paragraphs must be \textit{accurate} in describing an image.
 % For completeness, we also report results of the automatic evaluation, showing that automatic metrics, which aim to measure \textit{accuracy} of paragraphs rather than \textit{diversity}, do not necessarily pick the most diverse paragraph as the most accurate and vice versa.
 
 % SD 2020-08-28 13:03:38 +0200: I would argue that automatic measures also do not capture accuracy. This is because most of them are based on keyword matching. We might generate an accurate description but because it does not match the ground truth this is counted as bad choice. I think our AMT experiment reflects both accuracy and diversity.
+% Nikolai: that's a good point, I think something similar was mentioned somewhere, but I will put it here for now.
+% I have also added some points about importance of human evaluation based on INLG papers: this topic is hot for this particular conference, so I believe it makes sense to cite some of their work.
 
 % In this paper, we focus on learning to generate more \textit{diverse} image paragraphs.
 In language and vision literature, ``diversity'' of image descriptions has been mostly defined in terms of lexical diversity, word choice and \textit{n}-gram based metrics \cite{Devlin2015, Vijayakumar2016, Lindh2018, VanMiltenburg2018}.
 % These criteria are focused on
 In this work the focus is generating a diverse set of \textit{independent, one-sentence captions}, with each describing image as a whole.
-Each of these captions might refer to identical objects due to the nature of the task ("describe an image with a single sentence"). Then, diversity is measured in terms of how different object descriptions are from one caption to another (e.g. a man can be described as a ``person'' or ``human'' in two different captions).
+Each of these captions might refer to identical objects due to the nature of the task ("describe an image with a single sentence").
+Then, diversity is measured in terms of how different object descriptions are from one caption to another (e.g. a man can be described as a ``person'' or ``human'' in two different captions).
 However, as argued above, a good image paragraph model must also introduce diversity at the sentence level, describing \textit{different scene objects} throughout the paragraph. % is what makes it more informative than single sentence captions.
-Here, we define \textit{paragraph diversity} with two essential conditions. First, a generative model must demonstrate the ability to use % many different
+Here, we define \textit{paragraph diversity} with two essential conditions.
+First, a generative model must demonstrate the ability to use % many different
 relevant words to describe objects without unnecessary repetitions (\emph{word-level diversity}).
 Secondly, it must produce a set of sentences with relevant mentions of a variety of image objects in a relevant order (\emph{sentence-level diversity}). 
 
 % SD 2020-08-28 13:26:03 +0200: We are adding the order to diversity here. One mioght argue that this deserves a separate heading but let us leave it this way.
+% Nikolai: Yeah, we have never really paid that much attention to these two levels of diversity. Agreed, let's keep it like this for now.
 
 Producing structured and ordered sets of sentences (e.g. \textit{coherent paragraphs}) has been a topic of research in NLG community for a long time with both formal theories of coherence \cite{grosz95,Barzilay2008} and traditional rule-based model implementations \cite{Reiter00buildingnatural,Deemter:2016aa}.
 The coherence of generated text depends on several NLG sub-tasks: \textit{content determination (selection)}, the task of deciding which parts of the source information should be included in the output description, and \textit{text structuring (micro-planning)}, the task of ordering selected information \cite{Gatt2017}.
@@ -188,32 +197,38 @@ We evaluate how close our models are compared to the human performance in terms 
 % \cite{barzilay-lee-2004-catching} 
 
 
-
+\begin{figure*}[h]
+ \includegraphics[width=\linewidth]{figures/model}
+ \caption{Multimodal paragraph generator architecture.
+ 		The orange area on the left is the learned space where two modalities are attended to (vision in purple, language in green).
+		The mapped features are concatenated together and passed to the attention mechanism, that outputs a vector which is used as an input to the discourse LSTM (in blue, marked with $\delta$).
+		The last hidden state of the discourse LSTM is also used by the attention module at each timestamp.
+		The sentence LSTM (in green, marked with $\varsigma$) is given the sentence topic and word embeddings.
+		Due to limited space, we omit the linear layer and the softmax layer which are used to predict the next word from the output of the sentence LSTM.}
+ \label{fig:model}
+\end{figure*}
 
 
 \section{Approach}
 \paragraph{Overview}
-For our experiments we implement and adapt the hierarchical image paragraph model by \citet{krause2016hierarchical}.\footnote{The authors have not publicly released the code of their model and hence are base implementation is based on our the interpretation of their paper.}
+For our experiments we implement and adapt the hierarchical image paragraph model by \citet{krause2016hierarchical}.\footnote{The authors have not publicly released the code of their model and hence the model implementation is based on our interpretation of their paper.}
 To prepare input features, we utilise the pre-trained model for dense captioning \cite{densecap} in two ways.
 First, we use it to extract convolutional features of identified image regions.
 We also use its hidden states from the RNN layer as language features.
 In the original model, these states are used to generate region descriptions; therefore, these vectors represent semantic information about objects.
-We construct \textit{a multimodal space}, in which we learn mappings from both text and vision features and attend to produced vectors.
-Lastly, two attended modalities are concatenated to form a multimodal vector, which is used as an input to the paragraph generator.
+We construct \textit{a multimodal space}, in which we learn mappings from both text and vision features.
+Lastly, we concatenate both modalities and attend to them to form a multimodal vector, which is used as an input to the paragraph generator.
 %We fuse both modalities into a single vector represented by an affinity matrix, similar to \newcite{Xu2015} and \newcite{vqaLU16}. 
 %This matrix captures similarities between visual and language representations for all combinations of regions.
 % SD 2020-07-08 13:36:07 +0200: We need to say a bit more how the fusion is done.
 %Then, the similarity vector is used by a two-level hierarchical paragraph generator.
 Our paragraph generator consists of two components: discourse-level and sentence-level LSTMs \cite{lstm97}.
-First, the discourse-level LSTM learns each sentence topic from the multimodal representation, capturing information flow between sentences.
+First, the discourse-level LSTM learns topic of each sentence from the multimodal representation, capturing information flow between sentences.
 Second, each of the topics is used by sentence-level LSTM to generate an actual sentence.
 Finally, all generated sentences per image are concatenated to form a final paragraph.
 An overview of our model and a more detailed description is shown in Fig.~\ref{fig:model}.
-% Note that different
-Differently from \cite{krause2016hierarchical}, we do not learn to predict the end of the paragraph.
-Instead, we generate the same number of sentences for each image, as we find in its ground-truth paragraph.
-We leave the task of predicting the number of sentences to generate in a paragraph for future work.
-The focus of our work is not to improve on the results of \cite{krause2016hierarchical} but to investigate the effects of different multi-modal fusion on the accuracy of diversity of paragraph descriptions. % SD 2020-08-28 14:22:15 +0200: Added this sentence to emphasise our relation to Krause.
+Our model is different from the model by \newcite{krause2016hierarchical} in the following ways: (i) we use either max-pooling or attention in our models, (ii) we do not learn to predict the end of the paragraph, but generate the same number of sentences as we find in ground-truth paragraph per each image.
+The focus of our work is not to improve on the results of \newcite{krause2016hierarchical} but to investigate the effects of different multi-modal fusion on the accuracy of diversity of paragraph descriptions. % SD 2020-08-28 14:22:15 +0200: Added this sentence to emphasise our relation to Krause.
 
 % SD 2020-08-28 14:18:35 +0200: But this is not the only difference from Krause. Here is a good point to say: Our model is different from Krause in the following ways: (i)... ...(n). 
 
@@ -225,26 +240,6 @@ The focus of our work is not to improve on the results of \cite{krause2016hierar
 %Therefore, our model's performance in terms of automatic evaluation might not necessarily be comparable to the one described in \newcite{krause2016hierarchical}.
 %Though we report automatic evaluation scores, in this paper, we instead focus on showing that background knowledge incorporated in the paragraph generation model leads to more detailed and diverse image descriptions.
 % SD 2020-07-08 13:39:42 +0200: This should come earlier at the beginning of the section. As a base we take the model from Krause. We do not have the code so we make our own implementation. Secondly, we also make some modifications because we think they are more suitable. These are: (i)... (ii).... (n) and then their description. We can comment on the differences in results later when we discuss results.
-
-
-
-
-
-\begin{figure*}[t]
- \includegraphics[width=\linewidth]{figures/model}
- \caption{Multimodal paragraph generator architecture.
- 		The orange area on the left is the learned space where two modalities are attended to (vision in purple, language in green).
-		The attended features are concatenated and used as input to the discourse LSTM (in blue, marked with $\delta$) to produce sentence topics.
-		%The attended features are concatenated and passed to the linear layer for fusion.
-		%The output of the fusion layer \textit{F} is used by discourse LSTM (coloured in blue, indicated with $\delta$) to produce sentence topics.
-		The last hidden state of the discourse LSTM is used by the attention module at each timestamp.
-		The sentence LSTM (in green, marked with $\varsigma$) is given the sentence topic and word embeddings.
-		Due to limited space, we omit the linear layer and the softmax layer which are used to predict the next word from the output of the sentence LSTM.}
- \label{fig:model}
-\end{figure*}
-
-
-
 
 
 \subsection{Input Features}
@@ -265,7 +260,8 @@ We use this representation as features of visual modality.
 In the dense captioning task, a single layer LSTM is conditioned on region features to produce descriptions of these regions in natural language.
 We propose to utilise its outputs as language features, using them as additional semantic background information about detected objects.
 Specifically, we condition a pre-trained LSTM on region features to output a set ${Y = \{y_m, ..., y_M\}}$ with $y_m \in \R\sp{1 \times T \times H}$, where $T=15$ and $H=512$.
-We normalise each vector over the second dimension \textit{T}, which determines the maximum number of words in each description. % SD 2020-08-28 14:32:50 +0200: Is normalise the right word here. I initially understood that we fit the length of the representations to 15 words/units but this is not the case. Replace "normalise" --> condense?
+We condense each vector over the second dimension \textit{T}, which determines the maximum number of words in each description. % SD 2020-08-28 14:32:50 +0200: Is normalise the right word here. I initially understood that we fit the length of the representations to 15 words/units but this is not the case. Replace "normalise" --> condense?
+% Nikolai: the original representation is of length 15, but we need to squash it to get a single representation, so, yes, condense fits.
 We achieve this by summing all elements across this dimension and dividing the result by the actual length of the corresponding region description, which we generate from $Y$.
 The final matrix $L \in \R\sp{M \times H}$, contains language representations of $M$ detected regions.
 
@@ -275,34 +271,42 @@ The final matrix $L \in \R\sp{M \times H}$, contains language representations of
 %\nikolai{do not forget to mention RNN-GAN work on paragraphs, which also uses densecap regions, but they learn embeddings of words in phrases directly}
 
 \paragraph{Multimodal Features}
-To jointly utilise different modalities (textual and visual), we use methods from multimodal machine translation, which is similar to image captioning in its nature.
-In particular, we build on \cite{Caglayan2016,Caglayan2019}, who demonstrate that using modality-dependent linear layers in multimodal attention mechanism helps to achieve better results on multimodal machine translation as evaluated by automatic metrics.
+%To jointly utilise different modalities (textual and visual), we use methods from multimodal machine translation, which is similar to image captioning in its nature.
+%In particular, we build on \cite{Caglayan2016,Caglayan2019}, who demonstrate that using modality-dependent linear layers in multimodal attention mechanism helps to achieve better results on multimodal machine translation as evaluated by automatic metrics.
 First, we learn two different mappings, using $V_{map}$ for vision and $L_{map}$ for language.
 These linear projections learn to embed modality-specific information into the attention space.
-Then, two attention mechanisms are trained on each modality to learn the relevant features from each modality. 
-Finally, the weighted attended features are concatenated into the multimodal vector $f$.
-We have experimented with fusing two attended modalities into a single vector via additional linear layer, but observed no improvement. % SD 2020-08-28 16:12:37 +0200: This seems to be the latest model that we discussed on Friday: we have one attention mechanism on the concatendated features. Early vs late attention. Which model are we going to use? Both of them? Adjust description.
+Then, we concatenate these mappings to form the multimodal vector $f$, which is then concatenated with the mapping from the hidden state.
+%Then, two attention mechanisms are trained on each modality to learn the relevant features from each modality. 
+%Finally, the weighted attended features are concatenated into the multimodal vector $f$.
+We have experimented with fusing two attended modalities into a single vector via additional linear layer, but observed no improvement.
+We also tried to use modality-dependent attention (\textit{early attention}) as such setting has shown to produce good joint representation for the task of multimodal machine translation \cite{Caglayan2016,Caglayan2019}, which is very similar to image captioning in its nature.
+However, this set-up provided us with worse scores from automatic metrics.
+Therefore, here we use \textit{late attention}: attending to the features when they are already concatenated.
+% SD 2020-08-28 16:12:37 +0200: This seems to be the latest model that we discussed on Friday: we have one attention mechanism on the concatendated features. Early vs late attention. Which model are we going to use? Both of them? Adjust description.
 %Lastly, weighted attended features are concatenated and passed to another linear layer, which learns to integrate and fuse information into the multimodal vector.
 
-As shown in Eq.~\ref{eqn:fusionT} and Eq.~\ref{eqn:fusionV}, we first attend to mapped modality features at each timestamp $t$, where $t \in \{1, ..., S\}$ and $S$ is the maximum number of sentences to generate.
-We use $\delta$ to refer to the discourse LSTM and $\varsigma$ for denoting sentence LSTM.
-We set $S=6$. % SD 2020-08-28 16:17:30 +0200: earlier we said that we get S from the ground truth paragraphs.
-The last hidden state from the discourse LSTM is used at each timestamp to inform the network about previous discourse context. % SD 2020-08-28 16:19:19 +0200: network --> the attention mechanism?
+As shown in Eq.~\ref{eqn:mult}, at each timestamp $t$ we concatenate mapped features from both modalities to output the multimodal vector $mult_t$, where $t \in \{1, ..., S\}$ and $S$ is the maximum number of sentences to generate.
+We use $\delta$ to refer to the discourse LSTM and $\varsigma$ when referring to the sentence LSTM.
 Concatenation, the logistic sigmoid function and element-wise multiplication are indicated with $\oplus$, $\sigma$ and $\odot$ respectively.
-Finally, as in Eq.~\ref{eqn:fusion}, we obtain a single multimodal vector $f \in \R\sp{1 \times H}$, which encapsulates and merges salient information from attended visual and textual modalities.
+We set $S$ depending on the number of sentences in the ground-truth paragraph with the maximum $S=6$. % SD 2020-08-28 16:17:30 +0200: earlier we said that we get S from the ground truth paragraphs.
+Then, as Eq.~\ref{eqn:att} indicates, we generate attention weights for our multimodal vector $mult_t$.
+We use additive (concat) attention mechanism and concatenate multimodal representation with the previous hidden state of the discourse LSTM.
+%The last hidden state from the discourse LSTM is used at each timestamp to inform the network about previous discourse context.
+% SD 2020-08-28 16:19:19 +0200: network --> the attention mechanism?
+Finally, as in Eq.~\ref{eqn:fusion}, we obtain a weighted multimodal vector $f \in \R\sp{1 \times H}$, which encapsulates and merges salient information from attended visual and textual modalities.
 
 \begin{equation}
-  \alpha_t\sp{L} = \text{\small $softmax$}( W_a\sp{L} \text{\small $tanh$} (W_h h\sp{\delta}_{t-1} + W_{m}\sp{L} L_t) )
-\label{eqn:fusionT}
+	mult_t = [W_{m}\sp{V} V_t \oplus W_{m}\sp{L} L_t]
+\label{eqn:mult}
 \end{equation}
 
 \begin{equation}
-  \alpha_t\sp{V} = \text{\small $softmax$}( W_a\sp{V} \text{\small $tanh$} (W_h h\sp{\delta}_{t-1} + W_{m}\sp{V} V_t) )
-\label{eqn:fusionV}
+  \alpha_t\sp{mult} = \text{\small $softmax$}( W_a\sp{L} \text{\small $tanh$} (mult_t \oplus W_h h\sp{\delta}_{t-1})
+\label{eqn:att}
 \end{equation}
 
 \begin{equation}
-	f_t = [ \alpha_t\sp{L} \oplus \alpha_t\sp{V} ]
+	f_t = [ \alpha_t\sp{mult} \odot mult_t ]
 	%f_t = \text{\small $tanh$} (W_f [ \alpha_t\sp{L} \oplus \alpha_t\sp{V} ] )
 \label{eqn:fusion}
 \end{equation}
@@ -322,11 +326,11 @@ Finally, as in Eq.~\ref{eqn:fusion}, we obtain a single multimodal vector $f \in
 \subsection{Discourse LSTM}
 % SD 2020-07-08 13:56:54 +0200: to be compatible with the story we are presenting let us call this Discourse LSTM that predicts the topics based on the sentences which are generated and "Word LSTM" Sentence LSTM that relaises individual sentences by predicting the relevant sequences of words.
 Our discourse-level LSTM is responsible for modelling multi-modal topics of each of the individual sentences in the paragraph.
-At each timestamp, it is conditioned on the multimodal feature vector $f_t$, and its output is a set of hidden states $\{h_1, ..., h_S\}$, where each state is used as an input to the sentence-level LSTM.
+At each timestamp, it is conditioned on the weighted multimodal vector $f_t$, and its output is a set of hidden states $\{h_1, ..., h_S\}$, where each state is used as an input to the sentence-level LSTM.
 % SD 2020-07-09 14:02:47 +0200: What is the number of states?
 In its nature, the discourse LSTM has to simultaneously complete at least two tasks: produce a topic with a relevant combination of visual and linguistic information for each sentence, while preserving some type of \textit{ordering} between the topics.
 Such topic ordering is essential for keeping a natural transition between sentences (discourse items) in the paragraph (discourse).
-We expect attention on the two modalities to assist the discourse LSTM in its multiple objectives since attention weights specific parts of the input as more relevant for a particular sentence.
+We expect attention on the combination of two modalities to assist the discourse LSTM in its multiple objectives since attention weights specific parts of the input as more relevant for a particular sentence.
 We expect that this allows discourse LSTM to learn better sentence representations and sentence order.
 
 Similar to \cite{xu2015attend}, we also learn a gating scalar $\beta$ and apply it to $f_t$:
@@ -343,10 +347,11 @@ Thus, the input to discourse LSTM is computed as follows:
 \end{equation}
 
 % SD 2020-08-29 10:48:04 +0200: But this is now the late attention model that is appliued on the concatenated features. In the previous section we were discussing the early attention model.
+% Nikolai: yes, I have not updated the description of the model at the time, it should be fine now, I believe.
 
 We do not implement doubly stochastic regularisation, since this would force the model to pay equal attention to modality features, eliminating the purpose of learning to attend to the most salient parts of its input.
+% SD 2020-08-29 10:48:53 +0200: What do you mean by double stochastic regularisation here? Early attention?
 
-% SD 2020-08-29 10:48:53 +0200: What do you mean by double stochastic regularisation here? Early atention?
 
 %To assist sentence LSTM in its multiple objectives, we propose to use attention on the sentence topic level.
 %Attention alleviates the task of weighing specific parts of the input as more important for a particular sentence, thus allowing sentence LSTM to learn more precise sentence representations and sentence order.
@@ -408,6 +413,7 @@ For every subsequent sentence, both LSTMs use the last hidden states generated f
 % actually, discourse LSTM is using its own hidden states just like sentence LSTM using its own hidden states as well...using hidden state from sentence LSTM in discourse LSTM was good for end of paragraph prediction and had no affect on the quality of generated text. So since we are not learning to predict end of the paragraph, to make things simpler, it makes sense to use LSTM own hidden states.
 During training, we use teacher forcing and feed ground-truth words as target words at each timestamp.
 We use Adam \cite{adam14} as optimiser and choose the best model based on the validation loss (early stopping).
+For decoding we use beam search \cite{beam17} with beam width $B=2$ (we tested several values for the beam width $B \in \{2, 4, 6, 8, 10\}$).
 
 %Note that different from previous work, we do not implement sentence-level loss for the end of paragraph prediction. % SD 2020-07-09 14:46:42 +0200: We do not implent end of paragraph prediction. We should mention this at the beginning of the section where we compare our model with Krause.
 %Instead, we generate the same number of sentences for each image, as we find in its ground-truth paragraph.
@@ -417,17 +423,17 @@ We use Adam \cite{adam14} as optimiser and choose the best model based on the va
 
 
 
-\subsection{Decoding}
+%\subsection{Decoding}
 
 % SD 2020-08-29 12:19:37 +0200: I moved this here from Section 3 Experiments because it is part of training.
 
-For decoding we use beam search \cite{beam17} and experiment with forcing the model to generate a minimum number of words $C$ in each sentence.
+%For decoding we use beam search \cite{beam17} and experiment with forcing the model to generate a minimum number of words $C$ in each sentence.
 % Along with
-As with n-gram penalty, which we leave for future work, we believe that setting $C$ gives us more varied and diverse sentences.
-Similar to \cite{opennmt2017}, we ensure that each generated sentence consists of at least $C$ words by setting \verb|p(<end>) = -1e20| if it has been chosen by the beam before the sentence minimal length $C$ is achieved.
-We test several values for the beam width $B \in \{2, 4, 6, 8, 10\}$ and several values for $C \in \{7, 8, 9, 10, 11 \}$.
-Based on the CIDEr score, we chose to set $C=2$ and $C=9$.
-Note that $C$ is close to the average sentence length in ground-truth paragraphs (11.91).
+%As with n-gram penalty, which we leave for future work, we believe that setting $C$ gives us more varied and diverse sentences.
+%Similar to \cite{opennmt2017}, we ensure that each generated sentence consists of at least $C$ words by setting \verb|p(<end>) = -1e20| if it has been chosen by the beam before the sentence minimal length $C$ is achieved.
+%We test several values for the beam width $B \in \{2, 4, 6, 8, 10\}$. % and several values for $C \in \{7, 8, 9, 10, 11 \}$.
+%Based on the CIDEr score, we chose to set $C=2$ and $C=9$.
+%Note that $C$ is close to the average sentence length in ground-truth paragraphs (11.91).
 
 % write about minimal length control (showed better automatic results overall)
 % the same trend (vis+lang+att is the best) is present with no control for minimum length in diversity, but overall diversity is better for those without the control
@@ -451,11 +457,70 @@ Note that $C$ is close to the average sentence length in ground-truth paragraphs
 %\end{equation}
 % SD 2020-07-09 14:09:53 +0200: State at the beginning that we are going to implement two variants for selection of grounded features: attention and max pooling. Which of these systems is used to report the results?
 
-We describe six configurations of our model, which we train, validate and test on the released paragraph dataset splits (14,575, 2,487, 2,489 for training, validation and testing respectively). % SD 2020-08-29 11:10:48 +0200: Citation for the dataset.
+% SD 2020-08-29 12:52:09 +0200: It would be easier to compare the results if both tables a and b are combined into one and the max-pooling modles have +MAX label (in paralell to +ATT label). Rather than colour we can emphasise the best results for each model type (+MAX and +ATT) or use identical colour.
+
+\begin{table*}[h]
+   \footnotesize
+  \centering
+  \begin{tabular}{|l|l|c|c|c|c|c|c|c|}
+  \hline
+    \textbf{Model Input} & \textbf{Type} & \textbf{WMD} & \textbf{CIDEr}  & \textbf{METEOR} & \textbf{BLEU-1} & \textbf{BLEU-2}
+    & \textbf{BLEU-3} & \textbf{BLEU-4}  \\
+  \hline
+   IMG & +MAX & 7.48 & 25.66 & 11.20 & 24.51 & 13.67 & 7.96 &  4.51 \\
+  \hline
+   LNG & +MAX & 7.19 & 22.27 & 10.81 & 23.20 & 12.69 & 7.34 & 4.19\\
+  \hline
+   IMG+LNG & +MAX & \textbf{7.61} &  \textbf{26.38} &   \textbf{11.30} &  \textbf{25.10} &   \textbf{13.88} &   \textbf{8.11} &   \textbf{4.61}  \\
+  \hline
+   IMG & +ATT & 7.47 & 26.01& 11.26 & 24.88 &   \textbf{13.99} &  \textbf{8.13} &   \textbf{4.67}  \\
+  \hline
+   LNG & +ATT & 7.20 & 22.11 & 10.82 & 23.20 & 12.55 & 7.16 & 3.97  \\
+  \hline
+   IMG+LNG & +ATT & \textbf{7.54} &  \textbf{26.04} &  \textbf{11.28} & \textbf{24.96} & 13.82 & 8.04 & 4.60 \\
+     \hline
+  \end{tabular}
+    \caption{
+    Automatic evaluation results. Models are separated based on the input features (unimodal / bimodal) and type of the mechanism used to compactly describe content of the image (max-pooling / attention).
+    Best scores for both \textbf{+MAX} and \textbf{+ATT} modes are shown in bold.
+    }
+  \label{tab:accstats}
+\end{table*}
+
+
+\begin{table}[h]
+   \footnotesize
+  \centering
+  \begin{tabular}{|l|l|c|c|c|c|c|c|}
+  \hline
+    \textbf{Model Input} & \textbf{Type} & \textbf{mBLEU} & \textbf{self-CIDEr}  \\
+  \hline
+   IMG & +MAX & \textbf{50.63} & 76.43 \\
+  \hline
+   LNG & +MAX & 52.24 & 75.59 \\
+  \hline
+   IMG+LNG & +MAX & 52.09 & \textbf{76.46}  \\
+  \hline
+  \hline
+   IMG & +ATT & 51.82 & 75.51  \\
+  \hline
+   LNG & +ATT & 50.93 & 76.41  \\
+  \hline
+   IMG+LNG & +ATT & \textbf{47.42} & \textbf{78.39} \\
+  \hline
+  \hline
+   GT & - & \textcolor{blue}{18.84} & \textcolor{blue}{96.51} \\
+  \hline
+  \end{tabular}
+  \caption{Automatic paragraph diversity evaluation. mBLEU stands for the average score between all self-BLEU scores for \textit{n}-grams (1, 2, 3, 4). Self-CIDEr stands for the average score of the LSA-based diversity metric. We also include ground-truth scores calculated from the test set (GT, coloured in blue). Best models are shown in bold. All scores are multiplied by 100 for better interpretability.}
+  \label{tab:divstats}
+\end{table}
+
+We describe six configurations of our model, which we train, validate and test on the released paragraph dataset splits (14,575, 2,487, 2,489 for training, validation and testing respectively) \cite{krause2016hierarchical}. % SD 2020-08-29 11:10:48 +0200: Citation for the dataset.
 The \textbf{IMG} model is conditioned only on the mapped visual features, while the \textbf{LNG} model only uses the mapped semantic information to generate paragraphs.
 % These models do not learn to attend to its input features. % SD 2020-08-29 11:16:39 +0200: It were best to describe IMG, LNG and IMG+LNG models first and then say that we have two variants of each model, one using the attention (which one, early or late or both, see earlier point) and the other one using max pooling. 
 The \textbf{IMG+NLG} is conditioned on both mapped visual and semantic information.
-All models with \textbf{+ATT} use attention on either uni-modal or multi-modal features. % SD 2020-08-29 11:20:17 +0200: Early or late or both?
+All models with \textbf{+ATT} use late attention on either uni-modal or multi-modal features. % SD 2020-08-29 11:20:17 +0200: Early or late or both?
 We also test another configuration of the models with max-pooling of input features across $M$ regions, represented by mapping from either language features $x=W_{m}\sp{L} L_t$ or visual features $x=W_{m}\sp{V} V_t$:
 
 \begin{equation}
@@ -471,89 +536,6 @@ We also test another configuration of the models with max-pooling of input featu
 \end{equation}
 
 % SD 2020-08-29 11:24:35 +0200: I restructured the preceding part.
-
-
-\begin{table*}[h]
-
-  % \footnotesize
-\begin{subtable}{1\textwidth}
-  \centering
-  \begin{tabular}{|l|c|c|c|c|c|c|c|}
-  \hline
-    \textbf{Model} & \textbf{WMD} & \textbf{CIDEr}  & \textbf{METEOR} & \textbf{BLEU-1} & \textbf{BLEU-2}
-    & \textbf{BLEU-3} & \textbf{BLEU-4}  \\
-  \hline
-   IMG & 7.48 & 25.66 & 11.20 & 24.51 & 13.67 & 7.96 &  4.51 \\
-  \hline
-   LNG & 7.19 & 22.27 & 10.81 & 23.20 & 12.69 & 7.34 & 4.19\\
-  \hline
-   IMG+LNG & \cellcolor{green!100}7.61 & \cellcolor{green!100}26.38 &  \cellcolor{green!100}11.30 &  \cellcolor{green!100}25.10 &  \cellcolor{green!100}13.88 &  \cellcolor{green!100}8.11 &  \cellcolor{green!100}4.61  \\
-  \hline
- %\hline
-  % \cite{krause2016hierarchical} & - & 13.52 & 15.95 & 41.90 & 24.11 & 14.23 & 8.69 \\
-  %\hline
-  \end{tabular}
-    \caption{
-    Scores of automatic evaluation metrics for \textbf{models without attention / with max-pooling}.
-    Best scores are coloured in green.
-    }
-  \label{tab:metricsnoatt}
-  \vspace{.3cm}
-\end{subtable}
-
-\begin{subtable}{1\textwidth}
-  \centering
-  \begin{tabular}{|l|c|c|c|c|c|c|c|}
-  \hline
-    \textbf{Model} & \textbf{WMD} & \textbf{CIDEr}  & \textbf{METEOR} & \textbf{BLEU-1} & \textbf{BLEU-2}
-    & \textbf{BLEU-3} & \textbf{BLEU-4}  \\
-  \hline
-   IMG+ATT & \cellcolor{red!60}7.56 & \cellcolor{red!60}26.72 &  \cellcolor{red!60}11.40 &  \cellcolor{red!60}25.56 &  \cellcolor{red!60}14.28 &  \cellcolor{red!60}8.36 &  \cellcolor{red!60}4.85  \\
-  \hline
-   LNG+ATT & 7.34 & 25.11 & 10.97 & 24.28 & 13.36 & 7.67 & 4.35  \\
-  \hline
-   IMG+LNG+ATT & 7.36 & 24.96 & 11.02 & 24.30 & 13.44 & 7.80 & 4.46 \\
-  \hline
- %\hline
-  % \cite{krause2016hierarchical} & - & 13.52 & 15.95 & 41.90 & 24.11 & 14.23 & 8.69 \\
-  %\hline
-  \end{tabular}
-    \caption{
-    Scores of automatic evaluation metrics for \textbf{models with attention}.
-    Best scores are coloured in red.
-    }
-  \label{tab:metricsatt}
-\end{subtable}
-\caption{Automatic evaluation of generated paragraphs.} \label{tab:eval}
-\end{table*}
-
-\begin{table}[h]
-  % \footnotesize
-  \centering
-  \begin{tabular}{|l|c|c|c|c|c|c|}
-  \hline
-    \textbf{Model} & \textbf{mBLEU} & \textbf{self-CIDEr}  \\
-  \hline
-   IMG & \cellcolor{blue!20}0.50630 & 0.76438 \\
-  \hline
-   LNG & 0.52245 & 0.75591 \\
-  \hline
-   IMG+LNG & 0.52090 & \cellcolor{blue!20}0.76465  \\
-  \hline
-  \hline
-   IMG+ATT & \cellcolor{blue!10}0.51501 & \cellcolor{blue!10}0.76423 \\
-  \hline
-   LNG+ATT & \cellcolor{blue!50}0.50387 & \cellcolor{blue!50}0.76890  \\
-  \hline
-   IMG+LNG+ATT & 0.52247 & 0.75131 \\
-  \hline
-  \hline
-   GT & 0.18847 & 0.96514 \\
-  \hline
-  \end{tabular}
-  \caption{Scores for diversity measures for different paragraph models. mBLEU stands for the average score between all self-BLEU scores for \textit{n}-grams (1, 2, 3, 4). Self-CIDEr stands for average score of the LSA-based diversity metric. GT (ground truth) stands for corresponding diversity metric scores for the test set. Higher intensity of blue colour indicates better scores.}
-  \label{tab:divstats}
-\end{table}
 
 % \section{Evaluation}
 
@@ -590,7 +572,8 @@ A lower score indicates more diversity, e.g. less \textit{n}-gram matches betwee
 We also calculate the diversity metric introduced in \cite{wang2019describing}.
 This metric applies Latent Semantic Analysis \cite{deerwester90indexing} to the weighted n-gram feature representations (CIDEr values between unique pairs of sentences) and identifies the number of topics among sentences.
 Compared to self-BLEU, which measures n-gram overlap, LSA and CIDEr-based diversity metric measures semantic differences between sentences as well.
-More identified topics in paragraph sentences indicate higher level of diversity. However, this intrinsic metric does not evaluate if the paragraph demonstrates discourse coherence in terms of how these topics are introduced and the quality of the generated sentences and their sequences (Section~\ref{sec:introduction}). % SD 2020-08-29 12:41:37 +0200: Added this to emphasise our argument for human evaluation.
+More identified topics in paragraph sentences indicate higher level of diversity.
+However, this intrinsic metric does not evaluate if the paragraph demonstrates discourse coherence in terms of how these topics are introduced and the quality of the generated sentences and their sequences (Section~\ref{sec:introduction}). % SD 2020-08-29 12:41:37 +0200: Added this to emphasise our argument for human evaluation.
 
 %\paragraph{Diversity}
 %Majority of the diversity metrics for image descriptions are based on calculating \textit{n}-gram statistics as well as comparing vocabulary size, POS usage etc.
@@ -603,12 +586,41 @@ More identified topics in paragraph sentences indicate higher level of diversity
 
 \subsection{Results}
 
-% SD 2020-08-29 12:52:09 +0200: It would be easier to compare the results if both tables a and b are combined into one and the max-pooling modles have +MAX label (in paralell to +ATT label). Rather than colour we can emphasise the best results for each model type (+MAX and +ATT) or use identical colour.
+As the results in Table~\ref{tab:accstats} demonstrate, models which utilise both semantic and visual information (any \textbf{IMG+LNG} configuration) outperform their single modality variants.
+When using max-pooling, \textbf{IMG+LNG} model improves on CIDEr by 0.72 and METEOR by 0.10.
+Also, bimodal architecture is slightly more lexically diverse from the ground truth paragraphs, according to the WMD scores.
+This result comes at no decrease in other metrics, concerned with lexical accuracy.
 
-As the results in Table~\ref{tab:metricsnoatt} demonstrate, we gain on all \textit{n}-gram-based metrics when the model utilises semantic information and the visual representations (\textbf{IMG+LNG}) compared to models which use a single modality (\textbf{IMG} or \textbf{LNG}) only.
-Also, the distance between the ground-truth and the generated paragraphs in the word embedding space increases when both modalities are used as indicated by the WMD score.
-In the context of generating \textit{diverse} paragraphs, we see it as an improvement: \textbf{IMG+LNG} model does not only generate more accurate paragraphs, but also learns to slightly deviate its output's content from the content in ground-truth descriptions without hurting its accuracy. % SD 2020-08-29 12:55:07 +0200: How is this reflected in the numbers? We previously argued that the numbers mostly indicate lexical accuracy and lexical diversity but not other kinds of accuracy and diversity.
+% SD 2020-08-29 13:01:33 +0200: Hm, this depends on what attention we are using, early or late. Secondly, even if we are using late attention I would not agree. I think some descriptions/sentences may be more biased to semantic rather than visual information and vice versa (we say this earlier). Attention has to learn how to select features over the sequence, max pooling selects only the most prominent feature and this is the same over the entire sequence. Max pooling is a naive baseline. Therefore, the most likely reason is that learning attention in this case is just harder. (Point 1)
+% SD 2020-08-29 13:34:09 +0200: Note that the intrinsic measure evaluate mostly lexical accuracy and diversity. It therefore may be possible that in terms of these lexcial items are generated sufficiently well with visual features which provide a strong signal and therefore background semantic information is less relevant. (Point 2). Hence, the problem is not re-duplicated information bur rather what information is used for the generation of that part of descriptions that these measures are evaluating. Having recognised these defficiencies we therefore setup human-evaluation using AMT.
 
+
+When replacing max-pooling with late attention, we observe that the multimodal model does necessarily perform the best in BLEU metrics in particular.
+Two of our models (\textbf{IMG} and \textbf{IMG+LNG}) perform very close to each other, indicating that visual features might provide input signal simply as strong as the multimodal features when attending to them.
+In this case, attention treats semantic information as less relevant, while language features are clearly beneficial for the \textbf{IMG+LNG+MAX} model, which outperforms all other models in WMD, CIDEr, METEOR.
+
+
+Table~\ref{tab:divstats} contain the scores of the lexical diversity metrics. % SD 2020-08-29 13:40:35 +0200: Added lexical.
+The best (i.e. the lowest) mBLEU scores are achieved by models which use either a visual modality with max-pooling or both modalities with attention: \textbf{IMG+MAX} and \textbf{IMG+LNG+ATT}.
+The best self-CIDEr scores are achieved by both bimodal architectures.
+In addition, \textbf{IMG+LNG+ATT} strongly outperforms all other models in both lexical diversity metrics: mBLEU is reduced by 3.21\% indicating smaller \textit{n}-gram overlap between paragraph sentences, while self-CIDEr increases by 1.93\% demonstrating that attention in the model which uses multimodal features helps to generate more diverse set of sentences in terms of topicality.
+
+Note that the model configuration which uses only visual information scores the highest in multiple cases: BLEU-\{2, 3, 4\} when attention is used and mBLEU for models with max-pooling.
+It indicates that multimodal features do not necessarily help the model to produce more accurate and diverse paragarphs as measured by automatic metrics.
+Also, scores for both lexical accuracy and diversity are not that much different in most of the cases.
+This shows that intrinsic metrics might not be the best indicator for identifying clear differences in diversity and accuracy of the generated texts.
+In addition, such diversity metrics as mBLEU under-represent the diversity, being unable to take into account semantic differences between sentences.
+Therefore, we conduct a human evaluation experiment to achieve a better understanding of which input features and which model configurations generate both accurate and diverse paragraphs.
+
+
+
+%we gain on most of the \textit{n}-gram-based metrics when the model utilises semantic information and the visual representations (both \textbf{IMG+LNG} models) compared to models which use a single modality (\textbf{IMG} or \textbf{LNG}) only.
+%Also, the distance between the ground-truth and the generated paragraphs in the word embedding space increases when both modalities are used as indicated by the WMD score.
+%In the context of generating \textit{diverse} paragraphs, we see it as an improvement: \textbf{IMG+LNG} model does not only generate more accurate paragraphs, but also learns to slightly deviate its output's content from the content in ground-truth descriptions without hurting its accuracy.
+% SD 2020-08-29 12:55:07 +0200: How is this reflected in the numbers? We previously argued that the numbers mostly indicate lexical accuracy and lexical diversity but not other kinds of accuracy and diversity.
+% Nikolai: I agree, this sentence has simply not been removed on time.
+
+\iffalse
 However, as Table~\ref{tab:metricsatt} indicates, when replacing max-pooling with attention, % for modality processing,
 we observe % SD 2020-08-29 13:29:12 +0200: that \textbf{IMG+ATT} performs the best, leaving multimodal architecture (\textbf{IMG+LNG+ATT} slightly behind with ATT+LNG model.
 we observe that attention leads to a better performance for \textbf{IMG} and \textbf{LNG} individually but not for \textbf{IMG+LANG} together.
@@ -636,6 +648,8 @@ As previous work shows \cite{Caccia2018,Holtzman2019}, there is a trade-off betw
 Here, we conclude that when using max-pooling, multimodal input benefits both accuracy and diversity of the generated outputs. % SD 2020-08-29 14:08:42 +0200: Is accuracy still Table 1? But we have middle mBLEU and highest self-CIDER.
 On the contrary, attention seems to worsen both accuracy and diversity of these models, improving on accuracy and diversity metrics for uni-modal counterparts. % SD 2020-08-29 14:09:11 +0200: No: the best self-CIDER in IMG+LNG+ATT, the best mBLEU is LNG+ATT.
 However, models which utilise single modality, benefit from attention in both accuracy and diversity. % SD 2020-08-29 14:55:48 +0200: No.
+
+\fi
 
 % SD 2020-08-29 14:55:56 +0200: This paragraph would get integrated with the previous one, see my comment in l.633.
 
@@ -692,51 +706,73 @@ However, models which utilise single modality, benefit from attention in both ac
 % SD 2020-07-09 16:11:33 +0200: The diversity should be **lagom** not too little diverse and not overly divserse given human-generated descriptions.
 
 \subsection{Human Evaluation}
+\label{humaneval}
 % SD 2020-08-29 14:59:11 +0200: Added:
-As shown in the preceding discussion the intrinsic evaluation show us only a particular picture of the accuracy and diversity of the generated paragraphs. For this reason we have constructed a human evaluation task in which we are interested in the following properties of generated paragraphs covering both accuracy and diversity aspects: word choice, object salience, sentence structure and paragraph coherence.
+As shown in the preceding discussion the intrinsic evaluation show us only a particular picture of the accuracy and diversity of the generated paragraphs.
+For this reason we have constructed a human evaluation task in which we are interested in the following properties of generated paragraphs covering both accuracy and diversity aspects: word choice, object salience, sentence structure and paragraph coherence.
 % To collect human judgements about paragraphs, we employed our experiment on Amazon Mechanical Turk.
 We randomly chose 10\% of the images from our test set resulting in 250 images.
 For each of these images we gathered seven paragraphs (six from the models and one from the test set).
 % Each of these paragraphs has been evaluated by the crowdsourcing workers across multiple criteria: 
 We presented workers with the instructions shown in Appendix~\ref{sec:supplemental}.
-To ensure quality and variety of workers' judgements, we presented our tasks only to the Master workers (those with the high reputation and task acceptance rate) and controlled for the number of tasks a single worker is able to submit. % SD 2020-08-29 15:11:49 +0200: What was the number: 30?
+To ensure quality and variety of workers' judgements, we presented our tasks only to the Master workers (those with the high reputation and task acceptance rate) and controlled for the number of tasks a single worker is able to submit (we set it to 30). % SD 2020-08-29 15:11:49 +0200: What was the number: 30? Nikolai: Yup
 We paid 0.15\$ per task to a single worker.
-Finally, we obtained judgements from X unique Master workers for 1,750 image paragraphs overall.
+Finally, we obtained judgements from 154 unique Master workers for 1,750 image paragraphs overall.
+%63 workers have completed more than 10 tasks each.
 For each judgement criteria we took the average score across all models; the results are shown in Table~\ref{tab:humeval}.
 
 \begin{table}[h]
    \footnotesize
   \centering
-  \begin{tabular}{|l|c|c|c|c|c|c|}
+  \begin{tabular}[width=\linewidth]{|l|l|c|c|c|c|c|c|}
   \hline
-    \textbf{Model} & \textbf{mBLEU} & \textbf{self-CIDEr}  \\
+    \textbf{Model Input} & \textbf{Type} & \textbf{WC} & \textbf{OS} & \textbf{SS} & \textbf{PC}  \\
   \hline
-   IMG & \cellcolor{blue!20}0.50630 & 0.76438 \\
+   IMG & +MAX & 31.58 & 38.24 & \textbf{59.57} & \textbf{37.87}  \\
   \hline
-   LNG & 0.52245 & 0.75591 \\
+   LNG & +MAX & 29.64 & 36.43 & 56.43 &  36.95 \\
   \hline
-   IMG+LNG & 0.52090 & \cellcolor{blue!20}0.76465  \\
-  \hline
-  \hline
-   IMG+ATT & \cellcolor{blue!10}0.51501 & \cellcolor{blue!10}0.76423 \\
-  \hline
-   LNG+ATT & \cellcolor{blue!50}0.50387 & \cellcolor{blue!50}0.76890  \\
-  \hline
-   IMG+LNG+ATT & 0.52247 & 0.75131 \\
+   IMG+LNG & +MAX & \textbf{34.20} & \textbf{38.72} & 57.85 & 37.06  \\
   \hline
   \hline
-   GT & 0.18847 & 0.96514 \\
+   IMG & +ATT & 36.91 & 45.10  & 69.34 & 32.27  \\
+  \hline
+   LNG & +ATT & \textbf{37.06} & \textbf{46.78} & \textbf{72.95} & \textbf{40.88}  \\
+  \hline
+   IMG+LNG & +ATT & 33.81 & 37.67 & 45.37 &  34.71 \\
+  \hline
+  \hline
+  GT & - & 89.83 & 87.36 & 83.07 & 84.78  \\
   \hline
   \end{tabular}
-  \caption{Average scores for 4 param}
+  \caption{Human evaluation results. WC, OS, SS, PC stand for word choice, object salience, sentence structure and paragraph coherence. Each value in the table is the average of all scores for the corresponding criterion.}
   \label{tab:humeval}
 \end{table}
 
+In model settings with max-pooling, bimodal architecture scores first on choice of words and object salience.
+However, it is slightly worse than the visual model when looking at the sentence structure and paragraph coherence.
+To understand if there are significant differences between sentence structure and paragraph coherence scores between \textbf{IMG} and \textbf{IMG+LNG} models, we performed significance test on these values.
+There was no significant effect for sentence structure
+
+% par cor - Ttest_indResult(statistic=0.3908574273411422, pvalue=0.6960697768351158)
+% ss - Ttest_indResult(statistic=0.3477419470536474, pvalue=0.7281809194825375)
+
+The results of our human evaluation can also indicate that a more careful task design / experimental set-up is needed.
+Some previous work \cite{vanmiltenburg2017} has shown that there are many individual differences between crowd-workers who are required to complete a task related to image captioning.
+These differences might include personal preferences of what to describe, differences in background knowledge about image context, etc.
+We leave more careful investigation of human evaluation of paragraphs for future work.
+
+
 % SD 2020-08-29 15:12:48 +0200: Use the same suggested shading as before.
 
+\section{Discussion and Future Work}
+
+As shown by both automatic and human evaluation, multi-modal information does help generation of paragraphs.
+All models, which utilise two modalities in different ways produce more accurate and diverse multi-sentence image descriptions.
+Automatic evaluation measures only partial aspects of the generated texts (e.g., lexical accuracy / diversity), while the human evaluation is aimed at measuring other text features: coherence, salience, etc.
+It is surprising that in the context of our models, visual information is generally more helpful than language information as previous work on the similar task of visual question answering has reported strong bias on the semantic information \cite{Agrawal:2017aa}.
+
 % SD 2020-08-29 15:13:31 +0200: Discussion of results. Multi-modal information does help generation of paragraphs, but not on all measures equally. Intrinsic avluation measures evaluate only partial aspects. Attention is preferred over max-pooling because it is adaptive for each sentence. One point which we haven't mentioned before and it were good to state somewhere: it is superising that in this context IMG information works better or equally well as the LNG information as previous work on image captioning has reported strong bias on the LNG information, e.g. Agrawal:2017aa.
-
-
 
 \section{Related Work}
 
@@ -810,6 +846,12 @@ a different application of semantic information encoded in language: we use phra
 \section{Conclusion}
 
 % SD 2020-08-29 15:49:23 +0200: (i) "Our primary research question is as follows: does using both visual and linguistic information improve accuracy and diversity of generated paragraphs?" (ii) Attention (early or late) vs max pooling for informaiton fusion. (iii) Intrinisc evaluation measures are insufficient for evaluating generation of paragraphs as they focus on lexical choice. Even that is not fully reflected in them if it is based on bi-gram matching.
+
+In this paper we addressed the problem of generating both accurate and diverse image paragraphs.
+We showed that utilising both visual and linguistic information about objects in an image improves accuracy and diversity of generated texts based on automatic and human evaluation.
+We also showed that intrinsic evaluation metrics are insufficient for evaluation generation of paragraphs as they focus on lexical choice.
+In this context, 
+
 
 Future work: diversity in terms of choosing best candidate from the pool of candidates.
 Experiments with choosing different candidates (not always the most probable from the beam search) and report how diversity changes.

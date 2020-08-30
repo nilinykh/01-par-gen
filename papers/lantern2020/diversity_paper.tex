@@ -79,7 +79,7 @@
 
 \newcommand\BibTeX{B\textsc{ib}\TeX}
 
-\title{Bimodal Image Paragraph Generation: Investigating the Role of Visual and Semantic Stimuli in Generating Diverse and Accurate Image Descriptions}
+\title{Multimodal Image Paragraph Generation: Investigating the Role of Visual and Semantic Stimuli in Generating Diverse and Accurate Image Descriptions}
 
 \author{First Author \\
  Affiliation / Address line 1 \\
@@ -115,6 +115,7 @@ Both mechanisms interact: that a particular object is described at a particular 
 Compare for example: ``two cows are standing in the field'', ``there are trees in the field'' and ``a few of them are close to the trees''.
 The selection and the order of the relevant features are described by a cognitive mechanisms of attention and memory \cite{Lavie:2004aa,Dobnik:2016ac}.
 
+\iffalse
 \begin{figure}
 \centering
  \fbox{\includegraphics[width=\linewidth]{figures/example}}
@@ -127,6 +128,7 @@ The selection and the order of the relevant features are described by a cognitiv
  \label{example}
  \vspace{-.5cm}
 \end{figure}
+\fi
 
 In this paper we investigate the interplay between visual and textual information (reflecting background knowledge about the world and communicative intent) and their ability of generating natural linguistic discourses spanning over several sentences.
 % To improve on the first point, for each generated sentence we learn to attend to salient objects in the scene.,
@@ -480,22 +482,24 @@ For decoding we use beam search \cite{beam17} with beam width $B=2$ (we tested s
     \textbf{Model Input} & \textbf{Type} & \textbf{WMD} & \textbf{CIDEr}  & \textbf{METEOR} & \textbf{BLEU-1} & \textbf{BLEU-2}
     & \textbf{BLEU-3} & \textbf{BLEU-4}  \\
   \hline
-   IMG & +MAX & 7.48 & 25.66 & 11.20 & 24.51 & 13.67 & 7.96 &  4.51 \\
+   IMG & +MAX & \cellcolor{blue!18}7.48 & \cellcolor{blue!18}25.66 & \cellcolor{blue!18}11.20 & \cellcolor{blue!18}24.51 & \cellcolor{blue!18}13.67 & \cellcolor{blue!18}7.96 &  \cellcolor{blue!18}4.51 \\
   \hline
-   LNG & +MAX & 7.19 & 22.27 & 10.81 & 23.20 & 12.69 & 7.34 & 4.19\\
+   LNG & +MAX & \cellcolor{blue!10}7.19 & \cellcolor{blue!10}22.27 & \cellcolor{blue!10}10.81 & \cellcolor{blue!10}23.20 & \cellcolor{blue!10}12.69 & \cellcolor{blue!10}7.34 &  \cellcolor{blue!10}4.19\\
   \hline
-   IMG+LNG & +MAX & \textbf{7.61} &  \textbf{26.38} &   \textbf{11.30} &  \textbf{25.10} &   \textbf{13.88} &   \textbf{8.11} &   \textbf{4.61}  \\
+   IMG+LNG & +MAX & \cellcolor{blue!30}\textbf{7.61} &  \cellcolor{blue!30}\textbf{26.38} &   \cellcolor{blue!30}\textbf{11.30} &  \cellcolor{blue!30}\textbf{25.10} &   \cellcolor{blue!30}\textbf{13.88} &   \cellcolor{blue!30}\textbf{8.11} &  \cellcolor{blue!30} \textbf{4.61}  \\
   \hline
-   IMG & +ATT & 7.47 & 26.01& 11.26 & 24.88 &   \textbf{13.99} &  \textbf{8.13} &   \textbf{4.67}  \\
   \hline
-   LNG & +ATT & 7.20 & 22.11 & 10.82 & 23.20 & 12.55 & 7.16 & 3.97  \\
+   IMG & +ATT & \cellcolor{blue!18}7.47 & \cellcolor{blue!18}26.01& \cellcolor{blue!18}11.26 & \cellcolor{blue!18}24.88 &   \cellcolor{blue!30}\textbf{13.99} &  \cellcolor{blue!30}\textbf{8.13} &  \cellcolor{blue!30} \textbf{4.67}  \\
   \hline
-   IMG+LNG & +ATT & \textbf{7.54} &  \textbf{26.04} &  \textbf{11.28} & \textbf{24.96} & 13.82 & 8.04 & 4.60 \\
+   LNG & +ATT & \cellcolor{blue!10}7.20 & \cellcolor{blue!10}22.11 & \cellcolor{blue!10}10.82 & \cellcolor{blue!10}23.20 & \cellcolor{blue!10}12.55 & \cellcolor{blue!10}7.16 & \cellcolor{blue!10}3.97  \\
+  \hline
+   IMG+LNG & +ATT & \cellcolor{blue!30}\textbf{7.54} &  \cellcolor{blue!30}\textbf{26.04} & \cellcolor{blue!30} \textbf{11.28} & \cellcolor{blue!30}\textbf{24.96} & \cellcolor{blue!18}13.82 & \cellcolor{blue!18}8.04 & \cellcolor{blue!18}4.60 \\
      \hline
   \end{tabular}
     \caption{
     Automatic evaluation results. Models are separated based on the input features (unimodal / bimodal) and type of the mechanism used to compactly describe content of the image (max-pooling / attention).
     Best scores for both \textbf{+MAX} and \textbf{+ATT} modes are shown in bold.
+    The color intensity indicates how good the score is compared to the other models' scores.
     }
   \label{tab:accstats}
 \end{table*}
@@ -508,18 +512,18 @@ For decoding we use beam search \cite{beam17} with beam width $B=2$ (we tested s
   \hline
     \textbf{Model Input} & \textbf{Type} & \textbf{mBLEU} & \textbf{self-CIDEr}  \\
   \hline
-   IMG & +MAX & \textbf{50.63} & 76.43 \\
+   IMG & +MAX &  \cellcolor{red!30}\textbf{50.63} & \cellcolor{red!18}76.43 \\
   \hline
-   LNG & +MAX & 52.24 & 75.59 \\
+   LNG & +MAX & \cellcolor{red!10}52.24 & \cellcolor{red!10}75.59 \\
   \hline
-   IMG+LNG & +MAX & 52.09 & \textbf{76.46}  \\
+   IMG+LNG & +MAX & \cellcolor{red!18}52.09 & \cellcolor{red!30}\textbf{76.46}  \\
   \hline
   \hline
-   IMG & +ATT & 51.82 & 75.51  \\
+   IMG & +ATT & \cellcolor{red!10}51.82 & \cellcolor{red!10}75.51  \\
   \hline
-   LNG & +ATT & 50.93 & 76.41  \\
+   LNG & +ATT & \cellcolor{red!18}50.93 & \cellcolor{red!18}76.41  \\
   \hline
-   IMG+LNG & +ATT & \textbf{47.42} & \textbf{78.39} \\
+   IMG+LNG & +ATT & \cellcolor{red!30}\textbf{47.42} & \cellcolor{red!30}\textbf{78.39} \\
   \hline
   \hline
    GT & - & \textcolor{blue}{18.84} & \textcolor{blue}{96.51} \\
@@ -599,14 +603,10 @@ However, this intrinsic metric does not evaluate if the paragraph demonstrates d
 
 \subsection{Results}
 
-As the results in Table~\ref{tab:accstats} demonstrate, models which utilise both semantic and visual information (any \textbf{IMG+LNG} configuration) outperform their single modality variants.
+As the results in Table~\ref{tab:accstats} demonstrate, models which utilise both semantic and visual information (any \textbf{IMG+LNG} configuration) outperform their single modality variants in both attention and max-pooling settings.
 When using max-pooling, \textbf{IMG+LNG} model improves on CIDEr by 0.72 and METEOR by 0.10.
-Also, bimodal architecture is slightly more lexically diverse from the ground truth paragraphs, according to the WMD scores.
+Also, two-modal architecture is slightly lexically more diverse from the ground truth paragraphs, according to the WMD scores.
 This result comes at no decrease in other metrics, concerned with lexical accuracy.
-
-% SD 2020-08-29 13:01:33 +0200: Hm, this depends on what attention we are using, early or late. Secondly, even if we are using late attention I would not agree. I think some descriptions/sentences may be more biased to semantic rather than visual information and vice versa (we say this earlier). Attention has to learn how to select features over the sequence, max pooling selects only the most prominent feature and this is the same over the entire sequence. Max pooling is a naive baseline. Therefore, the most likely reason is that learning attention in this case is just harder. (Point 1)
-% SD 2020-08-29 13:34:09 +0200: Note that the intrinsic measure evaluate mostly lexical accuracy and diversity. It therefore may be possible that in terms of these lexcial items are generated sufficiently well with visual features which provide a strong signal and therefore background semantic information is less relevant. (Point 2). Hence, the problem is not re-duplicated information bur rather what information is used for the generation of that part of descriptions that these measures are evaluating. Having recognised these defficiencies we therefore setup human-evaluation using AMT.
-
 
 When replacing max-pooling with late attention, we observe that the multimodal model does necessarily perform the best in BLEU metrics in particular.
 Two of our models (\textbf{IMG} and \textbf{IMG+LNG}) perform very close to each other, indicating that visual features might provide input signal simply as strong as the multimodal features when attending to them.
@@ -615,15 +615,13 @@ In this case, attention treats semantic information as less relevant, while lang
 
 Table~\ref{tab:divstats} contain the scores of the lexical diversity metrics. % SD 2020-08-29 13:40:35 +0200: Added lexical.
 The best (i.e. the lowest) mBLEU scores are achieved by models which use either a visual modality with max-pooling or both modalities with attention: \textbf{IMG+MAX} and \textbf{IMG+LNG+ATT}.
-The best self-CIDEr scores are achieved by both bimodal architectures.
+The best self-CIDEr scores are achieved by both two-modal architectures.
 In addition, \textbf{IMG+LNG+ATT} strongly outperforms all other models in both lexical diversity metrics: mBLEU is reduced by 3.21\% indicating smaller \textit{n}-gram overlap between paragraph sentences, while self-CIDEr increases by 1.93\% demonstrating that attention in the model which uses multimodal features helps to generate more diverse set of sentences in terms of topicality.
 
-Note that the model configuration which uses only visual information scores the highest in multiple cases: BLEU-\{2, 3, 4\} when attention is used and mBLEU for models with max-pooling.
-It indicates that multimodal features do not necessarily help the model to produce more accurate and diverse paragarphs as measured by automatic metrics.
-Also, scores for both lexical accuracy and diversity are not that much different in most of the cases.
-This shows that intrinsic metrics might not be the best indicator for identifying clear differences in diversity and accuracy of the generated texts.
+Note that automatic metrics do not necessarily capture the quality of generated texts: all scores are close to each other and there is no particular model which performs the best.
+This means that intrinsic metrics might not be the best indicator for identifying clear differences in diversity and accuracy of the generated texts.
 In addition, such diversity metrics as mBLEU under-represent the diversity, being unable to take into account semantic differences between sentences.
-Therefore, we conduct a human evaluation experiment to achieve a better understanding of which input features and which model configurations generate both accurate and diverse paragraphs.
+Therefore, we conduct a human evaluation experiment to achieve a better understanding of which input features and which pooling mechanism assist in generation of both accurate and diverse paragraphs.
 
 
 
@@ -734,56 +732,57 @@ Finally, we obtained judgements from 154 unique Master workers for 1,750 image p
 %63 workers have completed more than 10 tasks each.
 For each judgement criteria we took the average score across all models; the results are shown in Table~\ref{tab:humeval}.
 
+\definecolor{LightCyan}{rgb}{0.88,1,1}
+\newcolumntype{b}{>{\columncolor{LightCyan}}c}
+
 \begin{table}[h]
-   \footnotesize
+   \scriptsize
   \centering
-  \begin{tabular}[width=\linewidth]{|l|l|c|c|c|c|c|c|}
+  \begin{tabular}[width=\linewidth]{|l|l|c|c|c|c|>{\columncolor{LightCyan}}c| }
   \hline
-    \textbf{Model Input} & \textbf{Type} & \textbf{WC} & \textbf{OS} & \textbf{SS} & \textbf{PC}  \\
+    \textbf{Input} & \textbf{Type} & \textbf{WC} & \textbf{OS} & \textbf{SS} & \textbf{PC} & Mean \\
   \hline
-   IMG & +MAX & 31.58 & 38.24 & \textbf{59.57} & \textbf{37.87}  \\
+   IMG & +MAX & 31.58 & 38.24 & \textbf{59.57} & \textbf{37.87} & 41.81  \\
   \hline
-   LNG & +MAX & 29.64 & 36.43 & 56.43 &  36.95 \\
+   LNG & +MAX & 29.64 & 36.43 & 56.43 &  36.95 &  39.86 \\
   \hline
-   IMG+LNG & +MAX & \textbf{34.20} & \textbf{38.72} & 57.85 & 37.06  \\
+   IMG+LNG & +MAX & \textbf{34.20} & \textbf{38.72} & 57.85 & 37.06 & 41.95  \\
   \hline
-  \hline
-   IMG & +ATT & 36.91 & 45.10  & 69.34 & 32.27  \\
-  \hline
-   LNG & +ATT & \textbf{37.06} & \textbf{46.78} & \textbf{72.95} & \textbf{40.88}  \\
-  \hline
-   IMG+LNG & +ATT & 33.81 & 37.67 & 45.37 &  34.71 \\
+  \rowcolor{LightCyan}
+   Mean & +MAX & 31.80 & 37.79 & 57.95 & 37.29 & -  \\
   \hline
   \hline
-  GT & - & 89.83 & 87.36 & 83.07 & 84.78  \\
+   IMG & +ATT & 36.91 & 45.10  & 69.34 & 32.27 & 45.90  \\
+  \hline
+   LNG & +ATT & \textbf{37.06} & \textbf{46.78} & \textbf{72.95} & \textbf{40.88} & 49.41  \\
+  \hline
+   IMG+LNG & +ATT & 33.81 & 37.67 & 45.37 &  34.71 & 37.89 \\
+  \hline
+  \rowcolor{LightCyan}
+   Mean  & +ATT & 35.92 & 43.18 & 62.55 & 35.95 & -  \\
+  \hline
+  GT & - & 89.83 & 87.36 & 83.07 & 84.78 & - \\
   \hline
   \end{tabular}
-  \caption{Human evaluation results. WC, OS, SS, PC stand for word choice, object salience, sentence structure and paragraph coherence. Each value in the table is the average of all scores for the corresponding criterion.}
+  \caption{Human evaluation results. WC, OS, SS, PC stand for word choice, object salience, sentence structure and paragraph coherence. Each value in the table is the average of all scores for the corresponding criterion. The mean values per each model and type of pooling mechanism are coloured in light cyan.}
   \label{tab:humeval}
 \end{table}
 
-In model settings with max-pooling, bimodal architecture scores first on choice of words and object salience.
-However, it is slightly worse than the visual model when looking at the sentence structure and paragraph coherence.
-To understand if there are significant differences between sentence structure and paragraph coherence scores between \textbf{IMG} and \textbf{IMG+LNG} models, we performed significance test on these values.
-There was no significant effect for sentence structure
-
-% par cor - Ttest_indResult(statistic=0.3908574273411422, pvalue=0.6960697768351158)
-% ss - Ttest_indResult(statistic=0.3477419470536474, pvalue=0.7281809194825375)
-
-The results of our human evaluation can also indicate that a more careful task design / experimental set-up is needed.
-Some previous work \cite{vanmiltenburg2017} has shown that there are many individual differences between crowd-workers who are required to complete a task related to image captioning.
-These differences might include personal preferences of what to describe, differences in background knowledge about image context, etc.
-We leave more careful investigation of human evaluation of paragraphs for future work.
-
 
 % SD 2020-08-29 15:12:48 +0200: Use the same suggested shading as before.
+% Nikolai: I would maybe unite these two section, combine results and discussion.
 
-\section{Discussion and Future Work}
+%\section{Discussion and Future Work}
 
-As shown by both automatic and human evaluation, multi-modal information does help generation of paragraphs.
-All models, which utilise two modalities in different ways produce more accurate and diverse multi-sentence image descriptions.
-Automatic evaluation measures only partial aspects of the generated texts (e.g., lexical accuracy / diversity), while the human evaluation is aimed at measuring other text features: coherence, salience, etc.
-It is surprising that in the context of our models, visual information is generally more helpful than language information as previous work on the similar task of visual question answering has reported strong bias on the semantic information \cite{Agrawal:2017aa}.
+As shown by human evaluation, multi-modal information does help generation of better paragraphs when using max-pooling.
+At the same time, max-pooling is preferable only when utilising a single modality, since attention-based models outperform max-pooling ones across each of the criteria.
+Also, the \textbf{IMG+LNG} model with max-pooling might be a beneficial choice (scores first in two criteria out of four) when learning to generate more salient objects and describe them correctly.
+However, attention is judged as more advantageous in general, having higher mean scores over all criteria compared to the mean scores of max-pooling models.
+The model which utilises semantic information and uses attention is judged as the best configuration by humans, which is in line with some previous work that reports strong bias on the semantic information \cite{Agrawal:2017aa}.
+More interestingly, max-pooling does not seem to have the same effect on utilisation of semantic information.
+
+We believe that these results suggest the following future experiments: (i) detailed investigation of early vs. late attention (when to fuse two modalities and how), (ii) as \newcite{vanmiltenburg2017} argue, more control over human evaluation can provide us with better, more precise human judgements, (iii) training with other decoding strategies such as top-\textit{k} sampling or nucleus sampling \cite{Holtzman2019}.
+
 
 % SD 2020-08-29 15:13:31 +0200: Discussion of results. Multi-modal information does help generation of paragraphs, but not on all measures equally. Intrinsic avluation measures evaluate only partial aspects. Attention is preferred over max-pooling because it is adaptive for each sentence. One point which we haven't mentioned before and it were good to state somewhere: it is superising that in this context IMG information works better or equally well as the LNG information as previous work on image captioning has reported strong bias on the LNG information, e.g. Agrawal:2017aa.
 
@@ -861,15 +860,15 @@ a different application of semantic information encoded in language: we use phra
 % SD 2020-08-29 15:49:23 +0200: (i) "Our primary research question is as follows: does using both visual and linguistic information improve accuracy and diversity of generated paragraphs?" (ii) Attention (early or late) vs max pooling for informaiton fusion. (iii) Intrinisc evaluation measures are insufficient for evaluating generation of paragraphs as they focus on lexical choice. Even that is not fully reflected in them if it is based on bi-gram matching.
 
 In this paper we addressed the problem of generating both accurate and diverse image paragraphs.
-We showed that utilising both visual and linguistic information about objects in an image improves accuracy and diversity of generated texts based on automatic and human evaluation.
-We also showed that intrinsic evaluation metrics are insufficient for evaluation generation of paragraphs as they focus on lexical choice.
-In this context, 
+We demonstrated that utilising both visual and linguistics information might benefit quality of generated texts depending on the pooling mechanism that is used.
+We showed that intrinsic evaluation metrics are insufficient for evaluation of paragraphs as they focus on lexical choice and do not capture human level of judgement (\textbf{LNG+ATT} is judged as the best model in human evaluation, while it is not among the leaders according to the automatic evaluation).
+%Also, we note that the result of this work is a series of future experiments 
 
 
-Future work: diversity in terms of choosing best candidate from the pool of candidates.
-Experiments with choosing different candidates (not always the most probable from the beam search) and report how diversity changes.
-Experiment with other language representations (more complex ones).
-End of paragraph prediction.
+%Future work: diversity in terms of choosing best candidate from the pool of candidates.
+%Experiments with choosing different candidates (not always the most probable from the beam search) and report how diversity changes.
+%Experiment with other language representations (more complex ones).
+%End of paragraph prediction.
 
 % SD 2020-07-09 16:18:09 +0200: Self-BLEU and other measures in Table 2 are good but they evaluate vocabulary only. However, as our paper is about a discourse we also need to evaluate whether the paragraphs have a better discourse structure. How shall we do that? This would be the main purpose of the human-evaluation experiment.
 

@@ -243,6 +243,7 @@ Second, each of the topics is used by sentence-level LSTM to generate an actual 
 Finally, all generated sentences per image are concatenated to form a final paragraph.
 An overview of our model and a more detailed description is shown in Fig.~\ref{fig:model}.
 Our model is different from the model by \newcite{krause2016hierarchical} in the following ways: (i) we use either max-pooling or attention in our models, (ii) we do not learn to predict the end of the paragraph, but generate the same number of sentences as we find in ground-truth paragraph per each image.
+% SD 2020-08-30 22:50:59 +0200: Krause also does not use semantic information.
 The focus of our work is not to improve on the results of \newcite{krause2016hierarchical} but to investigate the effects of different multi-modal fusion on the accuracy of diversity of paragraph descriptions. % SD 2020-08-28 14:22:15 +0200: Added this sentence to emphasise our relation to Krause.
 
 % SD 2020-08-28 14:18:35 +0200: But this is not the only difference from Krause. Here is a good point to say: Our model is different from Krause in the following ways: (i)... ...(n). 
@@ -295,8 +296,8 @@ Then, we concatenate these mappings to form the multimodal vector $f$, which is 
 %Finally, the weighted attended features are concatenated into the multimodal vector $f$.
 We have experimented with fusing two attended modalities into a single vector via additional linear layer, but observed no improvement.
 We also tried to use modality-dependent attention (\textit{early attention}) as such setting has shown to produce good joint representation for the task of multimodal machine translation \cite{Caglayan2016,Caglayan2019}, which is very similar to image captioning in its nature.
-However, this set-up provided us with worse scores from automatic metrics.
-Therefore, here we use \textit{late attention}: attending to the features when they are already concatenated.
+However, this set-up provided us with worse scores of automatic metrics.
+Therefore, here we use \textit{late attention}: attending to the visual and textual features when they are already concatenated.
 % SD 2020-08-28 16:12:37 +0200: This seems to be the latest model that we discussed on Friday: we have one attention mechanism on the concatendated features. Early vs late attention. Which model are we going to use? Both of them? Adjust description.
 %Lastly, weighted attended features are concatenated and passed to another linear layer, which learns to integrate and fuse information into the multimodal vector.
 
@@ -499,7 +500,7 @@ For decoding we use beam search \cite{beam17} with beam width $B=2$ (we tested s
     \caption{
     Automatic evaluation results. Models are separated based on the input features (unimodal / bimodal) and type of the mechanism used to compactly describe content of the image (max-pooling / attention).
     Best scores for both \textbf{+MAX} and \textbf{+ATT} modes are shown in bold.
-    The color intensity indicates how good the score is compared to the other models' scores.
+    The colour intensity indicates how good the score is compared to the other models' scores.
     }
   \label{tab:accstats}
 \end{table*}
@@ -610,16 +611,17 @@ This result comes at no decrease in other metrics, concerned with lexical accura
 
 When replacing max-pooling with late attention, we observe that the multimodal model does necessarily perform the best in BLEU metrics in particular.
 Two of our models (\textbf{IMG} and \textbf{IMG+LNG}) perform very close to each other, indicating that visual features might provide input signal simply as strong as the multimodal features when attending to them.
-In this case, attention treats semantic information as less relevant, while language features are clearly beneficial for the \textbf{IMG+LNG+MAX} model, which outperforms all other models in WMD, CIDEr, METEOR.
+In this case, attention treats semantic information as less relevant, while language features are clearly beneficial for the \textbf{IMG+LNG+MAX} model, which outperforms all other models in WMD, CIDEr, METEOR. % SD 2020-08-30 21:38:19 +0200: Rephrase: treats semantic information as less relevant. Also the previous sentence. We don't know (since the hypothesis is that the measures are deficient and they are not measuring ALL aspects of performance). Hence, "according to these measures attention does not have an effect." Interestingly, semantic information is beneficial to WMD, CIDER and METEOR, i.e. all the measure that also take into account syntactic structure.
 
 
 Table~\ref{tab:divstats} contain the scores of the lexical diversity metrics. % SD 2020-08-29 13:40:35 +0200: Added lexical.
 The best (i.e. the lowest) mBLEU scores are achieved by models which use either a visual modality with max-pooling or both modalities with attention: \textbf{IMG+MAX} and \textbf{IMG+LNG+ATT}.
-The best self-CIDEr scores are achieved by both two-modal architectures.
+The best self-CIDEr scores are achieved by both bi-modal architectures.
 In addition, \textbf{IMG+LNG+ATT} strongly outperforms all other models in both lexical diversity metrics: mBLEU is reduced by 3.21\% indicating smaller \textit{n}-gram overlap between paragraph sentences, while self-CIDEr increases by 1.93\% demonstrating that attention in the model which uses multimodal features helps to generate more diverse set of sentences in terms of topicality.
 
-Note that automatic metrics do not necessarily capture the quality of generated texts: all scores are close to each other and there is no particular model which performs the best.
-This means that intrinsic metrics might not be the best indicator for identifying clear differences in diversity and accuracy of the generated texts.
+Note that automatic metrics do not necessarily capture the quality of generated texts. % SD 2020-08-30 21:49:43 +0200:: Removed this, as it is a different point: all scores are close to each other and there is no particular model which performs the best.
+This % means that
+is because the intrinsic metrics might not be the best indicator for identifying clear differences in diversity and accuracy of the generated texts.
 In addition, such diversity metrics as mBLEU under-represent the diversity, being unable to take into account semantic differences between sentences.
 Therefore, we conduct a human evaluation experiment to achieve a better understanding of which input features and which pooling mechanism assist in generation of both accurate and diverse paragraphs.
 
@@ -719,8 +721,9 @@ However, models which utilise single modality, benefit from attention in both ac
 \subsection{Human Evaluation}
 \label{humaneval}
 % SD 2020-08-29 14:59:11 +0200: Added:
-As shown in the preceding discussion the intrinsic evaluation show us only a particular picture of the accuracy and diversity of the generated paragraphs.
-For this reason we have constructed a human evaluation task in which we are interested in the following properties of generated paragraphs covering both accuracy and diversity aspects: word choice, object salience, sentence structure and paragraph coherence.
+% SD 2020-08-30 21:53:30 +0200: Removed because now this is already mentioned in the previous paragraph: As shown in the preceding discussion the intrinsic evaluation show us only a particular picture of the accuracy and diversity of the generated paragraphs.
+% For this reason we have constructed a human evaluation task in which
+In the human evaluation task we are interested in the following properties of generated paragraphs covering both accuracy and diversity aspects: word choice, object salience, sentence structure and paragraph coherence.
 % To collect human judgements about paragraphs, we employed our experiment on Amazon Mechanical Turk.
 We randomly chose 10\% of the images from our test set resulting in 250 images.
 For each of these images we gathered seven paragraphs (six from the models and one from the test set).
@@ -774,15 +777,17 @@ For each judgement criteria we took the average score across all models; the res
 
 %\section{Discussion and Future Work}
 
-As shown by human evaluation, multi-modal information does help generation of better paragraphs when using max-pooling.
-At the same time, max-pooling is preferable only when utilising a single modality, since attention-based models outperform max-pooling ones across each of the criteria.
-Also, the \textbf{IMG+LNG} model with max-pooling might be a beneficial choice (scores first in two criteria out of four) when learning to generate more salient objects and describe them correctly.
-However, attention is judged as more advantageous in general, having higher mean scores over all criteria compared to the mean scores of max-pooling models.
-The model which utilises semantic information and uses attention is judged as the best configuration by humans, which is in line with some previous work that reports strong bias on the semantic information \cite{Agrawal:2017aa}.
-More interestingly, max-pooling does not seem to have the same effect on utilisation of semantic information.
+As shown by human evaluation, looking at the overall mean, the multi-modal information does help generation of better paragraphs when using max-pooling.
+The \textbf{IMG+LNG} model with max-pooling might be a beneficial choice (scores first in two criteria out of four) in terms of word choice and identification of salient objects. % when learning to generate more salient objects and describe them correctly.
+The performance of the \textbf{IMG+LNG} model with max polling is close to the performance of the \textbf{IMG} model while the performance of the \textbf{LNG} model is slightly lower.
+Overall, attention is judged as more advantageous in general than max pooling, having higher mean scores over all criteria compared to the mean scores of max-pooling models.
+However, here the \textbf{IMG+LNG} model is outperformed by both uni-modal models.
+The \textbf{LNG} model which utilises semantic information and uses attention is judged as the best configuration by humans, which is in line with some previous work that reports strong bias on the semantic information \cite{Agrawal:2017aa}.
+Note that while its performance is close to the \textbf{IMG} model in terms of word choice and object salience, the improvement of the \textbf{LNG} model is much more expressed in terms of sentence structure and paragraph coherence, categories where would expect that semantic information matters most.
+Interestingly, max-pooling does not seem to have the same effect on utilisation of semantic information: the \textbf{LNG} model achieves the lowest scores. A possible explanation for this is that with max-pooling the same semantic information is chosen for every sentence topic while attention learns to select different semantic information for a sequence of topics. This appears to affect semantic features more than visual features.
+% SD 2020-08-30 22:06:43 +0200: I don't understand this sentence. max-pooling --> attention? At the same time, max-pooling is preferable only when utilising a single modality, since attention-based models outperform max-pooling ones across each of the criteria.
 
-We believe that these results suggest the following future experiments: (i) detailed investigation of early vs. late attention (when to fuse two modalities and how), (ii) as \newcite{vanmiltenburg2017} argue, more control over human evaluation can provide us with better, more precise human judgements, (iii) training with other decoding strategies such as top-\textit{k} sampling or nucleus sampling \cite{Holtzman2019}.
-
+Overall, the results indicate that both visual and semantic information are beneficial for the generated paragraphs as they effect different evaluation categories differently. The main challenge lines in information fusion of visual and semantic information in the model with attention. We believe that these results suggest the following future experiments: (i) detailed investigation of early vs. late attention (when to fuse two modalities and how), (ii) as \newcite{vanmiltenburg2017} argue, more control over human evaluation can provide us with better, more precise human judgements, (iii) training with other decoding strategies such as top-\textit{k} sampling or nucleus sampling \cite{Holtzman2019}.
 
 % SD 2020-08-29 15:13:31 +0200: Discussion of results. Multi-modal information does help generation of paragraphs, but not on all measures equally. Intrinsic avluation measures evaluate only partial aspects. Attention is preferred over max-pooling because it is adaptive for each sentence. One point which we haven't mentioned before and it were good to state somewhere: it is superising that in this context IMG information works better or equally well as the LNG information as previous work on image captioning has reported strong bias on the LNG information, e.g. Agrawal:2017aa.
 

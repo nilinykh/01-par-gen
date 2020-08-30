@@ -79,7 +79,7 @@
 
 \newcommand\BibTeX{B\textsc{ib}\TeX}
 
-\title{Multimodal Image Paragraph Generation: Utilising Linguistic Information in Generating Diverse Image Descriptions}
+\title{Bimodal Image Paragraph Generation: Investigating the Role of Visual and Semantic Stimuli in Generating Diverse and Accurate Image Descriptions}
 
 \author{First Author \\
  Affiliation / Address line 1 \\
@@ -114,6 +114,19 @@ Perceptual information mainly determines \emph{what} to refer to while the reaso
 Both mechanisms interact: that a particular object is described at a particular point of a discourse and with particular words depends not only on its perceptual salience but also whether that object should be referred to at that point of the story that the text is narrating which is its discourse salience.
 Compare for example: ``two cows are standing in the field'', ``there are trees in the field'' and ``a few of them are close to the trees''.
 The selection and the order of the relevant features are described by a cognitive mechanisms of attention and memory \cite{Lavie:2004aa,Dobnik:2016ac}.
+
+\begin{figure}
+\centering
+ \fbox{\includegraphics[width=\linewidth]{figures/example}}
+ \caption{
+ Example image with generated paragraphs from three different models.\\
+ \textbf{IMG+ATT} : \textit{there are several cars parked on the street. there are two cars parked on the road. there are two cars parked on the road.}\\
+  \textbf{LNG+ATT} : \textit{there are several signs on the street. there are signs on the street. the pole is white.}\\
+  \textbf{IMG+LNG+ATT} : \textit{there is a parking meter on a sidewalk. there are cars next to the street. there is a parking lot next to the street.} 
+ }
+ \label{example}
+ \vspace{-.5cm}
+\end{figure}
 
 In this paper we investigate the interplay between visual and textual information (reflecting background knowledge about the world and communicative intent) and their ability of generating natural linguistic discourses spanning over several sentences.
 % To improve on the first point, for each generated sentence we learn to attend to salient objects in the scene.,

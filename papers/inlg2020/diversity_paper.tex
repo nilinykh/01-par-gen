@@ -68,7 +68,7 @@
 % and will typically save some space.
 \usepackage{microtype}
 
-%\aclfinalcopy % Uncomment this line for the final submission
+\aclfinalcopy % Uncomment this line for the final submission
 %\def\aclpaperid{***} % Enter the acl Paper ID here
 
 %\setlength\titlebox{5cm}
@@ -81,16 +81,11 @@
 
 \title{When an image tells a story: the role of visual and semantic information for generating paragraph descriptions}
 
-\author{First Author \\
- Affiliation / Address line 1 \\
- Affiliation / Address line 2 \\
- Affiliation / Address line 3 \\
- \texttt{email@domain} \\\And
- Second Author \\
- Affiliation / Address line 1 \\
- Affiliation / Address line 2 \\
- Affiliation / Address line 3 \\
- \texttt{email@domain} \\}
+\author{Nikolai Ilinykh \space\space\space\space\space\space\space Simon Dobnik\\
+ Centre for Linguistic Theory and Studies in Probability (CLASP) \\
+ Department of Philosophy, Linguistics and Theory of Science (FLoV) \\
+ University of Gothenburg, Sweden \\
+ \texttt{nikolai.ilinykh,simon.dobnik@gu.se} }
 
 \date{}
 
@@ -166,7 +161,7 @@ However, as argued above, a good image paragraph model must also introduce diver
 Here, we define \textit{paragraph diversity} with two essential conditions.
 First, a generative model must demonstrate the ability to use % many different
 relevant words to describe objects without unnecessary repetitions (\emph{word-level diversity}).
-Secondly, it must produce a set of sentences with relevant mentions of a variety of image objects in an appropriate order (\emph{sentence-level diversity}). 
+Secondly, it must produce a set of sentences with relevant mentions of a variety of image objects in an appropriate order (\emph{sentence-level diversity}).
 
 % SD 2020-08-28 13:26:03 +0200: We are adding the order to diversity here. One mioght argue that this deserves a separate heading but let us leave it this way.
 % Nikolai: Yeah, we have never really paid that much attention to these two levels of diversity. Agreed, let's keep it like this for now.
@@ -181,9 +176,6 @@ We believe that the hierarchical structure of our models reflects the nature of 
 % SD 2020-08-28 14:07:33 +0200: Unfortunately, this does not fit here anymore. Find another place?
 % More recently, \newcite{ilinykh19} collected the dataset of image description sequences (mini-discourses).
 % These mini-discourses are especially useful for learning models which can plan and realise such ordered and structured data.
-
-
-
 
 
 \iffalse
@@ -228,7 +220,6 @@ We evaluate how close our models are compared to the human performance in terms 
  \label{fig:model}
 \end{figure*}
 
-
 \section{Approach}
 \paragraph{Overview}
 For our experiments we implement and adapt the hierarchical image paragraph model by \citet{krause2016hierarchical}.\footnote{The authors have not publicly released the code of their model and hence the model implementation is based on our interpretation of their paper.}
@@ -249,7 +240,7 @@ Finally, all generated sentences per image are concatenated to form a final para
 An overview of our model and a more detailed description is shown in Fig.~\ref{fig:model}.
 Our model is different from the model by \newcite{krause2016hierarchical} in the following ways: (i) we use either max-pooling or attention in our models, (ii) we do not learn to predict the end of the paragraph, but generate the same number of sentences as we find in ground-truth paragraph per each image, (iii) we use semantic information about objects in the visual scene.
 % SD 2020-08-30 22:50:59 +0200: Krause also does not use semantic information. --> added.
-The focus of our work is not to improve on the results of \newcite{krause2016hierarchical} but to investigate the effects of different multi-modal fusion on the accuracy of the diversity of paragraph descriptions. % SD 2020-08-28 14:22:15 +0200: Added this sentence to emphasise our relation to Krause.
+The focus of our work is not to improve on the results of \newcite{krause2016hierarchical} but to investigate the effects of different multi-modal fusion on the accuracy or the diversity of paragraph descriptions. % SD 2020-08-28 14:22:15 +0200: Added this sentence to emphasise our relation to Krause.
 % SD 2020-08-28 14:18:35 +0200: But this is not the only difference from Krause. Here is a good point to say: Our model is different from Krause in the following ways: (i)... ...(n). 
 
 %We also deploy various strategies for decoding and analyse differences in corresponding generated paragraphs.
@@ -434,6 +425,7 @@ For every subsequent sentence, both LSTMs use the last hidden states generated f
 During training, we use teacher forcing and feed ground-truth words as target words at each timestamp.
 We use Adam \cite{adam14} as an optimiser and choose the best model based on the validation loss (early stopping).
 For decoding we use beam search \cite{beam17} with beam width $B=2$ (we tested several values for the beam width $B \in \{2, 4, 6, 8, 10\}$).
+We leave the investigation of the effects of using different decoding strategies such as nucleus sampling \cite{Holtzman2019}, or various techniques for controlling decoding (length penalty, n-gram repetition penalty \cite{opennmt2017,paulus2017deep}) for future work.
 
 %Note that different from previous work, we do not implement sentence-level loss for the end of paragraph prediction. % SD 2020-07-09 14:46:42 +0200: We do not implent end of paragraph prediction. We should mention this at the beginning of the section where we compare our model with Krause.
 %Instead, we generate the same number of sentences for each image, as we find in its ground-truth paragraph.

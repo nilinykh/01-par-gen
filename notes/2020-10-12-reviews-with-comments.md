@@ -1,6 +1,6 @@
-============================================================================ 
+============================================================================
 INLG 2020 Reviews for Submission #102
-============================================================================ 
+============================================================================
 
 Title: When an image tells a story: the role of visual and semantic information for generating paragraph descriptions
 Authors: Nikolai Ilinykh and Simon Dobnik
@@ -29,7 +29,7 @@ Strengths:
 -------------
 1. Clear and interesting approach for combining visual features and language.
 2. Good results.
-3. Good experimentation. 
+3. Good experimentation.
 
 Weaknesses:
 -----------------
@@ -41,8 +41,10 @@ Weaknesses:
 > SD: For (1) Emphasise that this is a deliberate extension so that we can study the effects of adding language information. However, through this extension we effectively propose a new model.
 
 > SD: For (2) Perhaps add some references. Mitchell, etc. But a performance comparison with concerete systems would be out of the scope of this paper.
+> NI: Not sure which references to add here (if any). Is it the ones about visual storytelling? We also have a reference to Sanja Fidler's work on paragraph generation from scene graphs using grammars (https://arxiv.org/pdf/1503.00064.pdf), would this count as a knowledge-based approach? I think so.
 
 > SD: For (3) This is probably because of the example. We need to add discussion alongside these lines: we do not control redundancy because in a way redundancy reduction is evaluatied through the incroporation of the linguistic information. We hope that this will reduce redundancy. In a production system additional redundancy control could be incorporated. The success of redundancy control by the linguistic module has been evaluated through the AMT evaluation. Here you can explain how the features we have tested relate to redundancy.
+> NI: I have added a sentence about decoding strategies and different ways to control for redundancy (n-gram penalty, for example). We have tested these ideas, but never put them in the paper. 'Redundancy' in your sense would mean that linguistic information is supposed to decrease the redundancy. We never really tested if it's true or not, but I also made a note about it.
 
 
 Detailed Comments
@@ -72,33 +74,36 @@ What are the main strengths and weaknesses of the paper?
 ---------------------------------------------------------------------------
 Strengths:
 -------------
-1. the paper is well written. 
+1. the paper is well written.
 2. it does a good job comparing the proposed approach with the existing literature.
 3. results are good.
 
 Weaknesses:
 -----------------
-1. it is not clear how similar or different the generated descriptions are. 
+1. it is not clear how similar or different the generated descriptions are.
 2. the paper requires a qualitative error analysis section.
 3.
 ---------------------------------------------------------------------------
 
 > SD: For (1) Question about redundancy? The similarity between the description is measured in the experiment where we calculate m-BLEU and self-CIDER in Table 2. Emphasise this more strongly?
+> NI: Agree, added some sentences in the section with self-measures.
 
 > SD: For (2) This is a good point. Rather than cherry-picking only good examples it also good to discuss shortcomings. This is what we are interested in as scientists. I assume Figure 1 shows a good example which comes quite early on but then I do not think we discuss qualitatively these descriptions. Shall we add another bad example and then discuss how the systems prodice good an bad sentences. I suspect the system will produce bad sentences when the image is challenging, as we were discussing earlier, when even a human had a difficulty to see what the image is about.
+> NI: added another example and wrote a short paragraph about good/bad generations. Thinking about some number which would represent what 'good' and 'bad' is, it actually can be a self-bleu score or similar, right? Going to refer to the evaluation section with self-measures when introducing good/bad paragraphs.
 
 
 
 Detailed Comments
 ---------------------------------------------------------------------------
-This paper introduces a model for generating multi-sentence image descriptions. It investigates the following question: to what extend using visual and/or textual features can improve the accuracy fo generated image descriptions? It shows that the model that uses both visual and language input can be used to generate accurate paragraphs. 
-The paper is well written and the claims are supported. 
+This paper introduces a model for generating multi-sentence image descriptions. It investigates the following question: to what extend using visual and/or textual features can improve the accuracy fo generated image descriptions? It shows that the model that uses both visual and language input can be used to generate accurate paragraphs.
+The paper is well written and the claims are supported.
 
-My question is, how do you make sure that the generated sentences are not very similar? that is to say, how do you make sure that the model describes different parts of the image or communicates different facts about the image in different sentences? I would like to see a careful analysis of the diversity of the sentences. Do they describe different content or they are just stating the same fact in different words? 
+My question is, how do you make sure that the generated sentences are not very similar? that is to say, how do you make sure that the model describes different parts of the image or communicates different facts about the image in different sentences? I would like to see a careful analysis of the diversity of the sentences. Do they describe different content or they are just stating the same fact in different words?
 The paper also needs a qualitative error analysis section that describes the mistakes that the model makes.
 ---------------------------------------------------------------------------
 
 > SD: Second paragraph: Self-measures, human evaluation and also qualitative analysis of some good and bad examples. Emphasise in the discussion/conclusion. Ah, I see, here we could measure the diversity of objects related that you suggested.
+> NI: I would go with emphasising the info about self-measures, human d evaluation and qualitative analysis of good/bad examples. I think we can leave measuring of object diversity for now.
 
 
 ============================================================================
@@ -120,8 +125,8 @@ What are the main strengths and weaknesses of the paper?
 ---------------------------------------------------------------------------
 Strengths:
 -------------
-1. Comprehensive initial investigation into the performance of various DNN approaches to multi-sentence image description. 
-2. Useful finding on the disparity between human evaluation and automated measures. 
+1. Comprehensive initial investigation into the performance of various DNN approaches to multi-sentence image description.
+2. Useful finding on the disparity between human evaluation and automated measures.
 3.
 
 Weaknesses:
@@ -132,6 +137,7 @@ Weaknesses:
 ---------------------------------------------------------------------------
 
 > SD: Emphasise in the discussion/consluisons that task-context will be evaluated in the next step/future work.
+> NI: Mentioned image description dataset and task dependency in conclusion, have a look please.
 
 
 Detailed Comments

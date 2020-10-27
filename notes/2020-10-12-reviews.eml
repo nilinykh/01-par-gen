@@ -1,0 +1,498 @@
+Received: from GUEXC04-P.GU.GU.SE (10.240.64.43) by GUEXC01-P.GU.GU.SE
+ (10.240.64.40) with Microsoft SMTP Server (version=TLS1_2,
+ cipher=TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256_P256) id 15.1.1979.3 via Mailbox
+ Transport; Mon, 12 Oct 2020 10:59:52 +0200
+Received: from GUEXC02-P.GU.GU.SE (10.240.64.41) by GUEXC04-P.GU.GU.SE
+ (10.240.64.43) with Microsoft SMTP Server (version=TLS1_2,
+ cipher=TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256_P256) id 15.1.1979.3; Mon, 12
+ Oct 2020 10:59:51 +0200
+Received: from esa4.hc487-47.eu.iphmx.com (207.54.77.55) by GUEXC02-P.GU.GU.SE
+ (10.240.64.41) with Microsoft SMTP Server (version=TLS1_2,
+ cipher=TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256_P256) id 15.1.1979.3 via
+ Frontend Transport; Mon, 12 Oct 2020 10:59:51 +0200
+Authentication-Results: esa4.hc487-47.eu.iphmx.com; dkim=none (message not signed) header.i=none; spf=Pass smtp.mailfrom=start@sun.softconf.com
+Received-SPF: Pass (esa4.hc487-47.eu.iphmx.com: domain of
+  start@sun.softconf.com designates 64.46.59.172 as permitted
+  sender) identity=mailfrom; client-ip=64.46.59.172;
+  receiver=esa4.hc487-47.eu.iphmx.com;
+  envelope-from="start@sun.softconf.com";
+  x-sender="start@sun.softconf.com"; x-conformance=spf_only;
+  x-record-type="v=spf1"; x-record-text="v=spf1 a ?all"
+X-Ironport-Dmarc-Check-Result: validskip
+IronPort-SDR: sDg8U8Mx7s3gT9l7UAmD/hNZSt1IUHQk765sYE/M12F2kTxOSk2ENcvyZDn1Wd1buBZbhzWpbp
+ tGiXWOtQ+pFiw3eUwPguGc/jZjlx9s6ZJIIRKdyxul60erRBzkw09DntQE5bWBHYmjBwAS6B5+
+ dMynmXq8K5vXTxOjs5ppb6nV0MMzTIAGh+cBEQKOGhRqNs56U8SnIqfFaWlB0tI2hF2fvNHr2i
+ Eay2e0oXItjxaYlP1JHvIdsCcx2Emdj0NLR789HoDYTSdsLCRVZG2PBT3FC5Wc6NYFq/RHuLpz
+ agz9buPr6FLd2AdjxiIIzZPy
+X-IronPort-RemoteIP: 64.46.59.172
+X-IronPort-MID: 3223766
+X-IronPort-Reputation: 2.5
+X-IronPort-Listener: IncomingMail
+X-IronPort-SenderGroup: ACCEPTLIST
+X-IronPort-MailFlowPolicy: $ACCEPTED
+X-IPAS-Result: =?us-ascii?q?A0EPAgCSGoRffaw7LkBgHQEBAQEJARIBBQUBgg+CI3dVA?=
+ =?us-ascii?q?SMHCCyEPYNJhTmGAYMYjlKKaYF0AQEBAQEBAQEBBwEBExIKBAEBhmQlATgTA?=
+ =?us-ascii?q?gMBAQEDAgMBAQEBAQQBAQECAQECAwIBAQEBAhABAXoGYGAEgUdegQsMMwyCN?=
+ =?us-ascii?q?yKBfSwNVIEBEQobIBERNwEBEwJtJ4MFgnwFCpk1AYEoPgIjAT8BDIEFgjGGH?=
+ =?us-ascii?q?gaBK4Eyg18kgT+DAoEPYgaBOI9RgRE2giWBdwGBVwEDF38IBQUBEgFgCQKCT?=
+ =?us-ascii?q?TOCLQSBBjwBAQGHWYZiEhKMOpoMdQEGAiKCMBiLGIk8hjcWgn+KCIh6iyOTH?=
+ =?us-ascii?q?ZJzjTcCBAYFAhQBgWshanBNIy+BPy+BHUwBAgECDQIBAgMBAgIIAQECAgIBA?=
+ =?us-ascii?q?k2NVAwLg06FFIViIQMwAgYCLQIGAQkBAQMJjAQPF4IHFwEB?=
+IronPort-PHdr: =?us-ascii?q?9a23=3Aq4T2yR/7WrDER/9uRHKM819IXTAuvvDOBiVQ1K?=
+ =?us-ascii?q?B+0+gQIJqq85mqBkHD//Il1AaPAdyEra8bwLKG+4nbGkU4qa6bt34DdJEeHz?=
+ =?us-ascii?q?Qksu4x2zIaPcieFEfgJ+TrZSFpVO5LVVti4m3peRMNQJW2aFLduGC94iAPER?=
+ =?us-ascii?q?vjKwV1Ov71GonPhMiryuy+4ZLebxhKiTanYb5/Lhq6oRnSu8ILnYZsN6E9xw?=
+ =?us-ascii?q?fTrHBVYepW32RoJVySnxb4+Mi9+YNo/jpTtfw86cNOSL32cKskQ7NWCjQmKH?=
+ =?us-ascii?q?0169bwtRbfVwuP52ATXXsQnxFVHgXK9hD6XpP2sivnqupw3TSRMMPqQbwoXz?=
+ =?us-ascii?q?mp8qFmQwLqhigaLT406HrXhMxqjK1UvhyvugBwzpXOb42JKPZweb/Rcc8YSG?=
+ =?us-ascii?q?dHQ81fVzZBAoS5b4YXDOQPJeBWoYjgrFcQsReyGxWgD/71xD9SgX/20rc63P?=
+ =?us-ascii?q?4kEQrbwgEgGMsCvWrUrNrvNacSS/u1x7TPwDXCafNW3Tj95JbUfhw/vf2BRq?=
+ =?us-ascii?q?lwcc3fyUkzCwzFiVOQqYL/MzyJ0eQNtnGW4ux9Xu2gl2ApsRt+oiSzxsgykI?=
+ =?us-ascii?q?nJgJoYx17F+Ch3wIg7Jdy1RVBnbdO4FJZeuCGUOpZ5TM4hTG9lpCU3x6EGtJ?=
+ =?us-ascii?q?O4YCQHzJspyhzBZ/KJfIaE/BLuWeiPLTp+mXlrdrW/hxOo/kihzO3xTsi00F?=
+ =?us-ascii?q?BOripKjNXAqm0B2hjJ5sebTft9+1+t2TeJ1wDX5eFIP1w4mbTHJ5I7xb4wjJ?=
+ =?us-ascii?q?UTvVzYHi/xlkX2kLOZdkIi+uim8ejofrLmppqaOoRpiQ/+Krwjl82wDOgiPQ?=
+ =?us-ascii?q?UDXnKX9OS42bH54EH0QqtGg/srmafDqp/aP94UpquhDg9VzIkj7xG/Ai+90N?=
+ =?us-ascii?q?QFm3kLNklFeBWJj4j1J17OJ/b4Dfmlj1uwlzdrwujKPrznAprTMnjOiLbscL?=
+ =?us-ascii?q?ln50NTyQc/19BS6pZOBr0cIv//RFf9tNnCAR84Nwy0zfznCNJ41o4GQmKPHr?=
+ =?us-ascii?q?WWMLnOsVKT/eIvPu+MaJUOuDb6Jfgl++LhjXg/mV8TZ6WmwZwXaHWgEvR8P0?=
+ =?us-ascii?q?qZeWbsgssGEWoSuAo+Te/qiFqGUTFJZna+RaM85jU6CIKgDYbDRYCtjaeO3C?=
+ =?us-ascii?q?emBJFWfX5JAEiWEXj0b4WER+sMaCWKL896kzwEUL+hS4k72R6zsw/10LxnLu?=
+ =?us-ascii?q?vX+iADupLjycJ55/bNmkJ6yTshCcWe1GWETid1mmIOVjw29K9i51dwmW2Oya?=
+ =?us-ascii?q?xpv/sNNPp3yLsTCl1ifabGyONgAtW6cQWEVdeASUy9CoGnBzU+FIprm/cVZE?=
+ =?us-ascii?q?hhENKkgFbI2C/8UJEPkLneJboQ3eqGhyKpb/5nzHnc3axppF5jactGNHe9zv?=
+ =?us-ascii?q?p+8QzcXdaTy22CkKi2fqMa0mjG82LVnjnGh11RTAMlCfaNZnsYfEaD9Y6jtG?=
+ =?us-ascii?q?rfU7+jD6gmOQJdyMmEb5FHccDtkU4fHaaxNc/XPySxkDvgWlPUmfWBcczrY2?=
+ =?us-ascii?q?UYzGPWD01X2wwQ/HPTMw84C2/hpm/FFzVhGBrpZF+k6uhxrn63Dwc0wgiGYl?=
+ =?us-ascii?q?cn1u+z/RgY1rSHU/1G5rsfo286rilsWlO03tbYEd2F8hF9db9AScgg5hFc0m?=
+ =?us-ascii?q?zFvAt7MNqrKKU73Awkfg96vl3j21BMMqsbz5J4lHox10IyJLmRjBVBfG/Igt?=
+ =?us-ascii?q?WsZfvaNy/z5BCqe+jd3VSMmNqR/64O7rw/pTCB9EmyCkM47118zt8TyHyS+p?=
+ =?us-ascii?q?7NCgRUWpX0Gko67Bl1objGbzJ1ud+SiSMqbPjy62CYk9syTPMo0BOhY8tSPM?=
+ =?us-ascii?q?bmXEfpHssWCtLvYO0mll61bw4VaeVb9ao6JcSjJLON3K+mOvolnSrz0zgBvN?=
+ =?us-ascii?q?47jxPKrnUmGYuql94fzvqV3xWKTWLxl1799MD8xdAbIG1NWGeijyn8BItBIK?=
+ =?us-ascii?q?Z1eNVuay/mLsupy9F5n5OoVWRf8QvpHE8PwtOBYgeUKUf60xFb0kIZ53egnG?=
+ =?us-ascii?q?Hrql482yFstaeZ0CHUlq75aBMdJkZQWW8kllDiPYOzid5cV0+tJVthhF6u4k?=
+ =?us-ascii?q?D0wLJeraJ0IjzIWUl/eC7yPjIHMOP4pv+YbsVI8p9trTRPXbH2fwWBUrCk6U?=
+ =?us-ascii?q?hSw2b5EmBZ3jx+azy6psCzgUlhkGzEZH87+3PdfYsplEXvoefETPsU5QIoAS?=
+ =?us-ascii?q?xxiD3ZHF+5Zon75siS0YzEvPy1UGSvEJZUdHuywA=3D=3D?=
+X-IronPort-Anti-Spam-Filtered: true
+X-IronPort-AV: E=Sophos;i="5.77,366,1596492000"; 
+   d="scan'208";a="3223766"
+X-MGA-submission: =?us-ascii?q?MDGFk2Vs3tTQpsE2bs26MYoCXQ3DIwwZO2icrj?=
+ =?us-ascii?q?tFTjUpL9iL63HHrvjt8cpuF+LVhwbjAVbWxBhOZxmkihNc9ete/1C0/O?=
+ =?us-ascii?q?a2bslD9U2LX02Gzj8PKE10hKxSrfjlvKHbWiGBaIZq0eUWumXACHbEtk?=
+ =?us-ascii?q?SNQhJcCUTovkAzFDaXZJNkMQ=3D=3D?=
+Received: from softconf.com (HELO sun.softconf.com) ([64.46.59.172])
+  by esa4.hc487-47.eu.iphmx.com with ESMTP/TLS/ECDHE-RSA-AES256-GCM-SHA384; 12 Oct 2020 10:59:49 +0200
+Received: from sun.softconf.com (localhost [127.0.0.1])
+	by sun.softconf.com (8.14.4/8.14.4) with ESMTP id 09C8xFls026707
+	(version=TLSv1/SSLv3 cipher=DHE-RSA-AES256-GCM-SHA384 bits=256 verify=NO);
+	Mon, 12 Oct 2020 01:59:16 -0700
+Received: (from www@localhost)
+	by sun.softconf.com (8.14.4/8.14.4/Submit) id 09C8xFF8026697;
+	Mon, 12 Oct 2020 01:59:15 -0700
+Date: Mon, 12 Oct 2020 01:59:15 -0700
+Message-ID: <202010120859.09C8xFF8026697@sun.softconf.com>
+Sender: <start@sun.softconf.com>
+From: INLG 2020 Program Co-Chairs <inlg2020@softconf.com>
+Reply-To: INLG 2020 Program Co-Chairs <inlg2020@softconf.com>
+X-START-Originating: INLG 2020 Program Co-Chairs <inlg2020@softconf.com>
+X-START-Subject: Your INLG 2020 Submission (Number 102)
+To: <nikolai.ilinykh@gu.se>
+CC: <nikolai.ilinykh@gu.se>, <simon.dobnik@gu.se>
+Subject: Your INLG 2020 Submission (Number 102)
+Content-Type: multipart/alternative;
+	boundary="834lfd0000beb0cbd07805783abbaf"
+Return-Path: start@sun.softconf.com
+X-MS-Exchange-Organization-Network-Message-Id: 090ea0d3-53ec-43a0-726b-08d86e8d2e4f
+X-MS-Exchange-Organization-AVStamp-Enterprise: 1.0
+X-MS-Exchange-Organization-AuthSource: GUEXC02-P.GU.GU.SE
+X-MS-Exchange-Organization-AuthAs: Anonymous
+X-MS-Exchange-Transport-EndToEndLatency: 00:00:00.4344602
+X-MS-Exchange-Processed-By-BccFoldering: 15.01.1979.002
+MIME-Version: 1.0
+
+--834lfd0000beb0cbd07805783abbaf
+Content-Type: text/plain; charset="UTF-8"
+Content-Transfer-Encoding: binary
+
+Dear Nikolai Ilinykh:
+
+On behalf of the INLG 2020 Program Committee, we are delighted to inform you that the following submission has been accepted to appear at the conference:
+
+When an image tells a story: the role of visual and semantic information for generating paragraph descriptions
+
+You will soon receive a follow-up email about oral presentation once the initial program gets ready.
+
+The Program Committee worked very hard to thoroughly review all the submitted papers. Please repay their efforts, by following their suggestions when you revise your paper.
+
+The deadline for the final version of your manuscript is October 30, 2020. Please make sure that you use the correct style file (using A4 format).
+
+For details, please see 
+
+Below are some importants points to consider, before submitting the final version:
+
+- The Program Committee worked very hard to thoroughly review
+
+all the submitted papers.  Please repay their efforts, by
+
+following their suggestions when you revise your paper.
+
+- Final versions of long papers can consist of 9 pages, plus an
+
+unrestricted number of pages for references.
+
+
+
+
+- Please remember that at least one author of each paper needs to
+
+register for the conference - https://www.inlg2020.org/registration
+
+When you are finished, you can upload your final manuscript at the following site:
+
+https://www.softconf.com/l/inlg2020/
+
+You will be prompted to login to your START account. If you do not see your submission, you can access it with the following passcode:
+
+102X-B8E3A3H4B3
+
+Alternatively, you can click on the following URL, which will take you directly to a form to submit your final paper (after logging into your account):
+
+https://www.softconf.com/l/inlg2020/user/scmd.cgi?scmd=aLogin&passcode=102X-B8E3A3H4B3
+
+The reviews and comments are attached below. Again, try to follow their advice when you revise your paper.
+
+Congratulations on your fine work. If you have any additional questions, please feel free to get in touch.
+
+Best Regards,
+
+Brian Davis, Yvette Graham, John Kelleher, Yaji Sripada,
+
+Program Chairs INLG 2020
+
+============================================================================ 
+INLG 2020 Reviews for Submission #102
+============================================================================ 
+
+Title: When an image tells a story: the role of visual and semantic information for generating paragraph descriptions
+Authors: Nikolai Ilinykh and Simon Dobnik
+
+
+============================================================================
+                            REVIEWER #1
+============================================================================
+
+---------------------------------------------------------------------------
+Reviewer's Scores
+---------------------------------------------------------------------------
+                   APPROPRIATENESS (1-5): 4
+                            IMPACT (1-5): 4
+                       ORIGINALITY (1-5): 4
+             MEANINGFUL COMPARISON (1-5): 4
+                 TECHNICALLY SOUND (1-5): 4
+                           CLARITY (1-5): 5
+                    RECOMMENDATION (1-5): 4
+
+What are the main strengths and weaknesses of the paper?
+---------------------------------------------------------------------------
+Strengths:
+-------------
+1. Clear and interesting approach for combining visual features and language.
+2. Good results.
+3. Good experimentation. 
+
+Weaknesses:
+-----------------
+1. Adaptation of  the hierarchical image paragraph model by Krause et al. (2017) instead of proposing an original approach.
+2. No comparison with knowledge-based approaches.
+3. No redundancy control in the generation process (in the example provided, the information is repeated).
+---------------------------------------------------------------------------
+
+
+Detailed Comments
+---------------------------------------------------------------------------
+In general, the paper is very well explained and the idea presented in interesting. The experiments performed are sound and the evaluation conducted is appropriate, combining automatic and human-based evaluation. I think the approach is very promising, and I would recommend the author to integrate some redundancy control in the approach to avoid the repetition of information. They could have a look at the redundancy control techniques that are usually employed in the task of multi-document summarization.
+---------------------------------------------------------------------------
+
+
+
+============================================================================
+                            REVIEWER #2
+============================================================================
+
+---------------------------------------------------------------------------
+Reviewer's Scores
+---------------------------------------------------------------------------
+                   APPROPRIATENESS (1-5): 4
+                            IMPACT (1-5): 3
+                       ORIGINALITY (1-5): 2
+             MEANINGFUL COMPARISON (1-5): 3
+                 TECHNICALLY SOUND (1-5): 3
+                           CLARITY (1-5): 4
+                    RECOMMENDATION (1-5): 3
+
+What are the main strengths and weaknesses of the paper?
+---------------------------------------------------------------------------
+Strengths:
+-------------
+1. the paper is well written. 
+2. it does a good job comparing the proposed approach with the existing literature.
+3. results are good.
+
+Weaknesses:
+-----------------
+1. it is not clear how similar or different the generated descriptions are. 
+2. the paper requires a qualitative error analysis section.
+3.
+---------------------------------------------------------------------------
+
+
+Detailed Comments
+---------------------------------------------------------------------------
+This paper introduces a model for generating multi-sentence image descriptions. It investigates the following question: to what extend using visual and/or textual features can improve the accuracy fo generated image descriptions? It shows that the model that uses both visual and language input can be used to generate accurate paragraphs. 
+The paper is well written and the claims are supported. 
+
+My question is, how do you make sure that the generated sentences are not very similar? that is to say, how do you make sure that the model describes different parts of the image or communicates different facts about the image in different sentences? I would like to see a careful analysis of the diversity of the sentences. Do they describe different content or they are just stating the same fact in different words? 
+The paper also needs a qualitative error analysis section that describes the mistakes that the model makes.
+---------------------------------------------------------------------------
+
+
+
+============================================================================
+                            REVIEWER #3
+============================================================================
+
+---------------------------------------------------------------------------
+Reviewer's Scores
+---------------------------------------------------------------------------
+                   APPROPRIATENESS (1-5): 5
+                            IMPACT (1-5): 3
+                       ORIGINALITY (1-5): 3
+             MEANINGFUL COMPARISON (1-5): 4
+                 TECHNICALLY SOUND (1-5): 4
+                           CLARITY (1-5): 3
+                    RECOMMENDATION (1-5): 4
+
+What are the main strengths and weaknesses of the paper?
+---------------------------------------------------------------------------
+Strengths:
+-------------
+1. Comprehensive initial investigation into the performance of various DNN approaches to multi-sentence image description. 
+2. Useful finding on the disparity between human evaluation and automated measures. 
+3.
+
+Weaknesses:
+-----------------
+1. Preliminary investigation, did not address issues such as how multi-sentence descriptions should be modulated by task-context or other situation-dependent factors.
+2.
+3.
+---------------------------------------------------------------------------
+
+
+Detailed Comments
+---------------------------------------------------------------------------
+This paper investigates the problem of multi-sentence image description using recent DNN techniques, focusing testing a variety of approaches on both automatic and human evaluation measures. Overall, the paper is clearly written and organized, and appears technically sound. One key contribution is highlighting that descriptions evaluated most positively by people may not be the best according to automated measures. Additionally, the results also suggest that multi-modal integration of information improves description quality. As the authors point out, this work described in the submission is a foundation for future work in description. Given the preliminary nature of this work, one limitation is that it does not address issues such as how multi-sentence descriptions should be modulated by task-context or other situation-dependent factors. When people freely view images, they will attend and encode differently than when they have a specific task in mind. How could the DNN app!
+ roaches present be adapted and trained to account for this?
+---------------------------------------------------------------------------
+
+
+
+
+--
+INLG 2020 - https://www.softconf.com/l/inlg2020
+
+
+--834lfd0000beb0cbd07805783abbaf
+Content-Type: text/html; charset="UTF-8"
+Content-Transfer-Encoding: binary
+
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"><p><span style="font-weight: 400;">Dear Nikolai Ilinykh:</span></p>
+
+<p><span style="font-weight: 400;">On behalf of the INLG 2020 Program Committee, we are delighted to inform you that the following submission has been accepted to appear at the conference:</span></p>
+
+<p><span style="font-weight: 400;">When an image tells a story: the role of visual and semantic information for generating paragraph descriptions</span></p>
+
+<p><span style="font-weight: 400;">You will soon receive a follow-up email about oral presentation once the initial program gets ready.</span></p>
+
+<p><span style="font-weight: 400;">The Program Committee worked very hard to thoroughly review all the submitted papers. Please repay their efforts, by following their suggestions when you revise your paper.</span></p>
+
+<p><span style="font-weight: 400;">The deadline for the final version of your manuscript is <strong>October 30, 2020.</strong> Please make sure that you use the correct style file (using A4 format).</span></p>
+
+<p><span style="font-weight: 400;">For details, please see</span><a href="https://www.inlg2019.com/paper"><span style="font-weight: 400;">&nbsp;</span></a></p>
+
+<p><span style="font-weight: 400;">Below are some importants points to consider, before submitting the final version:</span></p>
+
+<p><span style="font-weight: 400;">- The Program Committee worked very hard to thoroughly review</span></p>
+
+<p><span style="font-weight: 400;">all the submitted papers.&nbsp; Please repay their efforts, by</span></p>
+
+<p><span style="font-weight: 400;">following their suggestions when you revise your paper.</span></p>
+
+<p><span style="font-weight: 400;">- Final versions of long papers can consist of 9 pages, plus an</span></p>
+
+<p><span style="font-weight: 400;">unrestricted number of pages for references.</span></p>
+
+<p>&nbsp;</p>
+
+<p><span style="font-weight: 400;">- Please remember that at least one author of each paper needs to</span></p>
+
+<p><span style="font-weight: 400;">register for the conference - <a href="https://www.inlg2020.org/registration">https://www.inlg2020.org/registration</a></span></p>
+
+<p><span style="font-weight: 400;">When you are finished, you can upload your final manuscript at the following site:</span></p>
+
+<p><span style="font-weight: 400;"><a href="https://www.softconf.com/l/inlg2020/">https://www.softconf.com/l/inlg2020/</a></span></p>
+
+<p><span style="font-weight: 400;">You will be prompted to login to your START account. If you do not see your submission, you can access it with the following passcode:</span></p>
+
+<p><span style="font-weight: 400;">102X-B8E3A3H4B3</span></p>
+
+<p><span style="font-weight: 400;">Alternatively, you can click on the following URL, which will take you directly to a form to submit your final paper (after logging into your account):</span></p>
+
+<p><span style="font-weight: 400;"><a href="https://www.softconf.com/l/inlg2020/user/scmd.cgi?scmd=aLogin&amp;passcode=102X-B8E3A3H4B3">https://www.softconf.com/l/inlg2020/user/scmd.cgi?scmd=aLogin&amp;passcode=102X-B8E3A3H4B3</a></span></p>
+
+<p><span style="font-weight: 400;">The reviews and comments are attached below. Again, try to follow their advice when you revise your paper.</span></p>
+
+<p><span style="font-weight: 400;">Congratulations on your fine work. If you have any additional questions, please feel free to get in touch.</span></p>
+
+<p><span style="font-weight: 400;">Best Regards,</span></p>
+
+<p><span style="font-weight: 400;">Brian Davis, Yvette Graham, John Kelleher, Yaji Sripada,</span></p>
+
+<p><span style="font-weight: 400;">Program Chairs INLG 2020</span></p>
+
+<p>
+<pre>============================================================================ 
+INLG 2020 Reviews for Submission #102
+============================================================================ 
+
+Title: When an image tells a story: the role of visual and semantic information for generating paragraph descriptions
+Authors: Nikolai Ilinykh and Simon Dobnik
+
+
+============================================================================
+                            REVIEWER #1
+============================================================================
+
+---------------------------------------------------------------------------
+Reviewer's Scores
+---------------------------------------------------------------------------
+                   APPROPRIATENESS (1-5): 4
+                            IMPACT (1-5): 4
+                       ORIGINALITY (1-5): 4
+             MEANINGFUL COMPARISON (1-5): 4
+                 TECHNICALLY SOUND (1-5): 4
+                           CLARITY (1-5): 5
+                    RECOMMENDATION (1-5): 4
+
+What are the main strengths and weaknesses of the paper?
+---------------------------------------------------------------------------
+Strengths:
+-------------
+1. Clear and interesting approach for combining visual features and language.
+2. Good results.
+3. Good experimentation. 
+
+Weaknesses:
+-----------------
+1. Adaptation of  the hierarchical image paragraph model by Krause et al. (2017) instead of proposing an original approach.
+2. No comparison with knowledge-based approaches.
+3. No redundancy control in the generation process (in the example provided, the information is repeated).
+---------------------------------------------------------------------------
+
+
+Detailed Comments
+---------------------------------------------------------------------------
+In general, the paper is very well explained and the idea presented in interesting. The experiments performed are sound and the evaluation conducted is appropriate, combining automatic and human-based evaluation. I think the approach is very promising, and I would recommend the author to integrate some redundancy control in the approach to avoid the repetition of information. They could have a look at the redundancy control techniques that are usually employed in the task of multi-document summarization.
+---------------------------------------------------------------------------
+
+
+
+============================================================================
+                            REVIEWER #2
+============================================================================
+
+---------------------------------------------------------------------------
+Reviewer's Scores
+---------------------------------------------------------------------------
+                   APPROPRIATENESS (1-5): 4
+                            IMPACT (1-5): 3
+                       ORIGINALITY (1-5): 2
+             MEANINGFUL COMPARISON (1-5): 3
+                 TECHNICALLY SOUND (1-5): 3
+                           CLARITY (1-5): 4
+                    RECOMMENDATION (1-5): 3
+
+What are the main strengths and weaknesses of the paper?
+---------------------------------------------------------------------------
+Strengths:
+-------------
+1. the paper is well written. 
+2. it does a good job comparing the proposed approach with the existing literature.
+3. results are good.
+
+Weaknesses:
+-----------------
+1. it is not clear how similar or different the generated descriptions are. 
+2. the paper requires a qualitative error analysis section.
+3.
+---------------------------------------------------------------------------
+
+
+Detailed Comments
+---------------------------------------------------------------------------
+This paper introduces a model for generating multi-sentence image descriptions. It investigates the following question: to what extend using visual and/or textual features can improve the accuracy fo generated image descriptions? It shows that the model that uses both visual and language input can be used to generate accurate paragraphs. 
+The paper is well written and the claims are supported. 
+
+My question is, how do you make sure that the generated sentences are not very similar? that is to say, how do you make sure that the model describes different parts of the image or communicates different facts about the image in different sentences? I would like to see a careful analysis of the diversity of the sentences. Do they describe different content or they are just stating the same fact in different words? 
+The paper also needs a qualitative error analysis section that describes the mistakes that the model makes.
+---------------------------------------------------------------------------
+
+
+
+============================================================================
+                            REVIEWER #3
+============================================================================
+
+---------------------------------------------------------------------------
+Reviewer's Scores
+---------------------------------------------------------------------------
+                   APPROPRIATENESS (1-5): 5
+                            IMPACT (1-5): 3
+                       ORIGINALITY (1-5): 3
+             MEANINGFUL COMPARISON (1-5): 4
+                 TECHNICALLY SOUND (1-5): 4
+                           CLARITY (1-5): 3
+                    RECOMMENDATION (1-5): 4
+
+What are the main strengths and weaknesses of the paper?
+---------------------------------------------------------------------------
+Strengths:
+-------------
+1. Comprehensive initial investigation into the performance of various DNN approaches to multi-sentence image description. 
+2. Useful finding on the disparity between human evaluation and automated measures. 
+3.
+
+Weaknesses:
+-----------------
+1. Preliminary investigation, did not address issues such as how multi-sentence descriptions should be modulated by task-context or other situation-dependent factors.
+2.
+3.
+---------------------------------------------------------------------------
+
+
+Detailed Comments
+---------------------------------------------------------------------------
+This paper investigates the problem of multi-sentence image description using recent DNN techniques, focusing testing a variety of approaches on both automatic and human evaluation measures. Overall, the paper is clearly written and organized, and appears technically sound. One key contribution is highlighting that descriptions evaluated most positively by people may not be the best according to automated measures. Additionally, the results also suggest that multi-modal integration of information improves description quality. As the authors point out, this work described in the submission is a foundation for future work in description. Given the preliminary nature of this work, one limitation is that it does not address issues such as how multi-sentence descriptions should be modulated by task-context or other situation-dependent factors. When people freely view images, they will attend and encode differently than when they have a specific task in mind. How could the DNN app!
+ roaches present be adapted and trained to account for this?
+---------------------------------------------------------------------------
+
+
+</pre></p>
+
+<p style="padding-left: 30px;"><!-- Softconf MailTool --></p>
+<p>--
+<br>INLG 2020 - <a href="https://www.softconf.com/l/inlg2020">https://www.softconf.com/l/inlg2020</a>
+
+
+--834lfd0000beb0cbd07805783abbaf--

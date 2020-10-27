@@ -1,6 +1,26 @@
 Nikolai
 
 
+## 2020-09-25 
+
+  - Visual Genome (human annotated bounding boxes), MS Coco (automatically detected bounding boxes)
+  - How many extracted regions: 36 Anderson and 50 image paragraph paper
+    * Anderson says 36 works best on VG
+	* In MS Coco we can specify how many bounding boxes we want
+	* In VG we take 36 bounding boxes that are related with a relation; these are the relevant ones; injection of some cognitive linguistic knowledge
+  - Feature extractor for bottom up features/top down process
+  - HPE 101
+  - Cognitive systems materials
+	* Habitat tutorial
+	* Evaluation tutorial
+
+
+## 2020-09-09 
+
+  - Meeting with JP
+  - Planning of the transformers project/paper extension
+
+
 ## 2020-07-08 
 
 Simon

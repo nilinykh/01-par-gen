@@ -39,6 +39,7 @@ Weaknesses:
 ---------------------------------------------------------------------------
 
 > SD: For (1) Emphasise that this is a deliberate extension so that we can study the effects of adding language information. However, through this extension we effectively propose a new model.
+> NI: added a couple of sentences about it
 
 > SD: For (2) Perhaps add some references. Mitchell, etc. But a performance comparison with concerete systems would be out of the scope of this paper.
 > NI: Not sure which references to add here (if any). Is it the ones about visual storytelling? We also have a reference to Sanja Fidler's work on paragraph generation from scene graphs using grammars (https://arxiv.org/pdf/1503.00064.pdf), would this count as a knowledge-based approach? I think so.
@@ -89,7 +90,7 @@ Weaknesses:
 > NI: Agree, added some sentences in the section with self-measures.
 
 > SD: For (2) This is a good point. Rather than cherry-picking only good examples it also good to discuss shortcomings. This is what we are interested in as scientists. I assume Figure 1 shows a good example which comes quite early on but then I do not think we discuss qualitatively these descriptions. Shall we add another bad example and then discuss how the systems prodice good an bad sentences. I suspect the system will produce bad sentences when the image is challenging, as we were discussing earlier, when even a human had a difficulty to see what the image is about.
-> NI: added another example and wrote a short paragraph about good/bad generations. Thinking about some number which would represent what 'good' and 'bad' is, it actually can be a self-bleu score or similar, right? Going to refer to the evaluation section with self-measures when introducing good/bad paragraphs.
+> NI: added another example and wrote a short paragraph about good/bad generations. Thinking about some number or score that would represent how good/bad paragraph is. The idea is that bad paragraphs are more redundant (repetitive). In the good example, which is in the paper, some models produce better paragraphs (vis+lang+att, for example). I will put an example where even that model fails and produces redundant text.
 
 
 

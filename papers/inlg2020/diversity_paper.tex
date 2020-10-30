@@ -60,7 +60,6 @@
   }
 }
 
-
 \newcommand{\R}{\mathbb{R}}
 
 % This is not strictly necessary, and may be commented out,
@@ -206,8 +205,8 @@ We evaluate how close our models are compared to the human performance in terms 
 \section{Approach}
 \paragraph{Overview}
 For our experiments we implement and adapt the hierarchical image paragraph model by \citet{krause2016hierarchical}.\footnote{The authors have not publicly released the code of their model and hence the model implementation is based on our interpretation of their paper.}
-\nikolai{1-1: We deliberately chose to re-implement an existing model to study the effects of using different modalities (visual or language).
-However, through our implementation and extensions, we propose several new models based on the original model in \cite{krause2016hierarchical}.}
+We deliberately chose to re-implement an existing model to study the effects of using different modalities (visual or language).
+However, through our implementation and extensions, we propose several new models based on the original model in \cite{krause2016hierarchical}.
 To prepare input features, we utilise the pre-trained model for dense captioning \cite{densecap} in two ways.
 First, we use it to extract convolutional features of identified image regions.
 We also use its hidden states from the RNN layer as language features.
@@ -409,7 +408,7 @@ For every subsequent sentence, both LSTMs use the last hidden states generated f
 During training, we use teacher forcing and feed ground-truth words as target words at each timestamp.
 We use Adam \cite{adam14} as an optimiser and choose the best model based on the validation loss (early stopping).
 For decoding we use beam search \cite{beam17} with beam width $B=2$ (we tested several values for the beam width $B \in \{2, 4, 6, 8, 10\}$).
-\nikolai{1-3: We leave the investigation of the effects of using different decoding strategies such as nucleus sampling \cite{Holtzman2019} or various techniques for controlling decoding (length penalty, n-gram repetition penalty \cite{opennmt2017,paulus2017deep}) for future work.}
+We leave the investigation of the effects of using different decoding strategies such as nucleus sampling \cite{Holtzman2019} or various techniques for controlling decoding (length penalty, n-gram repetition penalty \cite{opennmt2017,paulus2017deep}) for future work.
 
 %Note that different from previous work, we do not implement sentence-level loss for the end of paragraph prediction. % SD 2020-07-09 14:46:42 +0200: We do not implent end of paragraph prediction. We should mention this at the beginning of the section where we compare our model with Krause.
 %Instead, we generate the same number of sentences for each image, as we find in its ground-truth paragraph.
@@ -523,7 +522,7 @@ We also test another configuration of the models with max-pooling of input featu
 
 \begin{equation}
  x^\varsigma_s = max_{i=1}^M(x)
- \label{eqn:maxpool}
+ \label{eqn:maxpool1}
 \end{equation}
 
 \noindent In the \textbf{IMG+LNG} model we apply max-pooling on both modalities and concatenate them into a single vector:
@@ -563,10 +562,10 @@ Here, we define \textit{paragraph diversity} with two requirements: a generative
 Typically, a variety of n-gram based automatic metrics is used to measure the correctness/accuracy of image captions.
 We evaluate our models % across several
 with the following metrics: CIDEr \cite{vedantam2014cider}, METEOR \cite{meteor14}, BLEU-\{1, 2, 3, 4\} \cite{bleu}, and Word Mover's Distance \cite{Kusner2015FromWE,kilickaya2017}.
-\nikolai{2-1: We also measure lexical diversity of sentences within the generated paragraphs.
+We also measure lexical diversity of sentences within the generated paragraphs.
 For this we report self-BLEU \cite{Zhu2018selfbleu} which is sometimes referred to as mBLEU \cite{Shetty2017}. % SD 2020-08-29 12:24:19 +0200: I changed to lexical diversity to distinguish this from our notion of diversity discussed earlier.
 % This metric has been specifically proposed to assess the similarity between two sentences, and it can be used to measure how much one sentence resembles another.
-Estimating lexical diversity is important for paragraph generation as their sentences should be neither too similar nor too different from each other.}
+Estimating lexical diversity is important for paragraph generation as their sentences should be neither too similar nor too different from each other.
 %This metric evaluates how much one sentence resembles another by calculating the BLEU score between sentences.
 We calculate self-BLEU as follows: we split each generated paragraph into sentences and use one sentence as a hypothesis and the other sentences as references.
 A lower score indicates more diversity, e.g. fewer \textit{n}-gram matches between compared sentences.
@@ -606,13 +605,11 @@ The best (i.e. the lowest) mBLEU scores are achieved by models which use either 
 The best self-CIDEr scores are achieved by both bi-modal architectures.
 In addition, \textbf{IMG+LNG+ATT} strongly outperforms all other models in both lexical diversity metrics: mBLEU is reduced by 3.21\% indicating a smaller \textit{n}-gram overlap between paragraph sentences, while self-CIDEr increases by 1.93\% demonstrating that attention in the model which uses multimodal features helps to generate a more diverse set of sentences in terms of topicality.
 
-\nikolai{2-2:
 We include two examples of generated texts by humans and our models.
 As Figure~\ref{fig:goodexample} demonstrates, the \textbf{IMG+LNG+ATT} model can generate less redundant/repetitive descriptions compared to the \textbf{IMG+LNG+MAX} model.
 Figure~\ref{fig:badexample} demonstrates a case where \textbf{IMG+LNG+ATT} generated a paragraph which seems correct but different from the human-generated text (e.g. `human' instead of a `dog'). However, to a human eye it is not entirely clear whether the surfer is a human or a dog.
 Neither of our models was able to see a `dog' in this image.
 Similar challenging examples include cases where different human describers have a different take on what the image is about or what is the focus of the image.
-}
 
 Therefore, % automatic metrics do not necessarily capture the quality of generated texts. % SD 2020-08-30 21:49:43 +0200:: Removed this, as it is a different point: all scores are close to each other and there is no particular model which performs the best.
 % This % means that
@@ -788,8 +785,8 @@ Interestingly, max-pooling does not seem to have the same effect on utilisation 
 A possible explanation for this is that when using max-pooling, the same semantic information is chosen for every sentence topic.
 At the same time, attention learns to select different semantic information for a sequence of topics.
 This appears to affect semantic features more than visual features.
-\nikolai{1-3: Note that humans mostly judge models that incorporate linguistic information as the best ones for the word choice criterion.
-This supports the idea that utilising semantic information reduces redundancy in terms of the number of repeated words in the generated paragraph.}
+Note that humans mostly judge models that incorporate linguistic information as the best ones for the word choice criterion.
+This supports the idea that utilising semantic information reduces redundancy in terms of the number of repeated words in the generated paragraph.
 
 % SD 2020-08-30 22:06:43 +0200: I don't understand this sentence. max-pooling --> attention? At the same time, max-pooling is preferable only when utilising a single modality, since attention-based models outperform max-pooling ones across each of the criteria.
 % Nikolai: yeah, this sentence is confusing, I think you have paraphrased it in the last paragraph.
@@ -872,12 +869,11 @@ In this paper, we addressed the problem of generating both accurate and diverse 
 We demonstrated that utilising both visual and linguistic information might benefit the quality of generated texts depending on the pooling mechanism that is used.
 We showed that intrinsic evaluation metrics are insufficient for evaluation of paragraphs as they focus on lexical choice and do not capture human level of judgement: \textbf{LNG+ATT} is judged as the best model in human evaluation, while it is not among the leaders according to the automatic evaluation.
 We believe that our work is a good starting point for further investigation of the ways multiple sources of information about the world can be merged for learning generation of high-quality multi-sentence stories, describing real-world visual scenes.
-\nikolai{3-1:
 In our future work we also intend to test how our models can generate task-dependent paragraphs.
 For this task we will use the dataset of image description sequences \cite{ilinykh19} which consists of paragraphs collected in a task-based setting to train our models.
 In contrast, % This dataset differs from the Stanford image paragraph dataset that we use here in terms of how it was collected:
 in the Stanford dataset humans were not given a specific task when describing images.
-We believe that generation from more context-dependent and structured descriptions can open up new perspectives for the research on image paragraphs.}
+We believe that generation from more context-dependent and structured descriptions can open up new perspectives for the research on image paragraphs.
 
 
 %Future work: diversity in terms of choosing best candidate from the pool of candidates.

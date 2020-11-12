@@ -19,6 +19,7 @@
 \usepackage[hyperref]{acl2020}
 %\usepackage{times}
 \usepackage{mathptmx}
+\usepackage{scrextend}
 \usepackage{latexsym}
 \renewcommand{\UrlFont}{\ttfamily\small}
 
@@ -78,7 +79,7 @@
 
 \newcommand\BibTeX{B\textsc{ib}\TeX}
 
-\title{When an image tells a story: the role of visual and semantic information for generating paragraph descriptions}
+\title{When an Image Tells a Story: The Role of Visual and Semantic Information for Generating Paragraph Descriptions}
 
 \author{Nikolai Ilinykh \space\space\space\space\space\space\space Simon Dobnik\\
  Centre for Linguistic Theory and Studies in Probability (CLASP) \\
@@ -569,7 +570,7 @@ Estimating lexical diversity is important for paragraph generation as their sent
 %This metric evaluates how much one sentence resembles another by calculating the BLEU score between sentences.
 We calculate self-BLEU as follows: we split each generated paragraph into sentences and use one sentence as a hypothesis and the other sentences as references.
 A lower score indicates more diversity, e.g. fewer \textit{n}-gram matches between compared sentences.
-We also calculate the diversity metric introduced in \cite{wang2019describing}.
+We also calculate the diversity metric introduced by \newcite{wang2019describing}.
 This metric applies Latent Semantic Analysis \cite{deerwester90indexing} to the weighted n-gram feature representations (CIDEr values between unique pairs of sentences) and identifies the number of topics among sentences.
 Compared to self-BLEU, which measures n-gram overlap, LSA combined with CIDEr-based kernel metric measures semantic differences between sentences as well.
 More identified topics in paragraph sentences indicate a higher level of diversity.
@@ -697,19 +698,22 @@ However, models which utilise single modality, benefit from attention in both ac
         \label{fig:goodexample}
     \end{subfigure}%
     \hfill
-    \begin{subfigure}[t]{.48\textwidth}
+    \begin{subfigure}[t]{.49\textwidth}
         \centering
-         \fbox{\includegraphics[width=\linewidth,height=2.22in]{figures/example3}}
+         \fbox{\includegraphics[width=2.88in,height=2.22in]{figures/example3}}
+         \begin{addmargin}[0em]{.5em}
         \caption{
-        \baselineskip=1.3\baselineskip
+        \baselineskip=1.29\baselineskip
         \textbf{HUMAN}: \textit{A large splash is in front of a wave in the water. There is a large white and black surf board in the water. There is a black dog that is riding on top of the surf board.}\\
  \textbf{IMG+MAX} : \textit{A man is riding a wave. He is holding a surfboard. The man is wearing a black wet suit.}\\
  \textbf{LNG+MAX} : \textit{A person is surfing in the water. The surfboard is black and white. The surfboard is black and white.}\\
  \textbf{IMG+LNG+MAX} : \textit{A man is standing on a surfboard. The surfboard is black. The man is wearing black shorts.} \\
  \textbf{IMG+ATT} : \textit{A man is standing on a surfboard. The surfboard is black and white. The man has black hair.}\\
  \textbf{LNG+ATT} : \textit{A person is standing in the water. The person is wearing a black suit. The person is holding a black surfboard.}\\
- \textbf{IMG+LNG+ATT} : \textit{A person is surfing in the ocean. She is wearing a black wet suit. She is holding a white surfboard.} }
-        \label{fig:badexample}
+ \textbf{IMG+LNG+ATT} : \textit{A person is surfing in the ocean. She is wearing a black wet suit. She is holding a white surfboard.}
+  }
+   \label{fig:badexample}
+\end{addmargin}
     \end{subfigure}
     \caption{Two example images with generated paragraphs from our models (incl. ground truth descriptions).}
     \label{fig:examples}

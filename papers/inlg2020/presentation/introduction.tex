@@ -1,0 +1,453 @@
+\UseRawInputEncoding
+\documentclass[notes=hide]{beamer}
+\usepackage[german,english]{babel}
+\usepackage{german}
+\usetheme{Madrid}
+\usepackage{floatflt}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{verbatim}
+\usepackage{pst-node}
+\usepackage{moreverb}
+\usecolortheme{lily}
+
+%\definecolor{UBCblue}{rgb}{0.04706, 0.13725, 0.26667} % UBC Blue (primary)
+%\usecolortheme[named=UBCblue]{structure}
+
+\makeatother
+\setbeamertemplate{footline}
+{
+  \leavevmode%
+  \hbox{%
+ % \begin{beamercolorbox}[wd=.45\paperwidth,ht=2.25ex,dp=1ex,center]{author in head/foot}%
+   % \usebeamerfont{author in head/foot}\insertshortauthor
+  %\end{beamercolorbox}%
+  \begin{beamercolorbox}[wd=.7\paperwidth,ht=2.25ex,dp=1ex,center]{title in head/foot}%
+    \usebeamerfont{title in head/foot}\insertshorttitle
+  \end{beamercolorbox}%
+  \begin{beamercolorbox}[wd=.3\paperwidth,ht=2.25ex,dp=1ex,center]{date in head/foot}%
+    \insertframenumber{} / \inserttotalframenumber\hspace*{1ex}
+  \end{beamercolorbox}}%
+  \vskip0pt%
+}
+\makeatletter
+\setbeamertemplate{navigation symbols}{}
+
+
+\definecolor{firstsent}{RGB}{51, 255, 153}
+\definecolor{secondsent}{RGB}{255, 181, 112}
+\definecolor{thirdsent}{RGB}{255, 0, 136}
+\definecolor{fourthsent}{RGB}{255, 0, 255}
+
+%\renewcommand{\footnotesize}{\fontsize{7pt}{7pt}\selectfont}
+%\addtolength{\footnotesep}{5mm} 
+%\setlength\footnotemargin{1pt}
+
+
+\title[INLG 2020, Oral Session 6: NLG and Vision]{When an Image Tells a Story: The Role of Visual and Semantic Information for Generating Paragraph Descriptions}
+%\subtitle{INLG 2020 presentation}
+\author{Nikolai Ilinykh, Simon Dobnik}
+\institute{Centre for Linguistic Theory and Studies in Probability (CLASP) \\
+               Department of Philosophy, Linguistics and Theory of Science (FLoV)\\
+               University of Gothenburg, Sweden}
+
+\date{17$^{th}$ December 2020}
+
+\begin{document}
+
+\begin{frame}
+  \titlepage
+\end{frame}
+
+%\section{Describing images with longer sequences}
+
+\begin{frame}{Describing images with longer sequences\footnote{Krause, J., Johnson, J., Krishna, R., \& Fei-Fei, L. (2017). A Hierarchical Approach for Generating Descriptive Image Paragraphs. In Computer Vision and Pattern Recognition (CVPR).}}
+\small
+\center
+\fbox{\includegraphics[width=0.5\textwidth]{2327613}}
+\begin{block}{}
+People are standing on the grass behind a concrete patch that looks like it was just set. There are two orange cones in front of the concrete and yellow tape surrounding it. There are three people in yellow vests and white hard hats. There are some people sitting on a bench next to them.
+\end{block}
+\end{frame}
+
+\begin{frame}{Properties of Image Paragraphs (IP)}
+\small
+\includegraphics[width=.5\textwidth]{2327613boxes}
+\begin{block}{}
+\textcolor{firstsent}{\textbf{People}} are standing on the \textcolor{firstsent}{\textbf{grass}} behind \Rnode{st2}{\underline{\textcolor{firstsent}{\textbf{a concrete patch}}}} that looks like \Rnode{ss2}{\underline{it}} was just set. There are \textcolor{secondsent}{\textbf{two orange cones}} in front of  \Rnode{st1}{\underline{\textcolor{secondsent}{\textbf{the concrete and yellow tape}}}} surrounding \Rnode{ss1}{\underline{it}}. There are \Rnode{st}{ \underline{\textcolor{thirdsent}{\textbf{three people in yellow vests and white hard hats}}}}. There are \textcolor{fourthsent}{\textbf{some people sitting on a bench}} next to \Rnode{ss}{\underline{them}}.
+\ncbar[arrows = ->, linecolor =blue, angle = -90, arm = 0.9em]{ss}{st}
+\ncbar[arrows = ->, linecolor =blue, angle = 90, arm = 1.4em]{ss1}{st1}
+\ncbar[arrows = ->, linecolor =blue, angle = 90, arm = 1.4em]{ss2}{st2}
+\end{block}
+\end{frame}
+
+\begin{frame}{Two Sources of Important Information for IP}
+\small
+\begin{minipage}{0.5\textwidth}
+\includegraphics[width=1\textwidth]{2327613boxes}
+\end{minipage} \hfill
+\begin{minipage}{0.45\textwidth}
+\begin{enumerate}
+\item visual features of perceived objects (\textit{what} to refer to)
+\item background knowledge and communicative intent (\textit{when} and \textit{how} to refer)
+\end{enumerate}
+\end{minipage}
+\begin{block}{}
+\textcolor{firstsent}{\textbf{People}} are standing on the \textcolor{firstsent}{\textbf{grass}} behind \Rnode{st2}{\underline{\textcolor{firstsent}{\textbf{a concrete patch}}}} that looks like \Rnode{ss2}{\underline{it}} was just set. There are \textcolor{secondsent}{\textbf{two orange cones}} in front of  \Rnode{st1}{\underline{\textcolor{secondsent}{\textbf{the concrete and yellow tape}}}} surrounding \Rnode{ss1}{\underline{it}}. There are \Rnode{st}{ \underline{\textcolor{thirdsent}{\textbf{three people in yellow vests and white hard hats}}}}. There are \textcolor{fourthsent}{\textbf{some people sitting on a bench}} next to \Rnode{ss}{\underline{them}}.
+\ncbar[arrows = ->, linecolor =blue, angle = -90, arm = 0.9em]{ss}{st}
+\ncbar[arrows = ->, linecolor =blue, angle = 90, arm = 1.4em]{ss1}{st1}
+\ncbar[arrows = ->, linecolor =blue, angle = 90, arm = 1.4em]{ss2}{st2}
+\end{block}
+\end{frame}
+
+
+\begin{frame}{Our paper}
+\small
+\vspace{-1cm}{How to improve both \textit{accuracy} and \textit{diversity} of generated image paragraphs?}
+\begin{minipage}{0.2\textwidth}
+\vspace{.5cm}
+\includegraphics[width=2.5\textwidth]{hyp}
+\end{minipage} \hfill
+\begin{minipage}{0.5\textwidth}
+\vspace{.5cm}
+\begin{itemize}
+\item \textbf{model input}:\\ \texttt{unimodal} (visual / textual)\\ vs. \texttt{multimodal}
+\pause
+\item \textbf{information fusion}:\\ \texttt{max-pooling} vs. \texttt{attention}
+\end{itemize}
+\end{minipage}
+\end{frame}
+
+
+\begin{frame}{Our paper}
+\small
+{How to improve both \textit{accuracy} and \textit{diversity} of generated image paragraphs?}
+\begin{minipage}{0.2\textwidth}
+\vspace{.5cm}
+\includegraphics[width=2.5\textwidth]{hyp}
+\includegraphics[width=2.5\textwidth]{human}
+\end{minipage} \hfill
+\begin{minipage}{0.5\textwidth}
+\vspace{.5cm}
+\begin{itemize}
+\item \textbf{model input}:\\ \texttt{unimodal} (visual / textual)\\ vs. \texttt{multimodal}
+\item \textbf{information fusion}:\\ \texttt{max-pooling} vs. \texttt{attention}
+\item \textbf{paragraph evaluation}:\\ \texttt{automatic} vs. \texttt{human}
+\pause
+\item \textbf{human evaluation}:\\ \texttt{accuracy} and \texttt{diversity} of generated paragraphs
+\end{itemize}
+\end{minipage}
+\end{frame}
+
+
+\begin{frame}{Unimodal Features: Vision and Language}
+\small
+\end{frame}
+
+
+
+
+\begin{frame}{Tasks' description}
+ \begin{itemize}
+  \item one sheet with exercises every week (consists of several tasks)
+  \item corresponds to the topic of the lecture
+  \item prerequisite for successful completion of the course: {\bf pass all assignments}
+  \item assistance and discussion of the solution during the weekly tutorials
+  \item submission: Lernraum+ (can be uploaded in the respective folder's assignment)
+  \item deadlines are important!
+ \end{itemize}
+\end{frame}
+
+\begin{frame}{Assignments}
+
+are considered passed, if
+
+ \begin{itemize}
+ \item they are submitted on time
+  \item you have solved the task and proposed solution to it (in other words, \textbf{your solution} must be clear and precise)
+  \item your code (in case you've submitted it) runs (contains no bugs) and approximately does what it should to do
+  \item you did not copy stuff from your fellow students
+ \end{itemize}
+\end{frame}
+
+\begin{frame}{Deadlines}
+ \begin{block}{Programming project}
+ \begin{itemize}
+	\item due to the last day of February
+	\item provide ideas for the project before the end of January
+	 \begin{itemize}
+		\item if you have any now, you are welcome to discuss them with us
+		\item otherwise, you will be given the topic from the pool of projects
+	\end{itemize}
+\end{itemize}
+ \end{block}
+ \begin{block}{Homework}
+  \begin{itemize}
+  \item each homework is due to the following Thursday, 10 AM
+  \end{itemize}
+ \end{block}
+\end{frame}
+
+
+\begin{frame}{Tutorials}
+  \begin{itemize}
+    \item once per week, participation is free
+    \item discussion of weekly assignments
+    \item detailed and practical exploration of programming knowledge
+    \item a nice opportunity for collective learning, testing, solving programming issues...
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Programming is ...}
+
+\pause
+
+building machine-friendly instructions
+
+\pause
+
+ \begin{block}{}
+  \begin{itemize}
+   \item {\bf Do this, then do that.}
+   \item {\bf If this condition is true, perform this action; otherwise, do that action.}
+   \item  {\bf  Do this action that number of times.}
+   \item {\bf Keep doing that until this condition is true.}
+    \end{itemize}
+ \end{block}
+\end{frame}
+
+\begin{frame}[fragile]{Do you speak Python?}
+
+ \begin{block}{Python Quellcode}
+
+\begin{verbatim}
+passwordFile = open('SecretPasswordFile.txt')
+secretPassword = passwordFile.read()
+print('Enter your password.')
+typedPassword = input()
+if typedPassword == secretPassword:
+    print('Access granted.')
+    if typedPassword == '12345':
+        print('That password is one that an idiot \ 
+        puts on their luggage.')
+else:
+    print('Access denied')
+        
+\end{verbatim}
+ \end{block}
+
+        
+Quelle: \url{https://automatetheboringstuff.com/chapter0/}
+\end{frame}
+
+\begin{frame}[fragile]{Programming is not hard!}
+
+\begin{figure}[h!]
+\centering
+\includegraphics[width=1\textwidth]{r_10875_uRYQF.jpg}
+\end{figure} 
+*https://devrant.com/rants/10875/multi-threaded-programming-explained-with-puppies
+
+\end{frame}
+
+        
+       
+\begin{frame}[fragile]{Python is...}
+  
+   ...  learning something readable and elegant
+ 
+ \begin{block}{Saying `hello' in Java} 
+ \begin{verbatim}
+
+class Hello {
+
+  public static void main (String[] args) {
+      System.out.println ("Hello, world.");
+  }
+}  
+\end{verbatim}
+  \end{block}
+
+ \begin{block}{Saying `hello' in Python } 
+ \begin{verbatim}
+
+print('Hello, world.')
+
+\end{verbatim}
+
+  \end{block}
+\end{frame}
+
+\section{Here}
+
+\begin{frame}{Literature}
+
+  {\bf Books:}
+  \begin{itemize}
+    \item Scripts
+    \item Learning Python, O'Reilly \cite{Lutz:2007:LP}
+    \item Programming Python, O'Reilly \cite{Lutz:2006:PP}
+    \item Core Python Programming, Prentice Hall \cite{Chun:2007:CPP}
+  \end{itemize}
+
+\end{frame}
+
+\begin{frame}{Literature}
+
+  {\bf Online:}
+  \begin{itemize}
+    \item Python Dokumentation \\ \url{http://docs.python.org/}
+    \item How to Think Like a Python Programmer, Green Tea Press \\
+          \url{http://www.greenteapress.com/thinkpython/}
+       \item Practical Programming for Total Beginners
+       \url{https://automatetheboringstuff.com/}
+  \end{itemize}
+  
+  \begin{block}{Want to do some real-world applied programming?}
+    Whenever possible: steal code!\\
+    (But not from your fellow students!)
+  \end{block}
+  \end{frame}
+
+\section{Class Requirements}
+
+\subsection{Erste Schritte}
+
+\begin{frame}{Technical Details}
+ \begin{enumerate}
+	\item install Python using one of the next methods:
+	\begin{itemize}
+		\item download from {\tt http://www.python.org}
+		\item version: $3.5.0$
+		\item linux: Package manager
+		\item macOS: MacPorts
+		\item windows: Use Installer from the website
+	\end{itemize}
+	\item look at the editors out there
+	\item first look at the System Console (``Terminal'', ``Command Line Interface (CLI)'')
+ \end{enumerate}
+\end{frame}
+
+
+\begin{frame}{Python Versions}
+ \begin{itemize}
+	\item up-to-date versions:
+	\begin{itemize}
+		\item $2.7.10$
+		\item $3.5.0$ +
+	\end{itemize}
+	\item all versions are not completely compatible with each other
+	\item new in $3.*$:
+	\begin{itemize}
+	\item print is a function
+	\item all strings are written in unicode
+	\item new function names
+	\item faster iterations
+	\item $\ldots$, check \url{http://docs.python.org/3/whatsnew/3.0.html}
+	\end{itemize}
+	\item we will use Python3.x in the class (sometimes show differences to Python2.x*).
+ \end{itemize}
+\end{frame}
+
+\begin{frame}{Hand tools: Editors}
+  \begin{itemize}
+     \item editors are \textbf{essential} tools in programming environment
+     \item editors are your assistants when writing a bunch of code
+     \item an emergency help to clear your `programming syntax'
+     \item editors help with error detection (ideally)
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Properties of good editors}
+  \begin{itemize}
+    \item syntax highlighting
+    \item automatic indentation
+    \item good support of various encodings
+    \item tabs, spaces, shiftwidth, \ldots
+    \item abbreviations, templates, \ldots
+    \item undo/redo-stack
+    \item good code navigation
+    \item plain text
+    \item spelling correction in comments
+    \item code completion
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Editors}
+  \begin{itemize}
+    \item (g)vim
+    \item (x)emacs
+    \item gedit
+    \item kwrite
+    \item scite
+    \item jedit
+    \item notepad++
+    \item \ldots
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Tips for dealing with editors}
+  \begin{itemize}
+    \item try out different ones
+    \item \textbf{work with the keyboard as much as possible}
+    \begin{itemize}
+	    \item Ctrl +Arrow keys: jump over words
+	    \item Shift + Arrow keys: mark text pieces
+	    \item learn more keyboard shortcuts (copying, pasting, skipping paragraphs, commenting text out, etc.)
+    \end{itemize}
+    \item `machine typing course' ?
+	
+  \end{itemize}
+\end{frame}
+
+
+\subsection{Help}
+
+\begin{frame}{pydoc}
+  \begin{itemize}
+    \item help in the CLI
+    \item is normally installed with Python
+    \item quick overview of problems, questions, \ldots
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{ipython (notebook)}
+  \begin{itemize}
+    \item interactive python
+    \item tab expansion
+    \item coloured display
+    \item error messages are easily detected
+    \item notebooks: browser-based variants of Python editors, elegant combination of code, comments, formulas, plots, etc.
+  \end{itemize}
+\end{frame}
+
+
+\begin{frame}{First Homework}
+  \begin{itemize}
+    \item install Python3.6+ \textbf{or}
+    \item install iPython
+    \item familiarise yourself with the CLI and Python IDLE
+    \item install an editor
+    \item scan/skim through the Python Documentation
+    \item complete first exercises (will be available after the class)
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Tips for the homework (click on bold text to access links)}
+  \begin{itemize}
+    \item you can install Python from \href{https://www.python.org/downloads/}{\textbf{the official website}} or from the \href{https://conda.io/docs/user-guide/install/index.html}{\textbf{Anaconda distribution}}
+       	 \begin{itemize}
+    	\item Anaconda allows you to safely remove various Python versions if some of them are broken
+     	\end{itemize}
+    \item we will use Jupyter Notebook in our class, please look at \href{https://jupyter-notebook-beginner-guide.readthedocs.io/en/latest/execute.html}{\textbf{the official JN guidelines}} for more information, follow them and complete installations
+  \end{itemize}
+\end{frame}
+
+
+
+\begin{frame}{Literature}
+  \bibliography{introduction}
+  \bibliographystyle{plain}
+\end{frame}
+
+\end{document}

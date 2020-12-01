@@ -1,0 +1,32 @@
+\usepackage[ngerman]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage{microtype}
+
+\usepackage{pgfpages}
+%\pgfpagesuselayout{2 on 1}
+
+\usepackage{url}
+
+\usepackage{listings}
+\lstset{%
+language=python,
+escapechar=\|,
+basicstyle=\ttfamily\small,
+showtabs=true, tab=\rightarrowfill,
+showstringspaces=false,
+numbers=left,
+numberstyle=\footnotesize\color{gray}
+%texcl=true,
+%frame=
+%aboveskip=
+%belowskip=
+}
+
+%\usepackage{enumerate}
+\renewcommand{\theenumi}{\alph{enumi}}
+\renewcommand{\labelenumi}{(\theenumi)}
+\setlength{\leftmargini}{4ex}
+
+\usepackage{scrpage2}
+\pagestyle{scrheadings}
+\ihead{Einführung in die Programmierung -- WS 2018/19}%\\Dozent: Matthias Hartung}

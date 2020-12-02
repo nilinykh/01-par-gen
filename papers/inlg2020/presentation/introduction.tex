@@ -7,7 +7,9 @@
 \usepackage{graphicx}
 \usepackage{xcolor}
 \usepackage{verbatim}
+\usepackage{unicode-math}
 \usepackage{pst-node}
+\usepackage{fancyvrb}
 \usepackage{moreverb}
 \usecolortheme{lily}
 
@@ -38,6 +40,8 @@
 \definecolor{secondsent}{RGB}{255, 181, 112}
 \definecolor{thirdsent}{RGB}{255, 0, 136}
 \definecolor{fourthsent}{RGB}{255, 0, 255}
+\newcommand\setR{\symbb{R}}
+\newcommand{\eqname}[1]{\tag*{#1}}% Tag equation with name
 
 %\renewcommand{\footnotesize}{\fontsize{7pt}{7pt}\selectfont}
 %\addtolength{\footnotesep}{5mm} 
@@ -130,7 +134,7 @@ People are standing on the grass behind a concrete patch that looks like it was 
 \begin{minipage}{0.5\textwidth}
 \vspace{.5cm}
 \begin{itemize}
-\item \textbf{model input}:\\ \texttt{unimodal} (visual / textual)\\ vs. \texttt{multimodal}
+\item \textbf{model input}:\\ \texttt{unimodal} (visual / language)\\ vs. \texttt{multimodal}
 \item \textbf{information fusion}:\\ \texttt{max-pooling} vs. \texttt{attention}
 \item \textbf{paragraph evaluation}:\\ \texttt{automatic} vs. \texttt{human}
 \pause
@@ -140,314 +144,106 @@ People are standing on the grass behind a concrete patch that looks like it was 
 \end{frame}
 
 
-\begin{frame}{Unimodal Features: Vision and Language}
+\begin{frame}{Unimodal Features: Vision, Language}
 \small
+We use pre-trained \textbf{DenseCap}\footnote{Johnson, J., Karpathy, A., \& Fei-Fei, L. (2016). DenseCap: Fully Convolutional Localization Networks for Dense Captioning. In Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition.} model to extract both visual ($V$) and language ($L$) features for each image:
+\begin{minipage}{1\textwidth}
+\vspace{.3cm}
+\begin{enumerate}
+\item $V \in \setR\sp{M \times D}$: the output of the recognition network (two fully connected layers, within the \textcolor{red}{red box})
+\end{enumerate}
+\end{minipage} %\hfill
+\begin{minipage}{0.6\textwidth}
+\vspace{.3cm}
+\fbox{\includegraphics[width=1.65\textwidth]{densecap1.pdf}}
+\end{minipage}
+\vspace{.05cm}\\
+Notations: $M=50, D=4096, H=512$.
+\end{frame}
+
+\begin{frame}{Unimodal Features: Vision, Language}
+\small
+We use pre-trained \textbf{DenseCap}\footnote{Johnson, J., Karpathy, A., \& Fei-Fei, L. (2016). DenseCap: Fully Convolutional Localization Networks for Dense Captioning. In Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition.} model to extract both visual ($V$) and language ($L$) features for each image:
+\begin{minipage}{1\textwidth}
+\vspace{.3cm}
+\begin{enumerate}
+\item $V \in \setR\sp{M \times D}$: the output of the recognition network (two fully connected layers, within the \textcolor{red}{red box})
+\item $L \in \setR\sp{M \times H}$: the sequence of \textit{hidden states} used to generate the region descriptions (within the \textcolor{blue}{blue box})
+\end{enumerate}
+\end{minipage} %\hfill
+\begin{minipage}{0.6\textwidth}
+\vspace{.3cm}
+\fbox{\includegraphics[width=1.65\textwidth]{densecap2.pdf}}
+\end{minipage}
+\vspace{.05cm}\\
+Notations: $M=50, D=4096, H=512$.
 \end{frame}
 
 
-
-
-\begin{frame}{Tasks' description}
- \begin{itemize}
-  \item one sheet with exercises every week (consists of several tasks)
-  \item corresponds to the topic of the lecture
-  \item prerequisite for successful completion of the course: {\bf pass all assignments}
-  \item assistance and discussion of the solution during the weekly tutorials
-  \item submission: Lernraum+ (can be uploaded in the respective folder's assignment)
-  \item deadlines are important!
- \end{itemize}
+\begin{frame}{Multimodal Features: Vision \textbf{and} Language}
+\small
+\includegraphics[width=1\textwidth]{mapvis.pdf}
 \end{frame}
 
-\begin{frame}{Assignments}
-
-are considered passed, if
-
- \begin{itemize}
- \item they are submitted on time
-  \item you have solved the task and proposed solution to it (in other words, \textbf{your solution} must be clear and precise)
-  \item your code (in case you've submitted it) runs (contains no bugs) and approximately does what it should to do
-  \item you did not copy stuff from your fellow students
- \end{itemize}
+\begin{frame}{Multimodal Features: Vision \textbf{and} Language}
+\small
+\includegraphics[width=1\textwidth]{maplan.pdf}
 \end{frame}
 
-\begin{frame}{Deadlines}
- \begin{block}{Programming project}
- \begin{itemize}
-	\item due to the last day of February
-	\item provide ideas for the project before the end of January
-	 \begin{itemize}
-		\item if you have any now, you are welcome to discuss them with us
-		\item otherwise, you will be given the topic from the pool of projects
-	\end{itemize}
-\end{itemize}
- \end{block}
- \begin{block}{Homework}
-  \begin{itemize}
-  \item each homework is due to the following Thursday, 10 AM
-  \end{itemize}
- \end{block}
+\begin{frame}{Multimodal Features: Vision \textbf{and} Language}
+\small
+\includegraphics[width=1\textwidth]{maphid.pdf}
 \end{frame}
 
-
-\begin{frame}{Tutorials}
-  \begin{itemize}
-    \item once per week, participation is free
-    \item discussion of weekly assignments
-    \item detailed and practical exploration of programming knowledge
-    \item a nice opportunity for collective learning, testing, solving programming issues...
-  \end{itemize}
+\begin{frame}{Multimodal Features: Vision \textbf{and} Language}
+\includegraphics[width=1\textwidth]{maphid.pdf}
+\\ 
+{\vspace{1cm}\textbf{Note}: passing multimodal features through a linear layer $FC(mult_t)$ did not affect the automatic metric scores.}
 \end{frame}
 
-\begin{frame}{Programming is ...}
-
+\begin{frame}{Information Fusion: Max-Pooling}
+For uni-modal experiments, we use max-pooling on either mapped visual features $x=W_{m}\sp{V} V_t$ or mapped language features $x=W_{m}\sp{L} L_t$:
+\begin{equation}
+x^\varsigma_s = max_{i=1}^M(x)
+\end{equation}
 \pause
-
-building machine-friendly instructions
-
-\pause
-
- \begin{block}{}
-  \begin{itemize}
-   \item {\bf Do this, then do that.}
-   \item {\bf If this condition is true, perform this action; otherwise, do that action.}
-   \item  {\bf  Do this action that number of times.}
-   \item {\bf Keep doing that until this condition is true.}
-    \end{itemize}
- \end{block}
+For multimodal experiments, we concatenate max-pooled vectors of both modalities:
+\begin{equation}
+x^\varsigma_s = [max_{i=1}^M(W_{m}\sp{L} L_t) \oplus max_{i=1}^M(W_{m}\sp{V} V_t)]
+\end{equation}
 \end{frame}
 
-\begin{frame}[fragile]{Do you speak Python?}
+\begin{frame}{Information Fusion: Late Attention}
 
- \begin{block}{Python Quellcode}
+We applied \textbf{additive\textbackslash concat} attention on either unimodal or multimodal features ($F_t$):
 
-\begin{verbatim}
-passwordFile = open('SecretPasswordFile.txt')
-secretPassword = passwordFile.read()
-print('Enter your password.')
-typedPassword = input()
-if typedPassword == secretPassword:
-    print('Access granted.')
-    if typedPassword == '12345':
-        print('That password is one that an idiot \ 
-        puts on their luggage.')
-else:
-    print('Access denied')
-        
-\end{verbatim}
- \end{block}
-
-        
-Quelle: \url{https://automatetheboringstuff.com/chapter0/}
+\begin{equation}
+\alpha_t\sp{mult} = \text{\small $softmax$}(W_a\sp{A} \text{\small $tanh$} (F_t\textcolor{gray}{\oplus W_h h\sp{\delta}_{t-1}})
+\end{equation}
+\begin{equation}
+	f_t = [\alpha_t\sp{mult} \odot F_t ]
+\end{equation}
 \end{frame}
 
-\begin{frame}[fragile]{Programming is not hard!}
+\begin{frame}{Information Fusion: Late Attention}
 
-\begin{figure}[h!]
-\centering
-\includegraphics[width=1\textwidth]{r_10875_uRYQF.jpg}
-\end{figure} 
-*https://devrant.com/rants/10875/multi-threaded-programming-explained-with-puppies
+We applied \textbf{additive\textbackslash concat} attention on either unimodal or multimodal features ($F_t$):
+
+\begin{equation}
+\textcolor{red}{ \alpha_t\sp{mult}} = \text{\small $softmax$}( \textcolor{red}{W_a\sp{A}} \text{\small $tanh$} (F_t\textcolor{gray}{\oplus W_h h\sp{\delta}_{t-1}})
+\end{equation}
+\begin{equation}
+	f_t = [ \textcolor{red}{\alpha_t\sp{mult}} \odot F_t ]
+\end{equation}
+
+{\vspace{.5cm}\textbf{Note}: Although some work on multimodal machine translation has shown that early attention improves quality of text generations\footnote{Ozan Caglayan, Pranava Madhyastha, Lucia Specia, \& Lo\text{\"i}c Barrault. (2019). Probing the Need for Visual Context in Multimodal Machine Translation.}, using \textbf{modality-dependent / early} attention (unique $\textcolor{red}{W_a\sp{A}}$ and, therefore, unique $\textcolor{red}{ \alpha_t\sp{mult}}$ for each modality) provided us with worse automatic metric scores.}
 
 \end{frame}
 
-        
-       
-\begin{frame}[fragile]{Python is...}
-  
-   ...  learning something readable and elegant
- 
- \begin{block}{Saying `hello' in Java} 
- \begin{verbatim}
 
-class Hello {
-
-  public static void main (String[] args) {
-      System.out.println ("Hello, world.");
-  }
-}  
-\end{verbatim}
-  \end{block}
-
- \begin{block}{Saying `hello' in Python } 
- \begin{verbatim}
-
-print('Hello, world.')
-
-\end{verbatim}
-
-  \end{block}
-\end{frame}
-
-\section{Here}
-
-\begin{frame}{Literature}
-
-  {\bf Books:}
-  \begin{itemize}
-    \item Scripts
-    \item Learning Python, O'Reilly \cite{Lutz:2007:LP}
-    \item Programming Python, O'Reilly \cite{Lutz:2006:PP}
-    \item Core Python Programming, Prentice Hall \cite{Chun:2007:CPP}
-  \end{itemize}
+\begin{frame}{Image Paragraph Model}
 
 \end{frame}
 
-\begin{frame}{Literature}
-
-  {\bf Online:}
-  \begin{itemize}
-    \item Python Dokumentation \\ \url{http://docs.python.org/}
-    \item How to Think Like a Python Programmer, Green Tea Press \\
-          \url{http://www.greenteapress.com/thinkpython/}
-       \item Practical Programming for Total Beginners
-       \url{https://automatetheboringstuff.com/}
-  \end{itemize}
-  
-  \begin{block}{Want to do some real-world applied programming?}
-    Whenever possible: steal code!\\
-    (But not from your fellow students!)
-  \end{block}
-  \end{frame}
-
-\section{Class Requirements}
-
-\subsection{Erste Schritte}
-
-\begin{frame}{Technical Details}
- \begin{enumerate}
-	\item install Python using one of the next methods:
-	\begin{itemize}
-		\item download from {\tt http://www.python.org}
-		\item version: $3.5.0$
-		\item linux: Package manager
-		\item macOS: MacPorts
-		\item windows: Use Installer from the website
-	\end{itemize}
-	\item look at the editors out there
-	\item first look at the System Console (``Terminal'', ``Command Line Interface (CLI)'')
- \end{enumerate}
-\end{frame}
-
-
-\begin{frame}{Python Versions}
- \begin{itemize}
-	\item up-to-date versions:
-	\begin{itemize}
-		\item $2.7.10$
-		\item $3.5.0$ +
-	\end{itemize}
-	\item all versions are not completely compatible with each other
-	\item new in $3.*$:
-	\begin{itemize}
-	\item print is a function
-	\item all strings are written in unicode
-	\item new function names
-	\item faster iterations
-	\item $\ldots$, check \url{http://docs.python.org/3/whatsnew/3.0.html}
-	\end{itemize}
-	\item we will use Python3.x in the class (sometimes show differences to Python2.x*).
- \end{itemize}
-\end{frame}
-
-\begin{frame}{Hand tools: Editors}
-  \begin{itemize}
-     \item editors are \textbf{essential} tools in programming environment
-     \item editors are your assistants when writing a bunch of code
-     \item an emergency help to clear your `programming syntax'
-     \item editors help with error detection (ideally)
-  \end{itemize}
-\end{frame}
-
-\begin{frame}{Properties of good editors}
-  \begin{itemize}
-    \item syntax highlighting
-    \item automatic indentation
-    \item good support of various encodings
-    \item tabs, spaces, shiftwidth, \ldots
-    \item abbreviations, templates, \ldots
-    \item undo/redo-stack
-    \item good code navigation
-    \item plain text
-    \item spelling correction in comments
-    \item code completion
-  \end{itemize}
-\end{frame}
-
-\begin{frame}{Editors}
-  \begin{itemize}
-    \item (g)vim
-    \item (x)emacs
-    \item gedit
-    \item kwrite
-    \item scite
-    \item jedit
-    \item notepad++
-    \item \ldots
-  \end{itemize}
-\end{frame}
-
-\begin{frame}{Tips for dealing with editors}
-  \begin{itemize}
-    \item try out different ones
-    \item \textbf{work with the keyboard as much as possible}
-    \begin{itemize}
-	    \item Ctrl +Arrow keys: jump over words
-	    \item Shift + Arrow keys: mark text pieces
-	    \item learn more keyboard shortcuts (copying, pasting, skipping paragraphs, commenting text out, etc.)
-    \end{itemize}
-    \item `machine typing course' ?
-	
-  \end{itemize}
-\end{frame}
-
-
-\subsection{Help}
-
-\begin{frame}{pydoc}
-  \begin{itemize}
-    \item help in the CLI
-    \item is normally installed with Python
-    \item quick overview of problems, questions, \ldots
-  \end{itemize}
-\end{frame}
-
-\begin{frame}{ipython (notebook)}
-  \begin{itemize}
-    \item interactive python
-    \item tab expansion
-    \item coloured display
-    \item error messages are easily detected
-    \item notebooks: browser-based variants of Python editors, elegant combination of code, comments, formulas, plots, etc.
-  \end{itemize}
-\end{frame}
-
-
-\begin{frame}{First Homework}
-  \begin{itemize}
-    \item install Python3.6+ \textbf{or}
-    \item install iPython
-    \item familiarise yourself with the CLI and Python IDLE
-    \item install an editor
-    \item scan/skim through the Python Documentation
-    \item complete first exercises (will be available after the class)
-  \end{itemize}
-\end{frame}
-
-\begin{frame}{Tips for the homework (click on bold text to access links)}
-  \begin{itemize}
-    \item you can install Python from \href{https://www.python.org/downloads/}{\textbf{the official website}} or from the \href{https://conda.io/docs/user-guide/install/index.html}{\textbf{Anaconda distribution}}
-       	 \begin{itemize}
-    	\item Anaconda allows you to safely remove various Python versions if some of them are broken
-     	\end{itemize}
-    \item we will use Jupyter Notebook in our class, please look at \href{https://jupyter-notebook-beginner-guide.readthedocs.io/en/latest/execute.html}{\textbf{the official JN guidelines}} for more information, follow them and complete installations
-  \end{itemize}
-\end{frame}
-
-
-
-\begin{frame}{Literature}
-  \bibliography{introduction}
-  \bibliographystyle{plain}
-\end{frame}
 
 \end{document}

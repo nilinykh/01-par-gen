@@ -35,7 +35,6 @@
 \makeatletter
 \setbeamertemplate{navigation symbols}{}
 
-
 \definecolor{firstsent}{RGB}{51, 255, 153}
 \definecolor{secondsent}{RGB}{255, 181, 112}
 \definecolor{thirdsent}{RGB}{255, 0, 136}
@@ -226,6 +225,7 @@ We applied \textbf{additive\textbackslash concat} attention on either unimodal o
 \end{frame}
 
 \begin{frame}{Information Fusion: Late Attention}
+\small
 
 We applied \textbf{additive\textbackslash concat} attention on either unimodal or multimodal features ($F_t$):
 
@@ -236,7 +236,9 @@ We applied \textbf{additive\textbackslash concat} attention on either unimodal o
 	f_t = [ \textcolor{red}{\alpha_t\sp{mult}} \odot F_t ]
 \end{equation}
 
-{\vspace{.5cm}\textbf{Note}: Although some work on multimodal machine translation has shown that early attention improves quality of text generations\footnote{Ozan Caglayan, Pranava Madhyastha, Lucia Specia, \& Lo\text{\"i}c Barrault. (2019). Probing the Need for Visual Context in Multimodal Machine Translation.}, using \textbf{modality-dependent / early} attention (unique $\textcolor{red}{W_a\sp{A}}$ and, therefore, unique $\textcolor{red}{ \alpha_t\sp{mult}}$ for each modality) provided us with worse automatic metric scores.}
+{\vspace{.5cm}\textbf{Note}: Although some work on multimodal machine translation has shown that early attention improves quality of text generations
+\footnote{Ozan Caglayan, Pranava Madhyastha, Lucia Specia, \& Lo\text{\"i}c Barrault. (2019). Probing the Need for Visual Context in Multimodal Machine Translation}$^{,}$\footnote{Ozan Caglayan, Lo\text{\"i}c Barrault, \& Fethi Bougares. (2016). Multimodal Attention for Neural Machine Translation.}
+, using \textbf{modality-dependent / early} attention (unique $\textcolor{red}{W_a\sp{A}}$ and, therefore, unique $\textcolor{red}{ \alpha_t\sp{mult}}$ for each modality) provided us with worse automatic metric scores.}
 
 \end{frame}
 

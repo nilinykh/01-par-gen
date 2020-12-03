@@ -64,6 +64,12 @@
 
 %\section{Describing images with longer sequences}
 
+\begin{frame}{Describing images with longer sequences}
+\small
+\center
+\fbox{\includegraphics[width=0.5\textwidth]{2327613}}
+\end{frame}
+
 \begin{frame}{Describing images with longer sequences\footnote{Krause, J., Johnson, J., Krishna, R., \& Fei-Fei, L. (2017). A Hierarchical Approach for Generating Descriptive Image Paragraphs. In Computer Vision and Pattern Recognition (CVPR).}}
 \small
 \center
@@ -73,6 +79,7 @@ People are standing on the grass behind a concrete patch that looks like it was 
 \end{block}
 \end{frame}
 
+\iffalse
 \begin{frame}{Properties of Image Paragraphs (IP)}
 \small
 \includegraphics[width=.5\textwidth]{2327613boxes}
@@ -83,6 +90,7 @@ People are standing on the grass behind a concrete patch that looks like it was 
 \ncbar[arrows = ->, linecolor =blue, angle = 90, arm = 1.4em]{ss2}{st2}
 \end{block}
 \end{frame}
+\fi
 
 \begin{frame}{Two Sources of Important Information for IP}
 \small
@@ -178,7 +186,7 @@ We use pre-trained \textbf{DenseCap}\footnote{Johnson, J., Karpathy, A., \& Fei-
 Notations: $M=50, D=4096, H=512$.
 \end{frame}
 
-
+\iffalse
 \begin{frame}{Multimodal Features: Vision \textbf{and} Language}
 \small
 \includegraphics[width=1\textwidth]{mapvis.pdf}
@@ -188,6 +196,7 @@ Notations: $M=50, D=4096, H=512$.
 \small
 \includegraphics[width=1\textwidth]{maplan.pdf}
 \end{frame}
+\fi
 
 \begin{frame}{Multimodal Features: Vision \textbf{and} Language}
 \small
@@ -293,7 +302,7 @@ We apply \textbf{additive\textbackslash concat} attention on either unimodal or 
 \pause
 \item models with attention have higher mean scores across all criteria compared to the ones of models with max-pooling
 \pause
-\item \textbf{LNG+ATT} performs much better than \textbf{IMG+ATT} for sentence structure (SS) and paragraph coherence (PP): categories where semantic information would matter the most
+\item \textbf{LNG+ATT} performs much better than \textbf{IMG+ATT} for sentence structure (SS) and paragraph coherence (PC): categories where semantic information would matter the most
 \pause
 \item attention seems to affect semantic information more than visual features
 \end{enumerate}
